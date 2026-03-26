@@ -191,6 +191,7 @@ function VictoryStat({ label, value, color }) {
 }
 
 function BuildSummary({ upgrades }) {
+  const [selected, setSelected] = useState(null);
   if (upgrades.length === 0) return null;
 
   return (
@@ -220,19 +221,38 @@ function BuildSummary({ upgrades }) {
 
       {/* Liste upgrades */}
       <View style={styles.upgradesList}>
-        {upgrades.map((u, i) => (
-          <View key={`${u.id}_${i}`} style={[styles.upgradeChip, { borderColor: upgradeHex(u.color) + '88' }]}>
-            <Text style={[styles.chipTxt, { color: upgradeHex(u.color) }]}>{u.name}</Text>
-            {u.synergyActive && <Text style={[styles.chipSyn, { color: upgradeHex(u.color) }]}>✦</Text>}
-          </View>
-        ))}
+        {upgrades.map((u, i) => {
+          const hex        = upgradeHex(u.color);
+          const isSelected = selected?.id === u.id && selected?._idx === i;
+          return (
+            <TouchableOpacity
+              key={`${u.id}_${i}`}
+              activeOpacity={0.7}
+              onPress={() => setSelected(isSelected ? null : { ...u, _idx: i })}
+              style={[styles.upgradeChip, {
+                borderColor:     hex + (isSelected ? 'FF' : '88'),
+                backgroundColor: isSelected ? hex + '22' : 'transparent',
+              }]}
+            >
+              <Text style={[styles.chipTxt, { color: hex }]}>{u.name}</Text>
+              {u.synergyActive && <Text style={[styles.chipSyn, { color: hex }]}>✦</Text>}
+            </TouchableOpacity>
+          );
+        })}
       </View>
+
+      {selected && (
+        <View style={[styles.chipDesc, { borderColor: upgradeHex(selected.color) + '66' }]}>
+          <Text style={[styles.chipDescName, { color: upgradeHex(selected.color) }]}>{selected.name}</Text>
+          <Text style={styles.chipDescTxt}>{selected.desc || selected.description || '—'}</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 function upgradeHex(color) {
-  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
+  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
 }
 
 // ─── Helpers géométriques ─────────────────────────────────────────────────────
@@ -377,6 +397,16 @@ const styles = StyleSheet.create({
   },
   chipTxt: { fontSize: 11 },
   chipSyn: { fontSize: 9 },
+  chipDesc: {
+    marginTop:       4,
+    backgroundColor: PALETTE.bgDark,
+    borderWidth:     1,
+    borderRadius:    8,
+    padding:         10,
+    gap:             4,
+  },
+  chipDescName: { fontSize: 13, fontWeight: 'bold' },
+  chipDescTxt:  { color: PALETTE.textMuted, fontSize: 12 },
 
   // Boutons
   buttons: { width: '100%', gap: 10 },

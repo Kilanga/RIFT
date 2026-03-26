@@ -73,6 +73,10 @@ function processShooterTurn(enemy, player, enemies, room) {
 }
 
 function processBlockerTurn(enemy, player, enemies, room) {
+  // Phase Shift : le joueur est insaisissable, le Titan l'ignore
+  if (player.statuses?.some(s => s.id === 'phaseShift')) {
+    return noAction();
+  }
   if (manhattanDist(enemy, player) === 1) {
     return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: enemy.attack, logs: [`${enemy.type} écrase !`] };
   }

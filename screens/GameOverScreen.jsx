@@ -3,7 +3,7 @@
  * Fin de run : score, progression, nouvel unlock, hook émotionnel fort
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, G, Line } from 'react-native-svg';
@@ -75,17 +75,7 @@ export default function GameOverScreen() {
 
         {/* ── Upgrades acquis ce run ─────────────────────────────────────── */}
         {activeUpgrades.length > 0 && (
-          <View style={styles.runUpgrades}>
-            <Text style={styles.sectionTitle}>BUILD CE RUN</Text>
-            <View style={styles.upgradesList}>
-              {activeUpgrades.map((u, i) => (
-                <View key={`${u.id}_${i}`} style={[styles.upgradeChip, { borderColor: upgradeHex(u.color) }]}>
-                  <View style={[styles.chipDot, { backgroundColor: upgradeHex(u.color) }]} />
-                  <Text style={[styles.chipTxt, { color: upgradeHex(u.color) }]}>{u.name}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          <BuildSummary upgrades={activeUpgrades} />
         )}
 
         {/* ── Boutons ────────────────────────────────────────────────────── */}
@@ -232,8 +222,41 @@ function NewAchievements({ achievements }) {
   );
 }
 
+function BuildSummary({ upgrades }) {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <View style={styles.runUpgrades}>
+      <Text style={styles.sectionTitle}>BUILD CE RUN</Text>
+      <View style={styles.upgradesList}>
+        {upgrades.map((u, i) => {
+          const hex = upgradeHex(u.color);
+          const isSelected = selected?.id === u.id && selected?._idx === i;
+          return (
+            <TouchableOpacity
+              key={`${u.id}_${i}`}
+              activeOpacity={0.7}
+              onPress={() => setSelected(isSelected ? null : { ...u, _idx: i })}
+              style={[styles.upgradeChip, { borderColor: hex, backgroundColor: isSelected ? hex + '22' : 'transparent' }]}
+            >
+              <View style={[styles.chipDot, { backgroundColor: hex }]} />
+              <Text style={[styles.chipTxt, { color: hex }]}>{u.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {selected && (
+        <View style={[styles.chipDesc, { borderColor: upgradeHex(selected.color) + '66' }]}>
+          <Text style={[styles.chipDescName, { color: upgradeHex(selected.color) }]}>{selected.name}</Text>
+          <Text style={styles.chipDescTxt}>{selected.desc || selected.description || '—'}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function upgradeHex(color) {
-  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
+  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -397,6 +420,16 @@ const styles = StyleSheet.create({
   },
   chipDot: { width: 6, height: 6, borderRadius: 3 },
   chipTxt: { fontSize: 11 },
+  chipDesc: {
+    marginTop:       4,
+    backgroundColor: PALETTE.bgDark,
+    borderWidth:     1,
+    borderRadius:    8,
+    padding:         10,
+    gap:             4,
+  },
+  chipDescName: { fontSize: 13, fontWeight: 'bold' },
+  chipDescTxt:  { color: PALETTE.textMuted, fontSize: 12 },
 
   // Boutons
   buttons: { width: '100%', gap: 10 },

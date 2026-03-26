@@ -42,6 +42,7 @@ const INITIAL_RUN = {
   currentLayerIndex: 0,
   currentNodeId:     null,
   isDailyRun:        false,
+  maxComboThisRun:   0,    // Pour le succès Maître du Combo
   // Compteurs de performance par salle (reset à chaque enterRoom)
   turnsInRoom:       0,
   damageTakenInRoom: 0,
@@ -51,10 +52,11 @@ const INITIAL_RUN = {
 
 export const createNavigationSlice = (set, get) => ({
 
-  player:  { ...INITIAL_PLAYER },
-  run:     { ...INITIAL_RUN },
-  roomMap: [],
-  phase:   GAME_PHASES.MENU,
+  player:     { ...INITIAL_PLAYER },
+  playerBase: { ...INITIAL_PLAYER }, // stats avant upgrades, pour recalcul
+  run:        { ...INITIAL_RUN },
+  roomMap:    [],
+  phase:      GAME_PHASES.MENU,
 
   setPlayerName: (name) => set(s => ({ meta: { ...s.meta, playerName: name.trim().slice(0, 16) } })),
 
@@ -161,14 +163,15 @@ export const createNavigationSlice = (set, get) => ({
     // Génération procédurale — seed fixe si multijoueur/daily, sinon aléatoire
     const { map: runMap, seed: mapSeed, actBoundaries } = buildProceduralMap(multiOptions?.seed);
 
-    const basePlayer = {
-      ...INITIAL_PLAYER,
-      shape,
-      ...applyPermanentBonuses(meta.permanentUpgrades),
-    };
+    const bonuses    = applyPermanentBonuses(meta.permanentUpgrades);
+    const basePlayer = { ...INITIAL_PLAYER, shape, ...bonuses };
+    // PV de départ = PV max (les bonus permanents de maxHp doivent être pleins au départ)
+    basePlayer.hp = basePlayer.maxHp;
 
     set({
       player:               basePlayer,
+      playerBase:           { ...basePlayer },
+      secondWindUsed:       false,
       run:                  {
         ...INITIAL_RUN,
         startedAt:     Date.now(),

@@ -35,9 +35,10 @@ export default function GameGrid() {
   const isPlayerTurn = useGameStore(s => s.isPlayerTurn);
   const movePlayer   = useGameStore(s => s.movePlayer);
 
-  // Ref pour accéder à player et isPlayerTurn dans le PanResponder sans recréer
+  // Refs pour accéder aux valeurs courantes dans le PanResponder sans le recréer
   const playerRef       = useRef(player);
   const isPlayerTurnRef = useRef(isPlayerTurn);
+  const gridOffsetRef   = useRef({ x: 0, y: 0 });
   playerRef.current       = player;
   isPlayerTurnRef.current = isPlayerTurn;
 
@@ -54,9 +55,11 @@ export default function GameGrid() {
         const tapThr   = CELL_SIZE * 0.25;
 
         if (absDx < tapThr && absDy < tapThr) {
-          // Tap : on calcule la cellule touchée depuis la position initiale du doigt
-          const startCellX = Math.floor(gs.x0 / CELL_SIZE);
-          const startCellY = Math.floor(gs.y0 / CELL_SIZE);
+          // Tap : coordonnées relatives à la grille (soustrait l'offset écran)
+          const relX = gs.x0 - gridOffsetRef.current.x;
+          const relY = gs.y0 - gridOffsetRef.current.y;
+          const startCellX = Math.floor(relX / CELL_SIZE);
+          const startCellY = Math.floor(relY / CELL_SIZE);
           const p = playerRef.current;
           const cdx = startCellX - p.x;
           const cdy = startCellY - p.y;
@@ -75,6 +78,8 @@ export default function GameGrid() {
     })
   ).current;
 
+  const gridRef = useRef(null);
+
   if (!currentRoom) return null;
 
   const { grid, width, height } = currentRoom;
@@ -88,8 +93,14 @@ export default function GameGrid() {
         { borderColor: isPlayerTurn ? '#00CC66' : '#CC3333', width: totalW + 4, height: totalH + 4 },
       ]}>
         <View
+          ref={gridRef}
           style={{ width: totalW, height: totalH }}
           {...panResponder.panHandlers}
+          onLayout={() => {
+            gridRef.current?.measureInWindow((x, y) => {
+              gridOffsetRef.current = { x, y };
+            });
+          }}
         >
           <Svg width={totalW} height={totalH}>
             <Rect x={0} y={0} width={totalW} height={totalH} fill={PALETTE.bg} />
@@ -196,7 +207,7 @@ function DirectionHints({ player, grid, gridW, gridH, enemies, isPlayerTurn }) {
 function CellShape({ cell, rx, ry }) {
   const x = rx * CELL_SIZE, y = ry * CELL_SIZE, s = CELL_SIZE;
   const bg = {
-    [CELL_TYPES.WALL]:  PALETTE.bgCard,
+    [CELL_TYPES.WALL]:  '#1A1A28',
     [CELL_TYPES.EXIT]:  '#0D2010',
     [CELL_TYPES.ALTAR]: '#1A0D2E',
     [CELL_TYPES.CHEST]: '#2A2010',
@@ -208,7 +219,14 @@ function CellShape({ cell, rx, ry }) {
       {cell === CELL_TYPES.EXIT  && <Polygon points={geoTri(x+s/2,y+s/2,s*0.28)} fill={PALETTE.roomCombat} opacity={0.7} />}
       {cell === CELL_TYPES.ALTAR && <Circle cx={x+s/2} cy={y+s/2} r={s*0.22} fill="none" stroke="#AA44FF" strokeWidth={2} />}
       {cell === CELL_TYPES.CHEST && <Rect x={x+s*0.25} y={y+s*0.25} width={s*0.5} height={s*0.5} fill={PALETTE.fragment} opacity={0.7} rx={2} />}
-      {cell === CELL_TYPES.WALL  && <Rect x={x+1} y={y+1} width={s-2} height={s-2} fill="#0E0E1C" opacity={0.6} />}
+      {cell === CELL_TYPES.WALL  && (
+        <G>
+          <Rect x={x+1} y={y+1} width={s-2} height={s-2} fill="#111120" rx={2} />
+          {/* Croix pour distinguer clairement les murs */}
+          <Line x1={x+s*0.3} y1={y+s*0.3} x2={x+s*0.7} y2={y+s*0.7} stroke="#2A2A40" strokeWidth={1.5} />
+          <Line x1={x+s*0.7} y1={y+s*0.3} x2={x+s*0.3} y2={y+s*0.7} stroke="#2A2A40" strokeWidth={1.5} />
+        </G>
+      )}
     </G>
   );
 }

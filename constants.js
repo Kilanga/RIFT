@@ -34,6 +34,7 @@ export const UPGRADE_COLORS = {
   RED:   'red',   // Offensif
   BLUE:  'blue',  // Utilitaire / défensif
   GREEN: 'green', // Soin / support
+  CURSE: 'curse', // Malédiction (négatif pur)
 };
 
 // ─── Types de salles ──────────────────────────────────────────────────────────

@@ -70,7 +70,7 @@ function generateCombatRoom(floor) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
 
-  addRandomWalls(grid, width, height, 0.1);
+  addRandomWalls(grid, width, height, 0.08);
 
   const enemyCount = Math.min(1 + Math.floor(floor / 2), 4);
   const enemies = spawnEnemies(grid, width, height, enemyCount, floor, [
@@ -184,6 +184,55 @@ function addRandomWalls(grid, width, height, density) {
       if (Math.random() < density) grid[y][x] = CELL_TYPES.WALL;
     }
   }
+  ensureConnectivity(grid, width, height, 1, 1);
+}
+
+/**
+ * Garantit que toutes les cases libres sont accessibles depuis (startX, startY).
+ * Supprime les murs intérieurs qui isoleraient des cases.
+ */
+function ensureConnectivity(grid, width, height, startX, startY) {
+  const DIRS = [[0,-1],[0,1],[-1,0],[1,0]];
+
+  function floodFill() {
+    const visited = Array.from({ length: height }, () => new Array(width).fill(false));
+    const queue   = [{ x: startX, y: startY }];
+    visited[startY][startX] = true;
+    while (queue.length > 0) {
+      const { x, y } = queue.shift();
+      for (const [dx, dy] of DIRS) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+        if (visited[ny][nx] || grid[ny][nx] === CELL_TYPES.WALL) continue;
+        visited[ny][nx] = true;
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return visited;
+  }
+
+  // Répéter jusqu'à ce que toutes les cases libres soient connectées
+  for (let pass = 0; pass < 20; pass++) {
+    const visited = floodFill();
+    let fixed = false;
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        // Case libre non atteinte → chercher un mur intérieur adjacent à supprimer
+        if (grid[y][x] !== CELL_TYPES.WALL && !visited[y][x]) {
+          for (const [dx, dy] of DIRS) {
+            const nx = x + dx, ny = y + dy;
+            if (nx <= 0 || ny <= 0 || nx >= width - 1 || ny >= height - 1) continue;
+            if (grid[ny][nx] === CELL_TYPES.WALL) {
+              grid[ny][nx] = CELL_TYPES.EMPTY;
+              fixed = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (!fixed) break;
+  }
 }
 
 function addSymmetricPillars(grid, width, height) {
@@ -226,8 +275,15 @@ function scaledEnemy(template, floor) {
 }
 
 function generateShopItems() {
-  const upgradeIds = ['momentum', 'echo', 'fracture', 'shield_pulse', 'regen', 'leech', 'vitality', 'absorb', 'thorns'];
-  const shuffle    = [...upgradeIds].sort(() => Math.random() - 0.5);
+  const upgradeIds = [
+    'momentum', 'echo', 'fracture', 'shield_pulse', 'regen', 'leech',
+    'vitality', 'absorb', 'thorns', 'overload', 'critique', 'combustion',
+    'second_wind', 'regain', 'chain_reaction', 'blink',
+    'tranchant', 'berserker', 'cyclone', 'fortifie', 'esquive', 'vigile',
+    'parasitisme', 'resistance', 'renaissance',
+    'pacte_sang', 'verre_trempe', 'soif_sang', 'ame_maudite', 'contrat_mortel',
+  ];
+  const shuffle = [...upgradeIds].sort(() => Math.random() - 0.5);
   return shuffle.slice(0, 3).map(id => ({ upgradeId: id, price: randomInt(3, 8), bought: false }));
 }
 
@@ -303,6 +359,21 @@ function generateAct(rng, actIndex, layerOffset) {
       if (type === ROOM_TYPES.SHOP) hasShop = true;
       layer.push(type);
     }
+
+    // ── Règle post-génération : pas de doublons non-combat sur la même couche ─
+    if (layer.length > 1) {
+      const seenNonCombat = new Set();
+      for (let i = 0; i < layer.length; i++) {
+        if (layer[i] !== ROOM_TYPES.COMBAT) {
+          if (seenNonCombat.has(layer[i])) {
+            layer[i] = ROOM_TYPES.COMBAT;
+          } else {
+            seenNonCombat.add(layer[i]);
+          }
+        }
+      }
+    }
+
     template.push(layer);
   }
 
