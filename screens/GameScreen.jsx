@@ -1,0 +1,320 @@
+/**
+ * RIFT — GameScreen
+ * Écran principal de jeu : combat, repos, shop, choix d'upgrade, intro boss
+ * Orchestre les composants selon la phase en cours
+ */
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import useGameStore from '../store/gameStore';
+import { GAME_PHASES, PALETTE, ROOM_TYPES, CLASS_INFO } from '../constants';
+
+import GameGrid             from '../components/GameGrid';
+import CombatLog            from '../components/CombatLog';
+import UpgradeModal         from '../components/UpgradeModal';
+import RestRoomOverlay      from '../components/RestRoomOverlay';
+import ShopOverlay          from '../components/ShopOverlay';
+import PauseModal           from '../components/PauseModal';
+import BossIntroOverlay     from '../components/BossIntroOverlay';
+
+export default function GameScreen() {
+  const phase          = useGameStore(s => s.phase);
+  const player         = useGameStore(s => s.player);
+  const run            = useGameStore(s => s.run);
+  const currentRoom    = useGameStore(s => s.currentRoom);
+  const enemies        = useGameStore(s => s.enemies);
+  const isPlayerTurn   = useGameStore(s => s.isPlayerTurn);
+  const activeUpgrades = useGameStore(s => s.activeUpgrades);
+  const bossIntroType  = useGameStore(s => s.bossIntroType);
+
+  const [paused, setPaused] = useState(false);
+
+  const aliveEnemies = enemies.filter(e => e.hp > 0);
+  const isCombat     = phase === GAME_PHASES.COMBAT;
+  const isBossIntro  = phase === GAME_PHASES.BOSS_INTRO;
+
+  // Boss intro : plein écran
+  if (isBossIntro) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <BossIntroOverlay bossType={bossIntroType} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.container}>
+
+        {/* ── Header de salle ─────────────────────────────────────────── */}
+        <View style={styles.header}>
+          <RoomBadge type={currentRoom?.type} />
+
+          {/* Stats joueur */}
+          <View style={styles.playerStats}>
+            <View style={styles.statRow}>
+              <Text style={styles.statIcon}>❤</Text>
+              <View style={styles.barBg}>
+                <View style={[styles.barFill, {
+                  width: `${(player.hp / player.maxHp) * 100}%`,
+                  backgroundColor: player.hp / player.maxHp < 0.3 ? PALETTE.upgradeRed : PALETTE.hp,
+                }]} />
+              </View>
+              <Text style={styles.statTxt}>{player.hp}/{player.maxHp}</Text>
+            </View>
+
+            {activeUpgrades.some(u => u.id === 'momentum') && (
+              <View style={styles.statRow}>
+                <Text style={styles.statIcon}>⚡</Text>
+                <View style={styles.barBg}>
+                  <View style={[styles.barFill, {
+                    width: `${(player.charges / player.maxCharges) * 100}%`,
+                    backgroundColor: PALETTE.charge,
+                  }]} />
+                </View>
+                <Text style={styles.statTxt}>{player.charges}/{player.maxCharges}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Fragments */}
+          <View style={styles.fragBox}>
+            <Text style={styles.fragIcon}>◈</Text>
+            <Text style={styles.fragCount}>{player.fragments}</Text>
+          </View>
+
+          {/* Bouton pause */}
+          {isCombat && (
+            <TouchableOpacity style={styles.pauseBtn} onPress={() => setPaused(true)} activeOpacity={0.7}>
+              <Text style={styles.pauseIcon}>⏸</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── Stats secondaires + statuts ─────────────────────────────── */}
+        <View style={styles.secondRow}>
+          <ShapeLabel shape={player.shape} />
+          <Text style={styles.secStat}>⚔ {player.attack}</Text>
+          <Text style={styles.secStat}>🛡 {player.defense}</Text>
+
+          {/* Statuts actifs du joueur */}
+          {player.statuses?.length > 0 && (
+            <StatusIcons statuses={player.statuses} />
+          )}
+
+          <View style={[
+            styles.turnBadge,
+            { backgroundColor: isPlayerTurn ? '#002211' : '#220000', borderColor: isPlayerTurn ? '#00CC66' : '#CC3333' },
+          ]}>
+            <Text style={[styles.turnTxt, { color: isPlayerTurn ? '#00FF88' : '#FF5555' }]}>
+              {isPlayerTurn ? '▶ TON TOUR' : '◌ ENNEMIS…'}
+            </Text>
+          </View>
+          {aliveEnemies.length > 0 && (
+            <Text style={styles.enemyCount}>☠ {aliveEnemies.length}</Text>
+          )}
+        </View>
+
+        {/* ── Corps principal selon la phase ──────────────────────────── */}
+        <View style={styles.body}>
+          {isCombat && (
+            <View style={styles.gridWrapper}>
+              <GameGrid />
+            </View>
+          )}
+          {phase === GAME_PHASES.REST_ROOM && <RestRoomOverlay />}
+          {phase === GAME_PHASES.SHOP_ROOM && <ShopOverlay />}
+        </View>
+
+        {/* ── Log de combat ───────────────────────────────────────────── */}
+        {isCombat && <CombatLog maxLines={3} />}
+
+        {/* ── Upgrades actifs (bandeau compact) ──────────────────────── */}
+        {activeUpgrades.length > 0 && isCombat && (
+          <View style={styles.upgradesBar}>
+            {activeUpgrades.map((u, i) => (
+              <View
+                key={`${u.id}_${i}`}
+                style={[styles.upgradeDot, {
+                  backgroundColor: upgradeHex(u.color),
+                  opacity:         u.synergyActive ? 1 : 0.5,
+                  transform:       u.synergyActive ? [{ scale: 1.3 }] : [],
+                }]}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* ── Modal d'upgrade ─────────────────────────────────────────── */}
+        <UpgradeModal />
+
+        {/* ── Menu pause ──────────────────────────────────────────────── */}
+        <PauseModal visible={paused} onResume={() => setPaused(false)} />
+
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ─── Sous-composants ──────────────────────────────────────────────────────────
+
+function RoomBadge({ type }) {
+  const labels = {
+    [ROOM_TYPES.COMBAT]:     { txt: '⚔ COMBAT',     color: PALETTE.roomCombat },
+    [ROOM_TYPES.REST]:       { txt: '+ REPOS',       color: PALETTE.roomRest   },
+    [ROOM_TYPES.SHOP]:       { txt: '◆ BOUTIQUE',    color: PALETTE.roomShop   },
+    [ROOM_TYPES.BOSS_MINI]:  { txt: '☠ MINI-BOSS',  color: PALETTE.roomBoss   },
+    [ROOM_TYPES.BOSS]:       { txt: '★ BOSS',        color: PALETTE.roomBoss   },
+    [ROOM_TYPES.BOSS_FINAL]: { txt: '💀 BOSS FINAL', color: '#FF2266'          },
+  };
+  const { txt, color } = labels[type] || { txt: '?', color: PALETTE.textMuted };
+
+  return (
+    <View style={[styles.roomBadge, { borderColor: color }]}>
+      <Text style={[styles.roomBadgeTxt, { color }]}>{txt}</Text>
+    </View>
+  );
+}
+
+function ShapeLabel({ shape }) {
+  const info  = CLASS_INFO[shape];
+  const color = info?.color ?? PALETTE.textMuted;
+  return <Text style={{ color, fontSize: 12, fontWeight: 'bold' }}>{info?.short ?? '?'}</Text>;
+}
+
+const STATUS_ICONS = {
+  shield:      { icon: '🔵', label: 'Bouclier' },
+  attackBoost: { icon: '🔴', label: 'ATQ↑' },
+  vulnerable:  { icon: '🟡', label: 'Vulnerable' },
+};
+
+function StatusIcons({ statuses }) {
+  return (
+    <View style={styles.statusRow}>
+      {statuses.map((s, i) => {
+        const info = STATUS_ICONS[s.id] || { icon: '◈', label: s.id };
+        return (
+          <View key={`${s.id}_${i}`} style={styles.statusBadge}>
+            <Text style={styles.statusIcon}>{info.icon}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function upgradeHex(color) {
+  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  safe:      { flex: 1, backgroundColor: PALETTE.bg },
+  container: { flex: 1, gap: 0 },
+
+  // Header
+  header: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 12,
+    paddingVertical:   8,
+    borderBottomWidth: 1,
+    borderBottomColor: PALETTE.border,
+    gap:               10,
+  },
+  roomBadge: {
+    borderWidth:       1,
+    borderRadius:      6,
+    paddingHorizontal: 8,
+    paddingVertical:   3,
+  },
+  roomBadgeTxt: { fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+
+  playerStats: { flex: 1, gap: 4 },
+  statRow:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statIcon:    { width: 14, fontSize: 11, textAlign: 'center' },
+  barBg: {
+    flex:            1,
+    height:          6,
+    backgroundColor: '#0D1008',
+    borderRadius:    3,
+    overflow:        'hidden',
+  },
+  barFill:  { height: 6, borderRadius: 3 },
+  statTxt:  { color: PALETTE.textMuted, fontSize: 10, width: 40, textAlign: 'right' },
+
+  fragBox:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  fragIcon:  { color: PALETTE.fragment, fontSize: 13 },
+  fragCount: { color: PALETTE.textPrimary, fontSize: 14, fontWeight: 'bold' },
+
+  pauseBtn: {
+    width:           32,
+    height:          32,
+    alignItems:      'center',
+    justifyContent:  'center',
+    borderWidth:     1,
+    borderColor:     PALETTE.borderLight,
+    borderRadius:    8,
+    backgroundColor: PALETTE.bgDark,
+  },
+  pauseIcon: { fontSize: 14, color: PALETTE.textMuted },
+
+  // Bande secondaire
+  secondRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 12,
+    paddingVertical:   5,
+    borderBottomWidth: 1,
+    borderBottomColor: PALETTE.border,
+    gap:               8,
+  },
+  secStat: { color: PALETTE.textMuted, fontSize: 12 },
+  turnBadge: {
+    flex:              1,
+    alignItems:        'center',
+    justifyContent:    'center',
+    borderWidth:       1,
+    borderRadius:      6,
+    paddingVertical:   3,
+    paddingHorizontal: 8,
+  },
+  turnTxt:    { fontSize: 12, fontWeight: 'bold', letterSpacing: 1 },
+  enemyCount: { color: PALETTE.upgradeRed, fontSize: 11 },
+
+  // Statuts
+  statusRow:   { flexDirection: 'row', gap: 3 },
+  statusBadge: {
+    width:  20,
+    height: 20,
+    alignItems:     'center',
+    justifyContent: 'center',
+    borderRadius:   4,
+    backgroundColor: PALETTE.bgDark,
+    borderWidth:    1,
+    borderColor:    PALETTE.border,
+  },
+  statusIcon: { fontSize: 10 },
+
+  // Corps
+  body:        { flex: 1 },
+  gridWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 8 },
+
+  // Upgrades
+  upgradesBar: {
+    flexDirection:     'row',
+    flexWrap:          'wrap',
+    gap:               4,
+    paddingHorizontal: 12,
+    paddingVertical:   6,
+    borderTopWidth:    1,
+    borderTopColor:    PALETTE.border,
+  },
+  upgradeDot: {
+    width:        10,
+    height:       10,
+    borderRadius: 5,
+  },
+});
