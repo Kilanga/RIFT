@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useGameStore from '../store/gameStore';
 import { GAME_PHASES, PALETTE, ROOM_TYPES, CLASS_INFO } from '../constants';
@@ -27,8 +27,11 @@ export default function GameScreen() {
   const isPlayerTurn   = useGameStore(s => s.isPlayerTurn);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const bossIntroType  = useGameStore(s => s.bossIntroType);
+  const blinkUsed      = useGameStore(s => s.blinkUsed);
+  const useBlink       = useGameStore(s => s.useBlink);
 
   const [paused, setPaused] = useState(false);
+  const [showUpgrades, setShowUpgrades] = useState(false);
 
   const aliveEnemies = enemies.filter(e => e.hp > 0);
   const isCombat     = phase === GAME_PHASES.COMBAT;
@@ -114,6 +117,25 @@ export default function GameScreen() {
           {aliveEnemies.length > 0 && (
             <Text style={styles.enemyCount}>☠ {aliveEnemies.length}</Text>
           )}
+
+          {/* Bouton Upgrades */}
+          {activeUpgrades.length > 0 && (
+            <TouchableOpacity style={styles.upgradesBtn} onPress={() => setShowUpgrades(true)} activeOpacity={0.7}>
+              <Text style={styles.upgradesBtnTxt}>UPGRADES ({activeUpgrades.length})</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Bouton Clignotement */}
+          {activeUpgrades.some(u => u.id === 'blink') && (
+            <TouchableOpacity
+              style={[styles.blinkBtn, blinkUsed && styles.blinkBtnUsed]}
+              onPress={useBlink}
+              disabled={blinkUsed}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.blinkBtnTxt, blinkUsed && styles.blinkBtnTxtUsed]}>⚡ BLINK</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Corps principal selon la phase ──────────────────────────── */}
@@ -151,6 +173,27 @@ export default function GameScreen() {
 
         {/* ── Menu pause ──────────────────────────────────────────────── */}
         <PauseModal visible={paused} onResume={() => setPaused(false)} />
+
+        {/* ── Modal upgrades actifs ────────────────────────────────────── */}
+        <Modal visible={showUpgrades} transparent animationType="slide" onRequestClose={() => setShowUpgrades(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setShowUpgrades(false)}>
+            <Pressable style={styles.upgradesSheet} onPress={() => {}}>
+              <Text style={styles.upgradesSheetTitle}>UPGRADES ACTIFS</Text>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {activeUpgrades.map((u, i) => (
+                  <View key={`${u.id}_${i}`} style={[styles.upgradeCard, { borderColor: upgradeHex(u.color) }]}>
+                    <View style={[styles.upgradeCardBar, { backgroundColor: upgradeHex(u.color) }]} />
+                    <View style={styles.upgradeCardBody}>
+                      <Text style={[styles.upgradeCardName, { color: upgradeHex(u.color) }]}>{u.name.toUpperCase()}</Text>
+                      <Text style={styles.upgradeCardDesc}>{u.description}</Text>
+                      {u.synergyActive && <Text style={styles.synergeBadge}>✦ SYNERGIE ACTIVE</Text>}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
       </View>
     </SafeAreaView>
@@ -205,7 +248,7 @@ function StatusIcons({ statuses }) {
 }
 
 function upgradeHex(color) {
-  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
+  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -301,6 +344,66 @@ const styles = StyleSheet.create({
   // Corps
   body:        { flex: 1 },
   gridWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 8 },
+
+  // Boutons actions (secondRow)
+  upgradesBtn: {
+    borderWidth:       1,
+    borderColor:       PALETTE.borderLight,
+    borderRadius:      6,
+    paddingHorizontal: 6,
+    paddingVertical:   3,
+    backgroundColor:   PALETTE.bgDark,
+  },
+  upgradesBtnTxt: { color: PALETTE.textMuted, fontSize: 9, fontWeight: 'bold', letterSpacing: 1 },
+
+  blinkBtn: {
+    borderWidth:       1,
+    borderColor:       '#4488FF',
+    borderRadius:      6,
+    paddingHorizontal: 6,
+    paddingVertical:   3,
+    backgroundColor:   '#0A0A25',
+  },
+  blinkBtnUsed:    { borderColor: PALETTE.border, backgroundColor: PALETTE.bgDark },
+  blinkBtnTxt:     { color: '#4488FF', fontSize: 9, fontWeight: 'bold', letterSpacing: 1 },
+  blinkBtnTxtUsed: { color: PALETTE.textDim },
+
+  // Modal upgrades
+  modalOverlay: {
+    flex:            1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent:  'flex-end',
+  },
+  upgradesSheet: {
+    backgroundColor: PALETTE.bgCard,
+    borderTopWidth:  1,
+    borderTopColor:  PALETTE.border,
+    borderTopLeftRadius:  14,
+    borderTopRightRadius: 14,
+    padding:         16,
+    maxHeight:       '60%',
+    gap:             12,
+  },
+  upgradesSheetTitle: {
+    color:         PALETTE.textPrimary,
+    fontSize:      13,
+    fontWeight:    'bold',
+    letterSpacing: 3,
+    textAlign:     'center',
+  },
+  upgradeCard: {
+    flexDirection:   'row',
+    borderWidth:     1,
+    borderRadius:    8,
+    marginBottom:    8,
+    backgroundColor: PALETTE.bgDark,
+    overflow:        'hidden',
+  },
+  upgradeCardBar:  { width: 4, backgroundColor: '#fff' },
+  upgradeCardBody: { flex: 1, padding: 10, gap: 3 },
+  upgradeCardName: { fontSize: 12, fontWeight: 'bold', letterSpacing: 1 },
+  upgradeCardDesc: { color: PALETTE.textMuted, fontSize: 11 },
+  synergeBadge:    { color: '#FFD700', fontSize: 10, fontWeight: 'bold', marginTop: 2 },
 
   // Upgrades
   upgradesBar: {

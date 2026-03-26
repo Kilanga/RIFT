@@ -4,7 +4,7 @@
  */
 
 import { generateRoom } from '../../utils/procGen';
-import { applySynergies, getUpgradeChoices, getUpgradeById } from '../../systems/upgradeSystem';
+import { applySynergies, getUpgradeChoices, getUpgradeById, computePlayerStats } from '../../systems/upgradeSystem';
 import { pickPermanentUpgrades } from '../../utils/metaHelpers';
 import { ROOM_TYPES, GAME_PHASES, ENEMY_TYPES } from '../../constants';
 import { hapticSuccess, hapticMedium } from '../../utils/haptics';
@@ -51,6 +51,17 @@ export const createProgressionSlice = (set, get) => ({
       ? (room.enemies?.[0]?.type || ENEMY_TYPES.BOSS_VOID)
       : null;
 
+    // Fortifié : bouclier automatique au début de chaque salle
+    const hasFortifie = get().activeUpgrades.some(u => u.id === 'fortifie');
+    // Contrat Mortel : commence chaque salle à 60% des PV max
+    const hasContratMortel = get().activeUpgrades.some(u => u.id === 'contrat_mortel');
+    const cappedHp = hasContratMortel
+      ? Math.min(player.hp, Math.floor(player.maxHp * 0.6))
+      : player.hp;
+    const startStatuses = hasFortifie
+      ? [...(player.statuses || []).filter(s => s.id !== 'shield'), { id: 'shield', duration: 1 }]
+      : (player.statuses || []);
+
     set({
       currentRoom:  room,
       enemies:      room.enemies.map((e, i) => ({
@@ -65,7 +76,8 @@ export const createProgressionSlice = (set, get) => ({
       damagePops:   [],
       dyingEnemies: [],
       killsThisTurn: 0,
-      player:       { ...player, x: room.playerStart.x, y: room.playerStart.y },
+      blinkUsed:    false,
+      player:       { ...player, x: room.playerStart.x, y: room.playerStart.y, hp: cappedHp, statuses: startStatuses },
       run:          { ...get().run, turnsInRoom: 0, damageTakenInRoom: 0 },
     });
 
@@ -102,6 +114,16 @@ export const createProgressionSlice = (set, get) => ({
 
     if (activeUpgrades.some(u => u.id === 'regen')) {
       get().healPlayer(1);
+    }
+
+    // Renaissance : soigne jusqu'à 60% des PV max à la fin de chaque salle
+    if (activeUpgrades.some(u => u.id === 'renaissance')) {
+      const { player: p } = get();
+      const target = Math.floor(p.maxHp * 0.6);
+      if (p.hp < target) {
+        get().healPlayer(target - p.hp);
+        get().addLog(`🌿 Renaissance : soigné jusqu'à ${target} PV`);
+      }
     }
 
     const updatedMap = markNodeCleared(roomMap, run.currentNodeId);
@@ -156,7 +178,7 @@ export const createProgressionSlice = (set, get) => ({
         const newAch = checkNewAchievements(
           newMeta,
           { ...state.run, roomsCleared: state.run.roomsCleared + 1 },
-          { hpRatio, upgradeCount, hasSynergy }
+          { hpRatio, upgradeCount, hasSynergy, hpAbs: state.player.hp, usedSecondWind: state.secondWindUsed }
         );
         if (newAch.length > 0) {
           newMeta.achievements = [...(newMeta.achievements || []), ...newAch];
@@ -236,7 +258,7 @@ export const createProgressionSlice = (set, get) => ({
   },
 
   selectUpgrade: (upgradeId) => {
-    const { upgradeChoices, activeUpgrades } = get();
+    const { upgradeChoices, activeUpgrades, playerBase } = get();
     const chosen = upgradeChoices.find(u => u.id === upgradeId);
     if (!chosen) return;
 
@@ -249,11 +271,15 @@ export const createProgressionSlice = (set, get) => ({
       c => synergized.filter(u => u.color === c).length >= 3
     );
 
-    if (chosen.color === 'green' && newUpgrades.some(u => u.id === 'overgrowth')) {
+    // Recalcul des stats joueur avec tous les upgrades (gère stacking + résonance)
+    const newStats = computePlayerStats(playerBase, synergized);
+
+    if (chosen.color === 'green' && synergized.some(u => u.id === 'overgrowth')) {
       get().healPlayer(3);
     }
 
     set(state => {
+      const hpGain = Math.max(0, newStats.maxHp - state.player.maxHp);
       // Achievements upgrade
       const newAch = checkNewAchievements(state.meta, state.run, { upgradeCount, hasSynergy });
       const newMeta = newAch.length > 0
@@ -266,6 +292,13 @@ export const createProgressionSlice = (set, get) => ({
         pendingUpgradeChoice: false,
         phase:                GAME_PHASES.MAP,
         meta:                 newMeta,
+        player: {
+          ...state.player,
+          attack:  newStats.attack,
+          defense: newStats.defense,
+          maxHp:   newStats.maxHp,
+          hp:      Math.min(state.player.hp + hpGain, newStats.maxHp),
+        },
       };
     });
 
@@ -299,18 +332,45 @@ export const createProgressionSlice = (set, get) => ({
     const upgrade = getUpgradeById(item.upgradeId);
     if (!upgrade) return;
 
-    set(state => ({
-      player:         { ...state.player, fragments: state.player.fragments - item.price },
-      activeUpgrades: applySynergies([...state.activeUpgrades, upgrade]),
-      currentRoom: {
-        ...state.currentRoom,
-        shopItems: state.currentRoom.shopItems.map((it, i) =>
-          i === itemIndex ? { ...it, bought: true } : it
-        ),
-      },
-    }));
+    const newUpgrades = applySynergies([...get().activeUpgrades, upgrade]);
+    const newStats    = computePlayerStats(get().playerBase, newUpgrades);
+
+    set(state => {
+      const hpGain = Math.max(0, newStats.maxHp - state.player.maxHp);
+      return {
+        player: {
+          ...state.player,
+          fragments: state.player.fragments - item.price,
+          attack:    newStats.attack,
+          defense:   newStats.defense,
+          maxHp:     newStats.maxHp,
+          hp:        Math.min(state.player.hp + hpGain, newStats.maxHp),
+        },
+        activeUpgrades: newUpgrades,
+        currentRoom: {
+          ...state.currentRoom,
+          shopItems: state.currentRoom.shopItems.map((it, i) =>
+            i === itemIndex ? { ...it, bought: true } : it
+          ),
+        },
+      };
+    });
 
     hapticMedium();
     get().addLog(`🛍️ Acheté : ${upgrade.name}`);
+
+    // Vérifier les succès liés aux upgrades (builder, hoarder, synergy)
+    const upgradeCount = get().activeUpgrades.length;
+    const hasSynergy   = ['red','blue','green'].some(
+      c => get().activeUpgrades.filter(u => u.color === c).length >= 3
+    );
+    const newAch = checkNewAchievements(get().meta, get().run, { upgradeCount, hasSynergy });
+    if (newAch.length > 0) {
+      set(s => ({ meta: { ...s.meta, achievements: [...(s.meta.achievements || []), ...newAch] } }));
+      newAch.forEach(id => {
+        const a = ACHIEVEMENTS_CATALOG.find(x => x.id === id);
+        if (a) get().addLog(`🏅 Succès : ${a.icon} ${a.name}`);
+      });
+    }
   },
 });

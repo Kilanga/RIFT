@@ -8,7 +8,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Polygon, Circle, G, Line } from 'react-native-svg';
+import Svg, { Circle, Line } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PALETTE, PERMANENT_UPGRADES_CATALOG, PLAYER_SHAPES, CLASS_INFO } from '../constants';
 import { Assassin, Arcaniste, Colosse } from '../components/ClassSilhouettes';
@@ -46,7 +46,7 @@ export default function MenuScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchTopScores(10), fetchDailyScores(10)]).then(([top, daily]) => {
+    Promise.all([fetchTopScores(9), fetchDailyScores(9)]).then(([top, daily]) => {
       if (cancelled) return;
       setOnlineScores(top);
       setDailyScores(daily);
@@ -81,7 +81,6 @@ export default function MenuScreen() {
         {/* ── Titre ──────────────────────────────────────────────────────── */}
         <View style={styles.titleBox}>
           <Text style={styles.title}>RIFT</Text>
-          <Text style={styles.tagline}>DUNGEON ROGUELITE · GÉOMÉTRIQUE</Text>
         </View>
 
         {/* ── Dernière run ───────────────────────────────────────────────── */}
@@ -119,11 +118,6 @@ export default function MenuScreen() {
           </View>
         </View>
 
-        {hasMoreUnlocks && (
-          <Text style={styles.deathHint}>
-            ✦ Chaque mort débloque un upgrade permanent
-          </Text>
-        )}
 
         {/* ── Progression permanente ─────────────────────────────────────── */}
         <PermanentProgress upgrades={meta.permanentUpgrades} meta={meta} />
@@ -175,65 +169,39 @@ export default function MenuScreen() {
 // ─── Logo animé ───────────────────────────────────────────────────────────────
 
 function AnimatedLogo({ angle }) {
-  const R   = Math.PI / 180;
-  const cx  = 70;
-  const cy  = 70;
+  const t = (angle * Math.PI) / 180;
 
-  // 3 particules orbitales à rayons et vitesses différents
-  const p = [
-    { r: 62, speed: 1.0,  shape: 'tri',  color: PALETTE.triangle, size: 7  },
-    { r: 50, speed: -1.6, shape: 'circ', color: PALETTE.circle,   size: 5  },
-    { r: 75, speed: 0.6,  shape: 'hex',  color: PALETTE.hexagon,  size: 6  },
-  ].map(p => {
-    const a = (angle * p.speed) * R;
-    return { ...p, x: cx + p.r * Math.cos(a), y: cy + p.r * Math.sin(a) };
-  });
+  // Pulsations légères, déphasées de 120° pour chaque classe
+  const r1 = 18 * (1 + 0.05 * Math.sin(t * 1.8));
+  const r2 = 18 * (1 + 0.05 * Math.sin(t * 1.8 + 2.09));
+  const r3 = 18 * (1 + 0.05 * Math.sin(t * 1.8 + 4.19));
+
+  // Intensité de la fissure (plus lente)
+  const rift = 0.45 + 0.25 * Math.sin(t * 1.2);
 
   return (
     <Svg width={140} height={140} viewBox="0 0 140 140">
-      {/* Cercles de fond */}
-      <Circle cx={cx} cy={cy} r={62} fill="none" stroke="#1A1A3A" strokeWidth={0.8} opacity={0.5} />
-      <Circle cx={cx} cy={cy} r={48} fill="none" stroke="#2A2A5A" strokeWidth={0.8} opacity={0.4} />
-      <Circle cx={cx} cy={cy} r={34} fill="none" stroke="#1E1E40" strokeWidth={0.8} opacity={0.3} />
 
-      {/* Lignes de connexion des orbites */}
-      {p.map((pt, i) => (
-        <Line key={`line_${i}`} x1={cx} y1={cy} x2={pt.x} y2={pt.y}
-          stroke={pt.color} strokeWidth={0.5} opacity={0.2} />
-      ))}
+      {/* Fissure du rift — triangle lumineux en arrière-plan */}
+      <Line x1={70} y1={14} x2={12}  y2={106} stroke="#7722EE" strokeWidth={2}   opacity={rift * 0.85} />
+      <Line x1={70} y1={14} x2={128} y2={106} stroke="#7722EE" strokeWidth={2}   opacity={rift * 0.85} />
+      <Line x1={70} y1={14} x2={70}  y2={106} stroke="#AA44FF" strokeWidth={1}   opacity={rift * 0.45} />
+      <Line x1={12} y1={106} x2={128} y2={106} stroke="#5511CC" strokeWidth={1.5} opacity={rift * 0.6} />
 
-      {/* Triangle principal (statique) */}
-      <Polygon
-        points={`${cx},${cy - 42} ${cx - 36},${cy + 21} ${cx + 36},${cy + 21}`}
-        fill="none"
-        stroke={PALETTE.triangle}
-        strokeWidth={2}
-        opacity={0.6}
-      />
+      {/* Halos colorés derrière chaque silhouette */}
+      <Circle cx={24}  cy={74} r={22} fill={PALETTE.triangle} opacity={0.09} />
+      <Circle cx={70}  cy={74} r={22} fill={PALETTE.circle}   opacity={0.09} />
+      <Circle cx={116} cy={74} r={22} fill={PALETTE.hexagon}  opacity={0.09} />
 
-      {/* Cercle interne */}
-      <Circle cx={cx} cy={cy} r={16} fill="none" stroke={PALETTE.circle} strokeWidth={1.5} opacity={0.5} />
+      {/* Les trois silhouettes des classes */}
+      <Assassin  cx={24}  cy={74} r={r1} color={PALETTE.triangle} />
+      <Arcaniste cx={70}  cy={74} r={r2} color={PALETTE.circle}   />
+      <Colosse   cx={116} cy={74} r={r3} color={PALETTE.hexagon}  />
 
-      {/* Hexagone central */}
-      <Polygon
-        points={hexPts(cx, cy, 9)}
-        fill={PALETTE.hexagon}
-        opacity={0.55}
-      />
+      {/* Sol / base */}
+      <Line x1={4}   y1={106} x2={136} y2={106} stroke="#221144" strokeWidth={1.5} opacity={0.75} />
+      <Line x1={18}  y1={108} x2={122} y2={108} stroke="#7722EE" strokeWidth={0.8} opacity={rift * 0.55} />
 
-      {/* Particules orbitales */}
-      {p.map((pt, i) => (
-        <G key={`part_${i}`}>
-          {pt.shape === 'tri'  && <Polygon points={miniTri(pt.x, pt.y, pt.size)} fill={pt.color} />}
-          {pt.shape === 'circ' && <Circle cx={pt.x} cy={pt.y} r={pt.size * 0.7} fill={pt.color} />}
-          {pt.shape === 'hex'  && <Polygon points={hexPts(pt.x, pt.y, pt.size * 0.7)} fill={pt.color} />}
-        </G>
-      ))}
-
-      {/* Points aux sommets du triangle */}
-      <Circle cx={cx}        cy={cy - 42} r={2.5} fill={PALETTE.triangle} opacity={0.8} />
-      <Circle cx={cx - 36}   cy={cy + 21} r={2.5} fill={PALETTE.triangle} opacity={0.8} />
-      <Circle cx={cx + 36}   cy={cy + 21} r={2.5} fill={PALETTE.triangle} opacity={0.8} />
     </Svg>
   );
 }
@@ -617,19 +585,6 @@ function AchievementsSection({ unlockedIds }) {
       )}
     </View>
   );
-}
-
-// ─── Helpers géométriques ─────────────────────────────────────────────────────
-
-function hexPts(cx, cy, r) {
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = (Math.PI / 3) * i - Math.PI / 6;
-    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
-  }).join(' ');
-}
-
-function miniTri(cx, cy, r) {
-  return `${cx},${cy - r} ${cx - r * 0.866},${cy + r * 0.5} ${cx + r * 0.866},${cy + r * 0.5}`;
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
