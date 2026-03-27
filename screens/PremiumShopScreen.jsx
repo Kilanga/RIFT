@@ -17,7 +17,8 @@ import { PALETTE } from '../constants';
 import { createPaymentIntent, createThemePaymentIntent } from '../services/stripeService';
 import { GRID_THEMES_LIST } from '../utils/cosmeticCatalog';
 
-const PREMIUM_COLOR = '#9966FF';
+const PREMIUM_COLOR  = '#9966FF';
+const PRICE_PREMIUM  = '2,99 €';  // Affiché à titre indicatif — le vrai montant vient de Stripe
 
 const FEATURES = [
   { icon: '👻', titleKey: 'premium.feature_spectre_title', descKey: 'premium.feature_spectre_desc' },
@@ -125,7 +126,7 @@ export default function PremiumShopScreen() {
           ) : (
             /* ── Bandeau prix ───────────────────────────────────────────── */
             <View style={styles.priceBox}>
-              <Text style={styles.priceAmount}>{t('premium.price_amount')}</Text>
+              <Text style={styles.priceAmount}>{PRICE_PREMIUM}</Text>
               <Text style={styles.priceSub}>{t('premium.price_sub')}</Text>
             </View>
           )}
@@ -162,7 +163,7 @@ export default function PremiumShopScreen() {
                 ) : (
                   <>
                     <Text style={styles.buyBtnTxt}>{t('premium.unlock_btn')}</Text>
-                    <Text style={styles.buyBtnPrice}>{t('premium.price_amount')}</Text>
+                    <Text style={styles.buyBtnPrice}>{PRICE_PREMIUM}</Text>
                   </>
                 )}
               </TouchableOpacity>
