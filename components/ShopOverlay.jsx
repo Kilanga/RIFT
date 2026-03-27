@@ -94,8 +94,8 @@ function ShopItem({ upgrade, price, bought, canAfford, onBuy }) {
       {/* Infos */}
       <View style={styles.itemBody}>
         <Text style={[styles.itemRarity, { color: PALETTE.textMuted }]}>{rarityTxt}</Text>
-        <Text style={[styles.itemName, { color: bought ? PALETTE.textMuted : color }]}>{upgrade.name}</Text>
-        <Text style={styles.itemDesc} numberOfLines={2}>{upgrade.description}</Text>
+        <Text style={[styles.itemName, { color: bought ? PALETTE.textMuted : color }]}>{t(`upgrade.${upgrade.id}.name`, { defaultValue: upgrade.name })}</Text>
+        <Text style={styles.itemDesc} numberOfLines={2}>{t(`upgrade.${upgrade.id}.desc`, { defaultValue: upgrade.description })}</Text>
       </View>
 
       {/* Prix */}

@@ -120,11 +120,6 @@
     "rarity_curse": "MAUDIT"
   },
 
-  "event": {
-    "tag": "ÉVÉNEMENT",
-    "locked_hint": "Fragments insuffisants ({{count}} requis)"
-  },
-
   "victory": {
     "title": "FERMÉ",
     "title_pre": "LE RIFT EST",
@@ -371,21 +366,25 @@
 
   "class": {
     "triangle": {
+      "name": "Assassin",
       "passive": "Tranchant",
       "passive_desc": "Ignore 50 % de la DEF ennemie à chaque attaque.",
       "playstyle": "Agressif · Dégâts élevés · Fragile"
     },
     "circle": {
+      "name": "Arcaniste",
       "passive": "Onde arcanique",
       "passive_desc": "Chaque attaque frappe toutes les cases adjacentes en même temps (jusqu'à 8 ennemis).",
       "playstyle": "AoE · Contrôle · Polyvalent"
     },
     "hexagon": {
+      "name": "Colosse",
       "passive": "Riposte",
       "passive_desc": "Reçoit 50 % des dégâts. Renvoie 50 % de son ATQ à chaque ennemi qui l'attaque.",
       "playstyle": "Défensif · Survie · Contre-attaque"
     },
     "spectre": {
+      "name": "Spectre",
       "passive": "Éthéré",
       "passive_desc": "Ignore entièrement la défense ennemie. Immune aux pièges (lave, téléporteurs). PV réduits (15 max).",
       "playstyle": "Dégâts purs · Fragile · Premium",
@@ -409,5 +408,148 @@
     "abandon_confirm": "⚠ CONFIRMER L'ABANDON ?",
     "abandon_sub": "Score et kills seront perdus",
     "cancel": "Non, continuer"
+  },
+
+  "modifier": {
+    "standard":       { "name": "Standard",          "desc": "Aucun modificateur. Score normal.",                                                              "difficulty": "Normal" },
+    "pacifist":       { "name": "Non-Violence",       "desc": "Tu ne peux pas attaquer directement — uniquement Cyclone, Vigile et effets indirects.",          "difficulty": "Extrême" },
+    "berserker_mode": { "name": "Berserker",          "desc": "Commence avec 1 PV. Second Souffle désactivé.",                                                  "difficulty": "Extrême" },
+    "no_upgrades":    { "name": "Mains Nues",         "desc": "Aucun upgrade ne peut être sélectionné.",                                                        "difficulty": "Difficile" },
+    "glass_cannon":   { "name": "Canon de Verre",     "desc": "+5 ATQ, mais PV max divisés par 2.",                                                             "difficulty": "Difficile" },
+    "speed_run":      { "name": "Contre-la-Montre",   "desc": "Chaque salle doit être terminée en 5 tours ou moins, sinon -10 PV.",                            "difficulty": "Moyen" },
+    "cursed_run":     { "name": "Run Maudit",         "desc": "Commence avec une malédiction aléatoire.",                                                       "difficulty": "Moyen" },
+    "double_trouble": { "name": "Double Peine",       "desc": "Chaque salle de combat a 1 ennemi supplémentaire.",                                              "difficulty": "Moyen" },
+    "fragile":        { "name": "Fragile",            "desc": "Défense permanentement à 0.",                                                                    "difficulty": "Facile" }
+  },
+
+  "talent": {
+    "tranchant":    { "name": "Lame Acérée",  "desc": "+1 ATQ au départ de chaque run." },
+    "precision":    { "name": "Précision",    "desc": "Chaque run démarre avec 1 stack de Critique gratuit." },
+    "vigueur":      { "name": "Vigueur",      "desc": "+5 PV max au départ de chaque run." },
+    "armure":       { "name": "Armure",       "desc": "+1 DEF au départ de chaque run." },
+    "constitution": { "name": "Constitution", "desc": "+10 PV max au départ de chaque run." },
+    "resilience":   { "name": "Résilience",   "desc": "Soigne 2 PV après chaque salle terminée." },
+    "collecteur":   { "name": "Collecteur",   "desc": "Commence chaque run avec 3 fragments." },
+    "maestro":      { "name": "Maestro",      "desc": "Commence chaque run avec 1 upgrade aléatoire." }
+  },
+
+  "event": {
+    "tag": "ÉVÉNEMENT",
+    "locked_hint": "Fragments insuffisants ({{count}} requis)",
+    "mystery_altar": {
+      "title": "Autel des Sacrifices",
+      "desc":  "Un autel antique, taché de sang séché, attend ton offrande. La magie ici est ancienne et avide.",
+      "choice_sacrifice_hp":   "💔 Sacrifier 5 PV → +2 ATQ",
+      "choice_sacrifice_frag": "◈ Sacrifier 5 fragments → Soigner 12 PV",
+      "choice_ignore":         "↩ Ignorer"
+    },
+    "rift_echo": {
+      "title": "Éclat du Rift",
+      "desc":  "Un fragment de rift flotte dans l'air, vibrant d'une énergie instable. L'absorber pourrait te transformer... ou te briser.",
+      "choice_absorb":  "✨ Absorber (50% : +4 ATQ / 50% : -10 PV)",
+      "choice_channel": "⚡ Canaliser → +1 upgrade (choix libre)",
+      "choice_ignore":  "↩ Ignorer"
+    },
+    "wandering_merchant": {
+      "title": "Marchand Errant",
+      "desc":  "Un marchand poussiéreux surgit de nulle part, son chariot rempli de curiosités douteuses.",
+      "choice_buy_hp":  "◈ Soigner 15 PV (5 fragments)",
+      "choice_buy_atk": "◈ +3 ATQ (8 fragments)",
+      "choice_ignore":  "↩ Partir"
+    },
+    "cursed_fountain": {
+      "title": "Fontaine Maudite",
+      "desc":  "L'eau brille d'une couleur violette inquiétante. Une inscription en langue ancienne dit : « tout don a un prix ».",
+      "choice_drink_full":  "💧 Boire → PV max +8, mais ATQ -1",
+      "choice_drink_power": "⚗ Avaler le fond → ATQ +3, DEF -1",
+      "choice_ignore":      "↩ Ignorer"
+    },
+    "old_library": {
+      "title": "Bibliothèque Oubliée",
+      "desc":  "Des grimoires poussiéreux s'empilent jusqu'au plafond. La sagesse ici a survécu à des âges de silence.",
+      "choice_study":     "📚 Étudier → +80 score, -3 PV",
+      "choice_take_tome": "📖 Empocher un tome → +2 DEF, -4 PV max",
+      "choice_ignore":    "↩ Ignorer"
+    },
+    "wounded_warrior": {
+      "title": "Guerrier Blessé",
+      "desc":  "Un combattant gît contre le mur, à demi conscient. Il tient une relique dans sa main tremblante.",
+      "choice_help":   "🤝 Soigner → +1 upgrade (choix libre)",
+      "choice_take":   "⚔ Prendre la relique → +6 ATQ, -10 PV",
+      "choice_ignore": "↩ Passer son chemin"
+    }
+  },
+
+  "cosmetic": {
+    "default": { "name": "Défaut" },
+    "blood":   { "name": "Sang" },
+    "ice":     { "name": "Glace" },
+    "void":    { "name": "Néant" }
+  },
+
+  "perm_upgrade": {
+    "perm_hp1":      { "name": "+5 PV max",       "desc": "Commence chaque run avec 5 PV supplémentaires.",        "unlock_desc": "Toujours disponible" },
+    "perm_atk1":     { "name": "+1 Attaque",       "desc": "Dégâts de base augmentés de 1.",                       "unlock_desc": "Toujours disponible" },
+    "perm_def1":     { "name": "+1 Défense",       "desc": "Réduit les dégâts reçus de 1 point.",                  "unlock_desc": "Toujours disponible" },
+    "perm_frag1":    { "name": "+3 Fragments",     "desc": "Commence avec 3 fragments pour le shop.",              "unlock_desc": "Toujours disponible" },
+    "perm_hp2":      { "name": "+8 PV max",        "desc": "Robustesse accrue. +8 PV de départ.",                  "unlock_desc": "3 runs joués" },
+    "perm_charge1":  { "name": "+2 Charges max",   "desc": "Capacité de charge augmentée de 2.",                   "unlock_desc": "3 runs joués" },
+    "perm_atk2":     { "name": "+2 Attaque",       "desc": "Dégâts de base augmentés de 2.",                       "unlock_desc": "6 runs joués" },
+    "perm_frag2":    { "name": "+6 Fragments",     "desc": "Commence avec 6 fragments supplémentaires.",           "unlock_desc": "6 runs joués" },
+    "perm_def2":     { "name": "+2 Défense",       "desc": "Armure renforcée. Réduit les dégâts de 2.",            "unlock_desc": "12 runs joués" },
+    "perm_hp3":      { "name": "+12 PV max",       "desc": "Vitalité accrue. +12 PV de base.",                     "unlock_desc": "12 runs joués" },
+    "perm_slayer":   { "name": "Tueur +1 ATK",     "desc": "+1 ATK. L'expérience du combat te forge.",             "unlock_desc": "20 ennemis tués" },
+    "perm_slayer2":  { "name": "+2 ATK",           "desc": "+2 ATK. Le Rift t'a endurci.",                         "unlock_desc": "80 ennemis tués" },
+    "perm_victor":   { "name": "+10 PV",           "desc": "+10 PV max. Récompense de la première victoire.",      "unlock_desc": "Gagner 1 run" },
+    "perm_veteran":  { "name": "+3 ATK",           "desc": "+3 ATK. Maîtrise acquise au fil des victoires.",       "unlock_desc": "Gagner 3 runs" },
+    "perm_pierce":   { "name": "+2 ATK",           "desc": "+2 ATK. Maîtrise du Triangle.",                        "unlock_desc": "Gagner avec le Triangle" },
+    "perm_aura":     { "name": "+6 PV",            "desc": "+6 PV max. Maîtrise du Cercle.",                       "unlock_desc": "Gagner avec le Cercle" },
+    "perm_fortress": { "name": "+2 DEF",           "desc": "+2 DEF. Maîtrise du Hexagone.",                        "unlock_desc": "Gagner avec le Hexagone" },
+    "perm_scorer":   { "name": "+8 Fragments",     "desc": "+8 fragments de départ. Secret du marchand.",          "unlock_desc": "Score de 600" },
+    "perm_master":   { "name": "+4 ATK",           "desc": "+4 ATK. Maître du Rift — victoire avec les 3 formes.", "unlock_desc": "Gagner avec les 3 formes" },
+    "perm_transcend":{ "name": "+20 PV",           "desc": "+20 PV max. La plus haute progression.",               "unlock_desc": "Gagner 8 runs" }
+  },
+
+  "upgrade": {
+    "momentum":       { "name": "Momentum",            "desc": "Chaque déplacement charge une attaque. Charge max → dégâts ×2." },
+    "echo":           { "name": "Écho",                "desc": "Les attaques rebondissent sur l'ennemi le plus proche (60% dégâts)." },
+    "fracture":       { "name": "Fracture",            "desc": "Les ennemis tués explosent → 30% de leurs PV en AoE." },
+    "chain_reaction": { "name": "Réaction en chaîne",  "desc": "Après chaque kill, prochaine attaque +50%." },
+    "overload":       { "name": "Surcharge",           "desc": "+3 Attaque." },
+    "shield_pulse":   { "name": "Impulsion Bouclier",  "desc": "Après avoir subi des dégâts → bouclier pendant 1 tour." },
+    "resonance":      { "name": "Résonance",           "desc": "3 upgrades d'une même couleur → toutes les stats ×2." },
+    "blink":          { "name": "Clignotement",        "desc": "Une fois par salle : téléportation vers une case vide aléatoire." },
+    "absorb":         { "name": "Absorption",          "desc": "+2 Défense." },
+    "phase_shift":    { "name": "Déphasage",           "desc": "Les Blockers t'ignorent pendant 2 tours après un déplacement." },
+    "critique":       { "name": "Frappe Critique",     "desc": "+15% de chance de tripler les dégâts (cumulable)." },
+    "combustion":     { "name": "Combustion",          "desc": "Combo x2+ : inflige 3 dégâts à tous les ennemis adjacents. Cumulable." },
+    "regen":          { "name": "Régénération",        "desc": "+1 PV par salle complétée." },
+    "vitality":       { "name": "Vitalité",            "desc": "+4 PV max." },
+    "leech":          { "name": "Vol de vie",          "desc": "+1 PV par ennemi tué." },
+    "overgrowth":     { "name": "Excroissance",        "desc": "Chaque upgrade vert → +3 PV instantanés." },
+    "thorns":         { "name": "Épines",              "desc": "Renvoie 2 dégâts à chaque attaquant. Cumulable." },
+    "second_wind":    { "name": "Second Souffle",      "desc": "Une fois par run : survie à un coup fatal avec 1 PV." },
+    "regain":         { "name": "Regain",              "desc": "Quand le bouclier absorbe un coup : +2 PV. Cumulable." },
+    "tranchant":      { "name": "Tranchant",           "desc": "Perce 2 pts de défense ennemie par attaque. Cumulable." },
+    "berserker":      { "name": "Berserker",           "desc": "Sous 30% de PV : ATQ doublée." },
+    "cyclone":        { "name": "Cyclone",             "desc": "Chaque attaque frappe aussi les ennemis adjacents pour 50% des dégâts." },
+    "fortifie":       { "name": "Fortifié",            "desc": "Début de chaque salle : bouclier actif automatiquement." },
+    "esquive":        { "name": "Esquive",             "desc": "20% de chance d'esquiver complètement une attaque par stack." },
+    "vigile":         { "name": "Vigile",              "desc": "Fin de chaque tour : inflige 1 dégât aux ennemis adjacents. Cumulable." },
+    "parasitisme":    { "name": "Parasitisme",         "desc": "Lors d'un combo (×2+) : soigne 3 PV. Cumulable." },
+    "resistance":     { "name": "Résistance",          "desc": "Si PV > 50% : dégâts reçus réduits de 35%." },
+    "renaissance":    { "name": "Renaissance",         "desc": "Fin de salle : soigne jusqu'à 60% des PV max." },
+    "pacte_sang":     { "name": "Pacte de Sang",       "desc": "+8 ATQ — mais −8 PV max. Le pouvoir a un prix." },
+    "verre_trempe":   { "name": "Verre Trempé",        "desc": "+5 DEF — mais −4 ATQ. Blindé, mais maladroit." },
+    "soif_sang":      { "name": "Soif de Sang",        "desc": "+5 ATQ — mais perd 1 PV à chaque kill." },
+    "ame_maudite":    { "name": "Âme Maudite",         "desc": "+6 ATQ — mais chaque coup reçu inflige +2 dégâts bonus." },
+    "contrat_mortel": { "name": "Contrat Mortel",      "desc": "+12 PV max — mais commence chaque salle à 60% de tes PV." },
+    "ignition":       { "name": "Ignition",            "desc": "Chaque attaque inflige Brûlure : 3 dégâts/tour pendant 2 tours. Cumulable." },
+    "gelbomb":        { "name": "Gelbomb",             "desc": "Chaque attaque gèle la cible 1 tour (bloque le déplacement)." },
+    "shockwave":      { "name": "Onde de Choc",        "desc": "À chaque kill : étourdit les ennemis adjacents au joueur pendant 1 tour." },
+    "fragilite":      { "name": "Fragilité",           "desc": "☠ MALÉDICTION — −5 PV max et −1 DEF." },
+    "malediction":    { "name": "Malédiction",         "desc": "☠ MALÉDICTION — Chaque déplacement coûte 1 PV." },
+    "fardeau":        { "name": "Fardeau",             "desc": "☠ MALÉDICTION — Chaque attaque ennemie inflige +2 dégâts bonus." },
+    "corruption":     { "name": "Corruption",          "desc": "☠ MALÉDICTION — Perd 1 PV au début de chaque tour ennemi." }
   }
 }

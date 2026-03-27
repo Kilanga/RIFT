@@ -83,9 +83,9 @@ export default function PauseModal({ visible, onResume }) {
                       <View style={[styles.colorDot, { backgroundColor: color }]} />
                       <View style={styles.upgradeTexts}>
                         <Text style={[styles.upgradeName, { color: u.synergyActive ? color : PALETTE.textPrimary }]}>
-                          {u.synergyActive ? '✦ ' : ''}{u.name}
+                          {u.synergyActive ? '✦ ' : ''}{t(`upgrade.${u.id}.name`, { defaultValue: u.name })}
                         </Text>
-                        <Text style={styles.upgradeDesc}>{u.description}</Text>
+                        <Text style={styles.upgradeDesc}>{t(`upgrade.${u.id}.desc`, { defaultValue: u.description })}</Text>
                       </View>
                       {u.synergyActive && (
                         <Text style={[styles.synergyTag, { color }]}>{t('pause.synergy_tag')}</Text>

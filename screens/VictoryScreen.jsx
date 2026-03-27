@@ -92,8 +92,8 @@ export default function VictoryScreen() {
               <View key={u.id} style={styles.unlockRow}>
                 <Text style={styles.unlockIcon}>{u.icon}</Text>
                 <View>
-                  <Text style={styles.unlockName}>{u.name}</Text>
-                  <Text style={styles.unlockDesc}>{u.desc}</Text>
+                  <Text style={styles.unlockName}>{t(`perm_upgrade.${u.id}.name`, { defaultValue: u.name })}</Text>
+                  <Text style={styles.unlockDesc}>{t(`perm_upgrade.${u.id}.desc`, { defaultValue: u.desc })}</Text>
                 </View>
               </View>
             ))}
@@ -244,7 +244,7 @@ function BuildSummary({ upgrades }) {
                 backgroundColor: isSelected ? hex + '22' : 'transparent',
               }]}
             >
-              <Text style={[styles.chipTxt, { color: hex }]}>{u.name}</Text>
+              <Text style={[styles.chipTxt, { color: hex }]}>{t(`upgrade.${u.id}.name`, { defaultValue: u.name })}</Text>
               {u.synergyActive && <Text style={[styles.chipSyn, { color: hex }]}>✦</Text>}
             </TouchableOpacity>
           );
@@ -253,8 +253,8 @@ function BuildSummary({ upgrades }) {
 
       {selected && (
         <View style={[styles.chipDesc, { borderColor: upgradeHex(selected.color) + '66' }]}>
-          <Text style={[styles.chipDescName, { color: upgradeHex(selected.color) }]}>{selected.name}</Text>
-          <Text style={styles.chipDescTxt}>{selected.desc || selected.description || '—'}</Text>
+          <Text style={[styles.chipDescName, { color: upgradeHex(selected.color) }]}>{t(`upgrade.${selected.id}.name`, { defaultValue: selected.name })}</Text>
+          <Text style={styles.chipDescTxt}>{t(`upgrade.${selected.id}.desc`, { defaultValue: selected.desc || selected.description || '—' })}</Text>
         </View>
       )}
     </View>

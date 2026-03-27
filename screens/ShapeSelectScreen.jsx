@@ -110,7 +110,7 @@ export default function ShapeSelectScreen() {
                   </G>
                 </Svg>
                 <Text style={[styles.shapeName, { color: selected === s.id ? s.color : PALETTE.textMuted }]}>
-                  {s.name}
+                  {t(`class.${s.key}.name`, { defaultValue: s.name })}
                 </Text>
                 {isLocked && (
                   <Text style={[styles.shapeRunCount, { color: '#DD8833' }]}>
@@ -138,7 +138,7 @@ export default function ShapeSelectScreen() {
                   <shape.icon cx={30} cy={30} r={16} color={shape.color} />
                 </Svg>
                 <View style={styles.detailTitles}>
-                  <Text style={[styles.detailName, { color: shape.color }]}>{shape.name.toUpperCase()}</Text>
+                  <Text style={[styles.detailName, { color: shape.color }]}>{t(`class.${shape.key}.name`, { defaultValue: shape.name }).toUpperCase()}</Text>
                   <Text style={styles.detailPlaystyle}>{t(`class.${shape.key}.playstyle`)}</Text>
                 </View>
               </View>
@@ -159,7 +159,7 @@ export default function ShapeSelectScreen() {
               {/* Stats de run (si déjà joué avec cette forme) */}
               {shapeStats.runs > 0 && (
                 <View style={styles.runStatsBox}>
-                  <Text style={styles.runStatsTitle}>{t('shape_select.your_stats', { name: shape.name.toUpperCase() })}</Text>
+                  <Text style={styles.runStatsTitle}>{t('shape_select.your_stats', { name: t(`class.${shape.key}.name`, { defaultValue: shape.name }).toUpperCase() })}</Text>
                   <View style={styles.runStatsRow}>
                     <RunStat label={t('shape_select.runs')}       value={shapeStats.runs} />
                     <RunStat label={t('shape_select.wins')}       value={shapeStats.wins} color={PALETTE.charge} />
@@ -170,7 +170,7 @@ export default function ShapeSelectScreen() {
               )}
               {shapeStats.runs === 0 && (
                 <Text style={styles.neverPlayed}>
-                  {t('shape_select.never_played', { name: shape.name })}
+                  {t('shape_select.never_played', { name: t(`class.${shape.key}.name`, { defaultValue: shape.name }) })}
                 </Text>
               )}
 
@@ -186,10 +186,10 @@ export default function ShapeSelectScreen() {
             <View style={[styles.modBtn, styles.modBtnActive, { flexDirection: 'row', gap: 8 }]}>
               <Text style={styles.modIcon}>{dailyMod?.icon}</Text>
               <Text style={[styles.modNameActive]}>
-                {dailyMod?.name}  ×{dailyMod?.scoreMult}
+                {dailyMod ? t(`modifier.${dailyMod.id}.name`, { defaultValue: dailyMod.name }) : ''}  ×{dailyMod?.scoreMult}
               </Text>
             </View>
-            <Text style={styles.modDesc}>{dailyMod?.description}</Text>
+            <Text style={styles.modDesc}>{dailyMod ? t(`modifier.${dailyMod.id}.desc`, { defaultValue: dailyMod.description }) : ''}</Text>
           </View>
         ) : (
           <View style={styles.modSection}>
@@ -207,17 +207,20 @@ export default function ShapeSelectScreen() {
                   >
                     <Text style={styles.modIcon}>{mod.icon}</Text>
                     <Text style={[styles.modName, isActive && styles.modNameActive]}>
-                      {mod.name}{multTxt}
+                      {t(`modifier.${mod.id}.name`, { defaultValue: mod.name })}{multTxt}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-            {selectedMod !== 'standard' && (
-              <Text style={styles.modDesc}>
-                {modChoices.find(m => m.id === selectedMod)?.description}
-              </Text>
-            )}
+            {selectedMod !== 'standard' && (() => {
+              const activeMod = modChoices.find(m => m.id === selectedMod);
+              return activeMod ? (
+                <Text style={styles.modDesc}>
+                  {t(`modifier.${activeMod.id}.desc`, { defaultValue: activeMod.description })}
+                </Text>
+              ) : null;
+            })()}
           </View>
         )}
 
@@ -245,7 +248,7 @@ export default function ShapeSelectScreen() {
           activeOpacity={0.8}
         >
           <Text style={[styles.btnStartTxt, { color: shape?.color }]}>
-            {isDailySelect ? t('shape_select.start_daily', { name: shape?.name.toUpperCase() }) : t('shape_select.start_run', { name: shape?.name.toUpperCase() })}
+            {isDailySelect ? t('shape_select.start_daily', { name: shape ? t(`class.${shape.key}.name`, { defaultValue: shape.name }).toUpperCase() : '' }) : t('shape_select.start_run', { name: shape ? t(`class.${shape.key}.name`, { defaultValue: shape.name }).toUpperCase() : '' })}
           </Text>
           {shapeStats.runs > 0 && shapeStats.wins === 0 && (
             <Text style={[styles.btnStartSub, { color: shape?.color + '88' }]}>

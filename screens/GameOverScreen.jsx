@@ -85,7 +85,7 @@ export default function GameOverScreen() {
           <TouchableOpacity style={styles.btnRetry} onPress={goToShapeSelect} activeOpacity={0.8}>
             <Text style={styles.btnRetryTxt}>{t('game_over.retry')}</Text>
             <Text style={styles.btnRetrySub}>
-              {newUnlock ? t('game_over.retry_sub_unlock', { name: newUnlock.name }) : t('game_over.retry_sub_default')}
+              {newUnlock ? t('game_over.retry_sub_unlock', { name: t(`perm_upgrade.${newUnlock.id}.name`, { defaultValue: newUnlock.name }) }) : t('game_over.retry_sub_default')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnMenu} onPress={goToMenu} activeOpacity={0.8}>
@@ -180,7 +180,7 @@ function UnlockCard({ unlock }) {
       <View style={styles.unlockCard}>
         <Text style={styles.unlockIcon}>{unlock.icon || '✦'}</Text>
         <View style={styles.unlockTexts}>
-          <Text style={styles.unlockName}>{unlock.name}</Text>
+          <Text style={styles.unlockName}>{t(`perm_upgrade.${unlock.id}.name`, { defaultValue: unlock.name })}</Text>
           <Text style={styles.unlockDesc}>{t('game_over.unlock_passive')}</Text>
         </View>
       </View>
@@ -219,8 +219,8 @@ function NewAchievements({ achievements }) {
         <View key={a.id} style={styles.newAchCard}>
           <Text style={styles.newAchIcon}>{a.icon}</Text>
           <View style={styles.newAchTexts}>
-            <Text style={styles.newAchName}>{a.name}</Text>
-            <Text style={styles.newAchDesc}>{a.desc}</Text>
+            <Text style={styles.newAchName}>{t(`achievement.${a.id}_name`, { defaultValue: a.name })}</Text>
+            <Text style={styles.newAchDesc}>{t(`achievement.${a.id}_desc`, { defaultValue: a.desc })}</Text>
           </View>
         </View>
       ))}
@@ -247,15 +247,15 @@ function BuildSummary({ upgrades }) {
               style={[styles.upgradeChip, { borderColor: hex, backgroundColor: isSelected ? hex + '22' : 'transparent' }]}
             >
               <View style={[styles.chipDot, { backgroundColor: hex }]} />
-              <Text style={[styles.chipTxt, { color: hex }]}>{u.name}</Text>
+              <Text style={[styles.chipTxt, { color: hex }]}>{t(`upgrade.${u.id}.name`, { defaultValue: u.name })}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
       {selected && (
         <View style={[styles.chipDesc, { borderColor: upgradeHex(selected.color) + '66' }]}>
-          <Text style={[styles.chipDescName, { color: upgradeHex(selected.color) }]}>{selected.name}</Text>
-          <Text style={styles.chipDescTxt}>{selected.desc || selected.description || '—'}</Text>
+          <Text style={[styles.chipDescName, { color: upgradeHex(selected.color) }]}>{t(`upgrade.${selected.id}.name`, { defaultValue: selected.name })}</Text>
+          <Text style={styles.chipDescTxt}>{t(`upgrade.${selected.id}.desc`, { defaultValue: selected.desc || selected.description || '—' })}</Text>
         </View>
       )}
     </View>

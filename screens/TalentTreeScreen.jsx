@@ -85,7 +85,7 @@ export default function TalentTreeScreen() {
                       <View style={styles.talentInfo}>
                         <View style={styles.talentRow}>
                           <Text style={[styles.talentName, isUnlocked && { color: TALENT_COLOR }]}>
-                            {talent.name}
+                            {t(`talent.${talent.id}.name`, { defaultValue: talent.name })}
                           </Text>
                           {isUnlocked ? (
                             <Text style={styles.unlockedBadge}>{t('talent_tree.unlocked_badge')}</Text>
@@ -96,7 +96,14 @@ export default function TalentTreeScreen() {
                           )}
                         </View>
                         <Text style={[styles.talentDesc, locked && styles.talentDescLocked]}>
-                          {locked ? t('talent_tree.requires', { name: TALENT_CATALOG.find(tal => tal.id === talent.requires)?.name }) : talent.desc}
+                          {locked
+                            ? (() => {
+                                const req = TALENT_CATALOG.find(tal => tal.id === talent.requires);
+                                return t('talent_tree.requires', {
+                                  name: req ? t(`talent.${req.id}.name`, { defaultValue: req.name }) : talent.requires,
+                                });
+                              })()
+                            : t(`talent.${talent.id}.desc`, { defaultValue: talent.desc })}
                         </Text>
                       </View>
                       {canUnlock && (
