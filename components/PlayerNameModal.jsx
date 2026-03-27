@@ -44,7 +44,7 @@ export default function PlayerNameModal({ visible, onDone }) {
             placeholder={t('player_name.placeholder')}
             placeholderTextColor={PALETTE.textDim}
             value={name}
-            onChangeText={val => { setName(val.slice(0, 16)); setError(''); }}
+            onChangeText={val => { setName(val.slice(0, 22)); setError(''); }}
             autoFocus
             returnKeyType="done"
             onSubmitEditing={handleConfirm}

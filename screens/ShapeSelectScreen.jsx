@@ -16,45 +16,36 @@ import { pickModifierChoices, getDailyModifier } from '../utils/modifierCatalog'
 const SHAPES = [
   {
     id:    PLAYER_SHAPES.TRIANGLE,
+    key:   'triangle',
     name:  'Assassin',
     color: PALETTE.triangle,
     icon:  Assassin,
     stats: { atk: 5, def: 1, vit: 3 },
-    passive:     'Tranchant',
-    passiveDesc: 'Ignore 50 % de la DEF ennemie à chaque attaque.',
-    playstyle:   'Agressif · Dégâts élevés · Fragile',
   },
   {
     id:    PLAYER_SHAPES.CIRCLE,
+    key:   'circle',
     name:  'Arcaniste',
     color: PALETTE.circle,
     icon:  Arcaniste,
     stats: { atk: 3, def: 2, vit: 4 },
-    passive:     'Onde arcanique',
-    passiveDesc: 'Chaque attaque frappe toutes les cases adjacentes en même temps (jusqu\'à 8 ennemis).',
-    playstyle:   'AoE · Contrôle · Polyvalent',
   },
   {
     id:    PLAYER_SHAPES.HEXAGON,
+    key:   'hexagon',
     name:  'Colosse',
     color: PALETTE.hexagon,
     icon:  Colosse,
     stats: { atk: 2, def: 5, vit: 2 },
-    passive:     'Riposte',
-    passiveDesc: 'Reçoit 50 % des dégâts. Renvoie 50 % de son ATQ à chaque ennemi qui l\'attaque.',
-    playstyle:   'Défensif · Survie · Contre-attaque',
   },
   {
-    id:    PLAYER_SHAPES.SPECTRE,
-    name:  'Spectre',
-    color: '#CC88FF',
-    icon:  Spectre,
-    stats: { atk: 6, def: 0, vit: 5 },
-    passive:     'Éthéré',
-    passiveDesc: 'Ignore entièrement la défense ennemie. Immune aux pièges (lave, téléporteurs). PV réduits (15 max).',
-    playstyle:   'Dégâts purs · Fragile · Premium',
-    premium:     true,
-    premiumHint: '🔓 Débloque Premium pour accéder à cette classe',
+    id:      PLAYER_SHAPES.SPECTRE,
+    key:     'spectre',
+    name:    'Spectre',
+    color:   '#CC88FF',
+    icon:    Spectre,
+    stats:   { atk: 6, def: 0, vit: 5 },
+    premium: true,
   },
 ];
 
@@ -148,14 +139,14 @@ export default function ShapeSelectScreen() {
                 </Svg>
                 <View style={styles.detailTitles}>
                   <Text style={[styles.detailName, { color: shape.color }]}>{shape.name.toUpperCase()}</Text>
-                  <Text style={styles.detailPlaystyle}>{shape.playstyle}</Text>
+                  <Text style={styles.detailPlaystyle}>{t(`class.${shape.key}.playstyle`)}</Text>
                 </View>
               </View>
 
               {/* Passive */}
               <View style={[styles.passiveBox, { borderColor: shape.color + '55' }]}>
-                <Text style={[styles.passiveTitle, { color: shape.color }]}>● {shape.passive}</Text>
-                <Text style={styles.passiveDesc}>{shape.passiveDesc}</Text>
+                <Text style={[styles.passiveTitle, { color: shape.color }]}>● {t(`class.${shape.key}.passive`)}</Text>
+                <Text style={styles.passiveDesc}>{t(`class.${shape.key}.passive_desc`)}</Text>
               </View>
 
               {/* Stats de combat */}

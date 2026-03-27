@@ -340,7 +340,7 @@
   "player_name": {
     "title": "LEADERBOARD ONLINE",
     "subtitle": "Choisis ton nom de joueur.\nIl apparaîtra dans le classement mondial.",
-    "placeholder": "Ton pseudo (max 16 car.)",
+    "placeholder": "Ton pseudo (max 22 car.)",
     "error_min": "2 caractères minimum",
     "confirm": "✓  CONFIRMER",
     "skip": "Passer (scores locaux seulement)"
@@ -357,7 +357,40 @@
   },
 
   "boss_intro": {
-    "preparing": "Préparation au combat…"
+    "preparing": "Préparation au combat…",
+    "void_name": "L'ÉCHO",
+    "void_subtitle": "Fin de l'Acte I — Mini-boss",
+    "void_warning": "Pattern en spirale · S'enrage à 50 % PV",
+    "pulse_name": "TONNERRE INCARNÉ",
+    "pulse_subtitle": "Fin de l'Acte II — Boss",
+    "pulse_warning": "Attaques en croix · Alterne déplacement et attaque",
+    "rift_name": "LE DÉVOREUR",
+    "rift_subtitle": "Fin de l'Acte III — Boss Final",
+    "rift_warning": "Frappe × 3 en phase finale · Pulse de rift tous les 3 tours · S'accélère à 30 % PV"
+  },
+
+  "class": {
+    "triangle": {
+      "passive": "Tranchant",
+      "passive_desc": "Ignore 50 % de la DEF ennemie à chaque attaque.",
+      "playstyle": "Agressif · Dégâts élevés · Fragile"
+    },
+    "circle": {
+      "passive": "Onde arcanique",
+      "passive_desc": "Chaque attaque frappe toutes les cases adjacentes en même temps (jusqu'à 8 ennemis).",
+      "playstyle": "AoE · Contrôle · Polyvalent"
+    },
+    "hexagon": {
+      "passive": "Riposte",
+      "passive_desc": "Reçoit 50 % des dégâts. Renvoie 50 % de son ATQ à chaque ennemi qui l'attaque.",
+      "playstyle": "Défensif · Survie · Contre-attaque"
+    },
+    "spectre": {
+      "passive": "Éthéré",
+      "passive_desc": "Ignore entièrement la défense ennemie. Immune aux pièges (lave, téléporteurs). PV réduits (15 max).",
+      "playstyle": "Dégâts purs · Fragile · Premium",
+      "premium_hint": "🔓 Débloque Premium pour accéder à cette classe"
+    }
   },
 
   "pause": {

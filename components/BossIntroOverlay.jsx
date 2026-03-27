@@ -11,22 +11,22 @@ import { PALETTE, ENEMY_TYPES } from '../constants';
 
 const BOSS_DATA = {
   [ENEMY_TYPES.BOSS_VOID]: {
-    name:     "L'ÉCHO",
-    subtitle: 'Fin de l\'Acte I — Mini-boss',
-    color:    PALETTE.boss,
-    warning:  'Pattern en spirale · S\'enrage à 50 % PV',
+    nameKey:     'boss_intro.void_name',
+    subtitleKey: 'boss_intro.void_subtitle',
+    warningKey:  'boss_intro.void_warning',
+    color:       PALETTE.boss,
   },
   [ENEMY_TYPES.BOSS_PULSE]: {
-    name:     'TONNERRE INCARNÉ',
-    subtitle: 'Fin de l\'Acte II — Boss',
-    color:    '#FF6644',
-    warning:  'Attaques en croix · Alterne déplacement et attaque',
+    nameKey:     'boss_intro.pulse_name',
+    subtitleKey: 'boss_intro.pulse_subtitle',
+    warningKey:  'boss_intro.pulse_warning',
+    color:       '#FF6644',
   },
   [ENEMY_TYPES.BOSS_RIFT]: {
-    name:     'LE DÉVOREUR',
-    subtitle: 'Fin de l\'Acte III — Boss Final',
-    color:    '#FF2266',
-    warning:  'Frappe × 3 en phase finale · Pulse de rift tous les 3 tours · S\'accélère à 30 % PV',
+    nameKey:     'boss_intro.rift_name',
+    subtitleKey: 'boss_intro.rift_subtitle',
+    warningKey:  'boss_intro.rift_warning',
+    color:       '#FF2266',
   },
 };
 
@@ -86,10 +86,10 @@ export default function BossIntroOverlay({ bossType }) {
       {/* Texte */}
       <View style={styles.textArea}>
         <Text style={[styles.warningLabel, { color: color + 'CC' }]}>⚠  BOSS</Text>
-        <Text style={[styles.bossName, { color }]}>{data.name}</Text>
-        <Text style={styles.bossSubtitle}>{data.subtitle}</Text>
+        <Text style={[styles.bossName, { color }]}>{t(data.nameKey)}</Text>
+        <Text style={styles.bossSubtitle}>{t(data.subtitleKey)}</Text>
         <View style={[styles.warningBox, { borderColor: color + '44' }]}>
-          <Text style={[styles.warningText, { color: color + 'BB' }]}>{data.warning}</Text>
+          <Text style={[styles.warningText, { color: color + 'BB' }]}>{t(data.warningKey)}</Text>
         </View>
       </View>
 

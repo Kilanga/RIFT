@@ -63,7 +63,7 @@ export const createNavigationSlice = (set, get) => ({
   phase:         GAME_PHASES.MENU,
   isDailySelect: false,
 
-  setPlayerName: (name) => set(s => ({ meta: { ...s.meta, playerName: name.trim().slice(0, 16) } })),
+  setPlayerName: (name) => set(s => ({ meta: { ...s.meta, playerName: name.trim().slice(0, 22) } })),
 
   goToShapeSelect:       () => set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: false }),
   goToDailyShapeSelect: () => set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: true }),

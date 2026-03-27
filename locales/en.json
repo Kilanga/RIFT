@@ -340,7 +340,7 @@
   "player_name": {
     "title": "ONLINE LEADERBOARD",
     "subtitle": "Choose your player name.\nIt will appear in the world rankings.",
-    "placeholder": "Your username (max 16 chars)",
+    "placeholder": "Your username (max 22 chars)",
     "error_min": "Minimum 2 characters",
     "confirm": "✓  CONFIRM",
     "skip": "Skip (local scores only)"
@@ -357,7 +357,40 @@
   },
 
   "boss_intro": {
-    "preparing": "Preparing for battle…"
+    "preparing": "Preparing for battle…",
+    "void_name": "THE ECHO",
+    "void_subtitle": "End of Act I — Mini-boss",
+    "void_warning": "Spiral pattern · Enrages at 50% HP",
+    "pulse_name": "THUNDER INCARNATE",
+    "pulse_subtitle": "End of Act II — Boss",
+    "pulse_warning": "Cross attacks · Alternates movement and attack",
+    "rift_name": "THE DEVOURER",
+    "rift_subtitle": "End of Act III — Final Boss",
+    "rift_warning": "Strikes × 3 in final phase · Rift pulse every 3 turns · Speeds up at 30% HP"
+  },
+
+  "class": {
+    "triangle": {
+      "passive": "Sharpened",
+      "passive_desc": "Ignores 50% of enemy DEF on every attack.",
+      "playstyle": "Aggressive · High damage · Fragile"
+    },
+    "circle": {
+      "passive": "Arcane Wave",
+      "passive_desc": "Each attack hits all adjacent cells simultaneously (up to 8 enemies).",
+      "playstyle": "AoE · Control · Versatile"
+    },
+    "hexagon": {
+      "passive": "Riposte",
+      "passive_desc": "Takes 50% of damage. Reflects 50% of ATK to each enemy that attacks.",
+      "playstyle": "Defensive · Survival · Counter-attack"
+    },
+    "spectre": {
+      "passive": "Ethereal",
+      "passive_desc": "Completely ignores enemy defense. Immune to traps (lava, teleporters). Reduced HP (15 max).",
+      "playstyle": "Pure damage · Fragile · Premium",
+      "premium_hint": "🔓 Unlock Premium to access this class"
+    }
   },
 
   "pause": {
