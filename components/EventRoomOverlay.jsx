@@ -5,10 +5,12 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
 
 export default function EventRoomOverlay() {
+  const { t } = useTranslation();
   const currentEvent   = useGameStore(s => s.currentEvent);
   const applyEventChoice = useGameStore(s => s.applyEventChoice);
   const player         = useGameStore(s => s.player);
@@ -19,7 +21,7 @@ export default function EventRoomOverlay() {
     <ScrollView contentContainerStyle={styles.container}>
       {/* En-tête */}
       <View style={styles.header}>
-        <Text style={styles.tag}>ÉVÉNEMENT</Text>
+        <Text style={styles.tag}>{t('event.tag')}</Text>
         <Text style={styles.title}>{currentEvent.title}</Text>
       </View>
 
@@ -44,7 +46,7 @@ export default function EventRoomOverlay() {
               </Text>
               {locked && (
                 <Text style={styles.lockedHint}>
-                  Fragments insuffisants ({choice.requireFragments} requis)
+                  {t('event.locked_hint', { count: choice.requireFragments })}
                 </Text>
               )}
             </TouchableOpacity>

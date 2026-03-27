@@ -9,6 +9,7 @@ import {
   Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
 
@@ -17,6 +18,7 @@ function upgradeHex(color) {
 }
 
 export default function PauseModal({ visible, onResume }) {
+  const { t } = useTranslation();
   const player         = useGameStore(s => s.player);
   const run            = useGameStore(s => s.run);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
@@ -45,18 +47,18 @@ export default function PauseModal({ visible, onResume }) {
 
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>⏸  PAUSE</Text>
-              <Text style={styles.subtitle}>Salle {run.roomsCleared + 1} · Score {run.score}</Text>
+              <Text style={styles.title}>{t('pause.title')}</Text>
+              <Text style={styles.subtitle}>{t('pause.subtitle', { room: run.roomsCleared + 1, score: run.score })}</Text>
             </View>
 
             {/* Stats joueur */}
             <View style={styles.statsBox}>
-              <Text style={styles.sectionLabel}>JOUEUR</Text>
+              <Text style={styles.sectionLabel}>{t('pause.section_player')}</Text>
               <View style={styles.statsRow}>
-                <StatItem icon="❤" label="PV"       value={`${player.hp}/${player.maxHp}`} color={PALETTE.hp} />
-                <StatItem icon="⚔" label="ATQ"      value={player.attack}  color={PALETTE.upgradeRed} />
-                <StatItem icon="🛡" label="DÉF"      value={player.defense} color={PALETTE.upgradeBlue} />
-                <StatItem icon="◈" label="Fragments" value={player.fragments} color={PALETTE.fragment} />
+                <StatItem icon="❤" label={t('pause.stat_hp')}        value={`${player.hp}/${player.maxHp}`} color={PALETTE.hp} />
+                <StatItem icon="⚔" label={t('pause.stat_atk')}       value={player.attack}  color={PALETTE.upgradeRed} />
+                <StatItem icon="🛡" label={t('pause.stat_def')}       value={player.defense} color={PALETTE.upgradeBlue} />
+                <StatItem icon="◈" label={t('pause.stat_fragments')}  value={player.fragments} color={PALETTE.fragment} />
               </View>
             </View>
 
@@ -64,7 +66,9 @@ export default function PauseModal({ visible, onResume }) {
             {activeUpgrades.length > 0 && (
               <View style={styles.upgradesBox}>
                 <Text style={styles.sectionLabel}>
-                  BUILD ACTUEL — {activeUpgrades.length} upgrade{activeUpgrades.length > 1 ? 's' : ''}
+                  {activeUpgrades.length > 1
+                    ? t('pause.build_current_plural', { count: activeUpgrades.length })
+                    : t('pause.build_current', { count: activeUpgrades.length })}
                 </Text>
                 {activeUpgrades.map((u, i) => {
                   const color = upgradeHex(u.color);
@@ -84,7 +88,7 @@ export default function PauseModal({ visible, onResume }) {
                         <Text style={styles.upgradeDesc}>{u.description}</Text>
                       </View>
                       {u.synergyActive && (
-                        <Text style={[styles.synergyTag, { color }]}>SYNERGIE</Text>
+                        <Text style={[styles.synergyTag, { color }]}>{t('pause.synergy_tag')}</Text>
                       )}
                     </View>
                   );
@@ -95,7 +99,7 @@ export default function PauseModal({ visible, onResume }) {
             {/* Boutons */}
             <View style={styles.buttons}>
               <TouchableOpacity style={styles.btnResume} onPress={handleResume} activeOpacity={0.8}>
-                <Text style={styles.btnResumeTxt}>▶  REPRENDRE</Text>
+                <Text style={styles.btnResumeTxt}>{t('pause.resume')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -104,16 +108,16 @@ export default function PauseModal({ visible, onResume }) {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.btnAbandonTxt, confirmAbandon && { color: PALETTE.upgradeRed }]}>
-                  {confirmAbandon ? '⚠ CONFIRMER L\'ABANDON ?' : '✕  ABANDONNER LE RUN'}
+                  {confirmAbandon ? t('pause.abandon_confirm') : t('pause.abandon')}
                 </Text>
                 {confirmAbandon && (
-                  <Text style={styles.btnAbandonSub}>Score et kills seront perdus</Text>
+                  <Text style={styles.btnAbandonSub}>{t('pause.abandon_sub')}</Text>
                 )}
               </TouchableOpacity>
 
               {confirmAbandon && (
                 <TouchableOpacity style={styles.btnCancel} onPress={() => setConfirmAbandon(false)} activeOpacity={0.8}>
-                  <Text style={styles.btnCancelTxt}>Non, continuer</Text>
+                  <Text style={styles.btnCancelTxt}>{t('pause.cancel')}</Text>
                 </TouchableOpacity>
               )}
             </View>

@@ -8,6 +8,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   TextInput, ActivityIndicator, ScrollView,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useGameStore from '../store/gameStore';
 import { PALETTE, PLAYER_SHAPES } from '../constants';
@@ -17,28 +18,16 @@ import {
 } from '../services/multiplayerService';
 
 const MODES = [
-  {
-    id: '1v1',
-    label: '1 VS 1',
-    icon: '⚔',
-    desc: 'Compétitif — même carte, même seed.\nCelui qui termine avec le plus de points gagne.',
-    color: PALETTE.upgradeRed,
-  },
-  {
-    id: 'coop',
-    label: 'CO-OP',
-    icon: '🤝',
-    desc: 'Coopératif — progressez ensemble sur la même carte.\n(Bientôt disponible)',
-    color: PALETTE.upgradeGreen,
-    disabled: true,
-  },
+  { id: '1v1',  icon: '⚔',  color: PALETTE.upgradeRed,   disabled: false },
+  { id: 'coop', icon: '🤝', color: PALETTE.upgradeGreen, disabled: true  },
 ];
 
 export default function MultiplayerScreen() {
+  const { t } = useTranslation();
   const goToMenu   = useGameStore(s => s.goToMenu);
   const startRun   = useGameStore(s => s.startRun);
   const meta       = useGameStore(s => s.meta);
-  const playerName = meta.playerName || 'Joueur';
+  const playerName = meta.playerName || t('multiplayer.player_label').replace(':', '').trim();
 
   const [screen,   setScreen]   = useState('lobby');  // 'lobby' | 'create' | 'join' | 'room'
   const [mode,     setMode]     = useState('1v1');
@@ -74,7 +63,7 @@ export default function MultiplayerScreen() {
         setRoom(updated);
       });
     } catch (e) {
-      setError(e.message || 'Impossible de créer la room');
+      setError(e.message || t('multiplayer.error_create'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +72,7 @@ export default function MultiplayerScreen() {
   // ── Rejoindre une room ──────────────────────────────────────────────────────
 
   const handleJoin = async () => {
-    if (codeInput.length < 4) { setError('Code à 4 caractères'); return; }
+    if (codeInput.length < 4) { setError(t('multiplayer.error_code_length')); return; }
     setLoading(true);
     setError('');
     try {
@@ -99,7 +88,7 @@ export default function MultiplayerScreen() {
         }
       });
     } catch (e) {
-      setError(e.message || 'Impossible de rejoindre la room');
+      setError(e.message || t('multiplayer.error_join'));
     } finally {
       setLoading(false);
     }
@@ -108,13 +97,13 @@ export default function MultiplayerScreen() {
   // ── Démarrer la partie (hôte uniquement) ───────────────────────────────────
 
   const handleStart = async () => {
-    if (!room?.guest_name) { setError('En attente d\'un adversaire…'); return; }
+    if (!room?.guest_name) { setError(t('multiplayer.error_waiting')); return; }
     setLoading(true);
     try {
       await startGame(room.code);
       handleGameStart(room.code, room.seed, 'host');
     } catch (e) {
-      setError(e.message || 'Erreur au démarrage');
+      setError(e.message || t('multiplayer.error_start'));
     } finally {
       setLoading(false);
     }
@@ -152,9 +141,9 @@ export default function MultiplayerScreen() {
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.back}>← Retour</Text>
+            <Text style={styles.back}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>MULTIJOUEUR</Text>
+          <Text style={styles.title}>{t('multiplayer.title')}</Text>
           <View style={{ width: 72 }} />
         </View>
 
@@ -164,7 +153,7 @@ export default function MultiplayerScreen() {
 
             {/* Sélection de mode */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>MODE DE JEU</Text>
+              <Text style={styles.sectionTitle}>{t('multiplayer.mode_section')}</Text>
               <View style={styles.modeRow}>
                 {MODES.map(m => (
                   <TouchableOpacity
@@ -180,10 +169,10 @@ export default function MultiplayerScreen() {
                   >
                     <Text style={styles.modeIcon}>{m.icon}</Text>
                     <Text style={[styles.modeLabel, { color: mode === m.id ? m.color : PALETTE.textMuted }]}>
-                      {m.label}
+                      {t(`multiplayer.mode_${m.id}_label`)}
                     </Text>
-                    <Text style={styles.modeDesc}>{m.desc}</Text>
-                    {m.disabled && <Text style={styles.modeSoon}>BIENTÔT</Text>}
+                    <Text style={styles.modeDesc}>{t(`multiplayer.mode_${m.id}_desc`)}</Text>
+                    {m.disabled && <Text style={styles.modeSoon}>{t('multiplayer.mode_soon')}</Text>}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -191,10 +180,10 @@ export default function MultiplayerScreen() {
 
             {/* Pseudo */}
             <View style={styles.playerInfo}>
-              <Text style={styles.playerLabel}>Joueur :</Text>
+              <Text style={styles.playerLabel}>{t('multiplayer.player_label')}</Text>
               <Text style={[styles.playerName, { color: PALETTE.triangle }]}>{playerName}</Text>
               {!meta.playerName && (
-                <Text style={styles.playerWarning}> (configure ton pseudo dans le menu)</Text>
+                <Text style={styles.playerWarning}> {t('multiplayer.player_warning')}</Text>
               )}
             </View>
 
@@ -205,8 +194,8 @@ export default function MultiplayerScreen() {
                 onPress={() => { clearError(); setScreen('create'); }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.actionBtnTxt, { color: PALETTE.triangle }]}>+ CRÉER</Text>
-                <Text style={styles.actionBtnSub}>Génère un code à partager</Text>
+                <Text style={[styles.actionBtnTxt, { color: PALETTE.triangle }]}>{t('multiplayer.create')}</Text>
+                <Text style={styles.actionBtnSub}>{t('multiplayer.create_sub')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -214,8 +203,8 @@ export default function MultiplayerScreen() {
                 onPress={() => { clearError(); setScreen('join'); }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.actionBtnTxt, { color: PALETTE.upgradeBlue }]}>→ REJOINDRE</Text>
-                <Text style={styles.actionBtnSub}>Entre le code de ton ami</Text>
+                <Text style={[styles.actionBtnTxt, { color: PALETTE.upgradeBlue }]}>{t('multiplayer.join')}</Text>
+                <Text style={styles.actionBtnSub}>{t('multiplayer.join_sub')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -225,11 +214,8 @@ export default function MultiplayerScreen() {
         {/* ── CRÉER ── */}
         {screen === 'create' && (
           <View style={styles.centeredSection}>
-            <Text style={styles.sectionTitle}>CRÉER UNE ROOM — {mode.toUpperCase()}</Text>
-            <Text style={styles.createInfo}>
-              Une room sera créée et un code de 4 lettres sera généré.
-              Partage-le avec un ami pour jouer ensemble.
-            </Text>
+            <Text style={styles.sectionTitle}>{t('multiplayer.create_room_title', { mode: mode.toUpperCase() })}</Text>
+            <Text style={styles.createInfo}>{t('multiplayer.create_room_info')}</Text>
             <TouchableOpacity
               style={[styles.bigBtn, { borderColor: PALETTE.triangle }]}
               onPress={handleCreate}
@@ -238,7 +224,7 @@ export default function MultiplayerScreen() {
             >
               {loading
                 ? <ActivityIndicator color={PALETTE.triangle} />
-                : <Text style={[styles.bigBtnTxt, { color: PALETTE.triangle }]}>CRÉER LA ROOM</Text>
+                : <Text style={[styles.bigBtnTxt, { color: PALETTE.triangle }]}>{t('multiplayer.create_room_btn')}</Text>
               }
             </TouchableOpacity>
             {error ? <Text style={styles.errorTxt}>{error}</Text> : null}
@@ -248,8 +234,8 @@ export default function MultiplayerScreen() {
         {/* ── REJOINDRE ── */}
         {screen === 'join' && (
           <View style={styles.centeredSection}>
-            <Text style={styles.sectionTitle}>REJOINDRE UNE ROOM</Text>
-            <Text style={styles.createInfo}>Saisis le code à 4 lettres de ton ami.</Text>
+            <Text style={styles.sectionTitle}>{t('multiplayer.join_room_title')}</Text>
+            <Text style={styles.createInfo}>{t('multiplayer.join_room_info')}</Text>
             <TextInput
               style={styles.codeInput}
               value={codeInput}
@@ -267,7 +253,7 @@ export default function MultiplayerScreen() {
             >
               {loading
                 ? <ActivityIndicator color={PALETTE.upgradeBlue} />
-                : <Text style={[styles.bigBtnTxt, { color: PALETTE.upgradeBlue }]}>REJOINDRE</Text>
+                : <Text style={[styles.bigBtnTxt, { color: PALETTE.upgradeBlue }]}>{t('multiplayer.join_room_btn')}</Text>
               }
             </TouchableOpacity>
             {error ? <Text style={styles.errorTxt}>{error}</Text> : null}
@@ -280,41 +266,45 @@ export default function MultiplayerScreen() {
 
             {/* Code */}
             <View style={styles.roomCodeBox}>
-              <Text style={styles.roomCodeLabel}>CODE DE LA ROOM</Text>
+              <Text style={styles.roomCodeLabel}>{t('multiplayer.room_code_label')}</Text>
               <Text style={styles.roomCode}>{room.code}</Text>
-              <Text style={styles.roomCodeHint}>Partage ce code avec ton adversaire</Text>
+              <Text style={styles.roomCodeHint}>{t('multiplayer.room_code_hint')}</Text>
             </View>
 
             {/* Joueurs */}
             <View style={styles.playersRow}>
               <PlayerSlot
                 name={room.host_name}
-                label="HÔTE"
+                label={t('multiplayer.host_label')}
                 color={PALETTE.triangle}
                 isYou={role === 'host'}
                 ready={true}
+                youLabel={t('multiplayer.you')}
+                waitingLabel={t('multiplayer.slot_waiting')}
               />
-              <Text style={styles.vsText}>VS</Text>
+              <Text style={styles.vsText}>{t('multiplayer.vs')}</Text>
               <PlayerSlot
                 name={room.guest_name}
-                label="INVITÉ"
+                label={t('multiplayer.guest_label')}
                 color={PALETTE.circle}
                 isYou={role === 'guest'}
                 ready={!!room.guest_name}
+                youLabel={t('multiplayer.you')}
+                waitingLabel={t('multiplayer.slot_waiting')}
               />
             </View>
 
             {/* Infos */}
             <View style={styles.roomInfo}>
-              <Text style={styles.roomInfoItem}>Mode : {room.mode.toUpperCase()}</Text>
-              <Text style={styles.roomInfoItem}>Seed : #{room.seed}</Text>
+              <Text style={styles.roomInfoItem}>{t('multiplayer.room_mode', { mode: room.mode.toUpperCase() })}</Text>
+              <Text style={styles.roomInfoItem}>{t('multiplayer.room_seed', { seed: room.seed })}</Text>
             </View>
 
             {/* Status */}
             {!room.guest_name && (
               <View style={styles.waitingBox}>
                 <ActivityIndicator color={PALETTE.textMuted} size="small" />
-                <Text style={styles.waitingTxt}>En attente d'un adversaire…</Text>
+                <Text style={styles.waitingTxt}>{t('multiplayer.waiting_opponent')}</Text>
               </View>
             )}
 
@@ -328,7 +318,7 @@ export default function MultiplayerScreen() {
               >
                 {loading
                   ? <ActivityIndicator color={PALETTE.triangle} />
-                  : <Text style={styles.startBtnTxt}>▶  LANCER LA PARTIE</Text>
+                  : <Text style={styles.startBtnTxt}>{t('multiplayer.start_game')}</Text>
                 }
               </TouchableOpacity>
             )}
@@ -336,7 +326,7 @@ export default function MultiplayerScreen() {
             {role === 'guest' && room.guest_name && (
               <View style={styles.waitingBox}>
                 <ActivityIndicator color={PALETTE.triangle} size="small" />
-                <Text style={styles.waitingTxt}>En attente que l'hôte lance la partie…</Text>
+                <Text style={styles.waitingTxt}>{t('multiplayer.waiting_host')}</Text>
               </View>
             )}
 
@@ -351,17 +341,17 @@ export default function MultiplayerScreen() {
 
 // ─── Slot joueur ───────────────────────────────────────────────────────────────
 
-function PlayerSlot({ name, label, color, isYou, ready }) {
+function PlayerSlot({ name, label, color, isYou, ready, youLabel, waitingLabel }) {
   return (
     <View style={[styles.playerSlot, ready && { borderColor: color + '55' }]}>
       <Text style={[styles.playerSlotLabel, { color: PALETTE.textDim }]}>{label}</Text>
       {ready ? (
         <>
           <Text style={[styles.playerSlotName, { color }]}>{name}</Text>
-          {isYou && <Text style={styles.playerSlotYou}>(toi)</Text>}
+          {isYou && <Text style={styles.playerSlotYou}>{youLabel || '(toi)'}</Text>}
         </>
       ) : (
-        <Text style={styles.playerSlotEmpty}>En attente…</Text>
+        <Text style={styles.playerSlotEmpty}>{waitingLabel || 'En attente…'}</Text>
       )}
     </View>
   );

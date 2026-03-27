@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
@@ -17,19 +18,20 @@ const ORBIT_INTERVAL = 80;
 function getGrade(score, hp, maxHp, upgradeCount) {
   const hpRatio = maxHp > 0 ? hp / maxHp : 0;
   if (score >= 500 && hpRatio >= 0.6 && upgradeCount >= 5)
-    return { letter: 'S', color: '#FFD700', label: 'LÉGENDAIRE', desc: 'Maîtrise absolue du Rift.' };
+    return { letter: 'S', color: '#FFD700', labelKey: 'victory.grade_s_label', descKey: 'victory.grade_s_desc' };
   if (score >= 360 && hpRatio >= 0.3)
-    return { letter: 'A', color: '#00FF88', label: 'MAÎTRISÉ',   desc: 'Le Rift n\'a aucun secret pour toi.' };
+    return { letter: 'A', color: '#00FF88', labelKey: 'victory.grade_a_label', descKey: 'victory.grade_a_desc' };
   if (score >= 220)
-    return { letter: 'B', color: '#4488FF', label: 'SOLIDE',     desc: 'Une run propre et efficace.' };
+    return { letter: 'B', color: '#4488FF', labelKey: 'victory.grade_b_label', descKey: 'victory.grade_b_desc' };
   if (score >= 120)
-    return { letter: 'C', color: '#AA44FF', label: 'SURVIVANT',  desc: 'Tu t\'en es sorti de justesse.' };
-  return   { letter: 'D', color: '#666688', label: 'CHANCEUX',   desc: 'Le Rift a fermé malgré toi.' };
+    return { letter: 'C', color: '#AA44FF', labelKey: 'victory.grade_c_label', descKey: 'victory.grade_c_desc' };
+  return   { letter: 'D', color: '#666688', labelKey: 'victory.grade_d_label', descKey: 'victory.grade_d_desc' };
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function VictoryScreen() {
+  const { t } = useTranslation();
   const run            = useGameStore(s => s.run);
   const meta           = useGameStore(s => s.meta);
   const player         = useGameStore(s => s.player);
@@ -44,7 +46,8 @@ export default function VictoryScreen() {
   }, []);
 
   const isNewBest = run.score >= meta.bestScore;
-  const grade     = getGrade(run.score, player.hp, player.maxHp, activeUpgrades.length);
+  const gradeRaw  = getGrade(run.score, player.hp, player.maxHp, activeUpgrades.length);
+  const grade     = { ...gradeRaw, label: t(gradeRaw.labelKey), desc: t(gradeRaw.descKey) };
   const killsThisRun = run.killsThisRun || 0;
 
   return (
@@ -59,14 +62,14 @@ export default function VictoryScreen() {
 
         {/* ── Titre ──────────────────────────────────────────────────────── */}
         <View style={styles.titleBox}>
-          <Text style={styles.titlePre}>LE RIFT EST</Text>
-          <Text style={styles.title}>FERMÉ</Text>
-          {isNewBest && <Text style={styles.newBest}>✦ NOUVEAU RECORD ✦</Text>}
+          <Text style={styles.titlePre}>{t('victory.title_pre')}</Text>
+          <Text style={styles.title}>{t('victory.title')}</Text>
+          {isNewBest && <Text style={styles.newBest}>{t('victory.new_record')}</Text>}
         </View>
 
         {/* ── Score ──────────────────────────────────────────────────────── */}
         <View style={styles.scoreBox}>
-          <Text style={styles.scoreLabel}>SCORE FINAL</Text>
+          <Text style={styles.scoreLabel}>{t('victory.score_label')}</Text>
           <Text style={[styles.scoreValue, { color: grade.color }]}>
             {run.score.toLocaleString()}
           </Text>
@@ -74,17 +77,17 @@ export default function VictoryScreen() {
 
         {/* ── Stats ──────────────────────────────────────────────────────── */}
         <View style={styles.statsRow}>
-          <VictoryStat label="Salles"      value={run.roomsCleared} color={PALETTE.textPrimary} />
-          <VictoryStat label="Kills"       value={killsThisRun}     color={PALETTE.upgradeRed} />
-          <VictoryStat label="Upgrades"    value={activeUpgrades.length} color={PALETTE.charge} />
-          <VictoryStat label="PV restants" value={player.hp}        color={PALETTE.hp} />
+          <VictoryStat label={t('victory.stat_rooms')}    value={run.roomsCleared} color={PALETTE.textPrimary} />
+          <VictoryStat label={t('victory.stat_kills')}    value={killsThisRun}     color={PALETTE.upgradeRed} />
+          <VictoryStat label={t('victory.stat_upgrades')} value={activeUpgrades.length} color={PALETTE.charge} />
+          <VictoryStat label={t('victory.stat_hp')}       value={player.hp}        color={PALETTE.hp} />
         </View>
 
         {/* ── Upgrades permanents débloqués (récompense victoire) ─────────── */}
         {meta.lastRunSummary?.newUnlocks?.length > 0 && (
           <View style={styles.unlocksBox}>
-            <Text style={styles.unlocksTitle}>✦ RÉCOMPENSES DE VICTOIRE ✦</Text>
-            <Text style={styles.unlocksHint}>+{meta.lastRunSummary.newUnlocks.length} upgrades permanents débloqués</Text>
+            <Text style={styles.unlocksTitle}>{t('victory.victory_rewards')}</Text>
+            <Text style={styles.unlocksHint}>{t('victory.new_unlocks', { count: meta.lastRunSummary.newUnlocks.length })}</Text>
             {meta.lastRunSummary.newUnlocks.map(u => (
               <View key={u.id} style={styles.unlockRow}>
                 <Text style={styles.unlockIcon}>{u.icon}</Text>
@@ -103,20 +106,20 @@ export default function VictoryScreen() {
         {/* ── Boutons ────────────────────────────────────────────────────── */}
         <View style={styles.buttons}>
           <TouchableOpacity style={styles.btnRetry} onPress={goToShapeSelect} activeOpacity={0.8}>
-            <Text style={styles.btnRetryTxt}>▶  NOUVELLE RUN</Text>
+            <Text style={styles.btnRetryTxt}>{t('victory.new_run')}</Text>
             {grade.letter !== 'S' && (
-              <Text style={styles.btnRetrySub}>Peux-tu atteindre le grade S ?</Text>
+              <Text style={styles.btnRetrySub}>{t('victory.beat_grade_s')}</Text>
             )}
             {grade.letter === 'S' && (
-              <Text style={styles.btnRetrySub}>Bats ton record de {run.score.toLocaleString()} pts</Text>
+              <Text style={styles.btnRetrySub}>{t('victory.beat_record', { score: run.score.toLocaleString() })}</Text>
             )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnMenu} onPress={goToMenu} activeOpacity={0.8}>
-            <Text style={styles.btnMenuTxt}>Menu principal</Text>
+            <Text style={styles.btnMenuTxt}>{t('common.menu')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Run #{meta.totalRuns} · {meta.totalKills} kills au total</Text>
+        <Text style={styles.footer}>{t('victory.run_footer', { run: meta.totalRuns, kills: meta.totalKills })}</Text>
 
       </ScrollView>
     </SafeAreaView>
@@ -191,12 +194,13 @@ function VictoryStat({ label, value, color }) {
 }
 
 function BuildSummary({ upgrades }) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(null);
   if (upgrades.length === 0) return null;
 
   return (
     <View style={styles.buildBox}>
-      <Text style={styles.buildTitle}>BUILD FINAL</Text>
+      <Text style={styles.buildTitle}>{t('victory.build_final')}</Text>
 
       {/* Synergies */}
       <View style={styles.synergiesRow}>
@@ -221,7 +225,7 @@ function BuildSummary({ upgrades }) {
       </View>
       {upgrades.filter(u => u.color === 'curse').length >= 3 && (
         <View style={styles.curseBanner}>
-          <Text style={styles.curseBannerTxt}>☠ PACTE MAUDIT — ×2 À TOUS LES EFFETS</Text>
+          <Text style={styles.curseBannerTxt}>{t('game.curse_synergy')}</Text>
         </View>
       )}
 

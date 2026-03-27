@@ -8,17 +8,19 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
 
 export default function PlayerNameModal({ visible, onDone }) {
+  const { t } = useTranslation();
   const setPlayerName = useGameStore(s => s.setPlayerName);
   const [name, setName]       = useState('');
   const [error, setError]     = useState('');
 
   const handleConfirm = () => {
     const trimmed = name.trim();
-    if (trimmed.length < 2) { setError('2 caractères minimum'); return; }
+    if (trimmed.length < 2) { setError(t('player_name.error_min')); return; }
     setPlayerName(trimmed);
     onDone();
   };
@@ -34,17 +36,15 @@ export default function PlayerNameModal({ visible, onDone }) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.card}>
-          <Text style={styles.title}>LEADERBOARD ONLINE</Text>
-          <Text style={styles.subtitle}>
-            Choisis ton nom de joueur.{'\n'}Il apparaîtra dans le classement mondial.
-          </Text>
+          <Text style={styles.title}>{t('player_name.title')}</Text>
+          <Text style={styles.subtitle}>{t('player_name.subtitle')}</Text>
 
           <TextInput
             style={[styles.input, error ? styles.inputError : null]}
-            placeholder="Ton pseudo (max 16 car.)"
+            placeholder={t('player_name.placeholder')}
             placeholderTextColor={PALETTE.textDim}
             value={name}
-            onChangeText={t => { setName(t.slice(0, 16)); setError(''); }}
+            onChangeText={val => { setName(val.slice(0, 16)); setError(''); }}
             autoFocus
             returnKeyType="done"
             onSubmitEditing={handleConfirm}
@@ -52,11 +52,11 @@ export default function PlayerNameModal({ visible, onDone }) {
           {error ? <Text style={styles.errorTxt}>{error}</Text> : null}
 
           <TouchableOpacity style={styles.btnConfirm} onPress={handleConfirm} activeOpacity={0.8}>
-            <Text style={styles.btnConfirmTxt}>✓  CONFIRMER</Text>
+            <Text style={styles.btnConfirmTxt}>{t('player_name.confirm')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.btnSkip} onPress={handleSkip} activeOpacity={0.8}>
-            <Text style={styles.btnSkipTxt}>Passer (scores locaux seulement)</Text>
+            <Text style={styles.btnSkipTxt}>{t('player_name.skip')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
@@ -58,6 +59,7 @@ const SHAPES = [
 ];
 
 export default function ShapeSelectScreen() {
+  const { t } = useTranslation();
   const [selected, setSelected]         = useState(PLAYER_SHAPES.TRIANGLE);
   const [selectedMod, setSelectedMod]   = useState('standard');
   const [modChoices]                    = useState(() => pickModifierChoices());
@@ -76,7 +78,7 @@ export default function ShapeSelectScreen() {
   const handleSelectShape = (shapeId) => {
     const s = SHAPES.find(sh => sh.id === shapeId);
     if (s?.premium && !meta.isPremium) {
-      Alert.alert('Classe Premium', 'Débloque Premium pour accéder à Spectre.', [{ text: 'OK' }]);
+      Alert.alert(t('shape_select.premium_alert_title'), t('shape_select.premium_alert_msg'), [{ text: t('shape_select.premium_ok') }]);
       return;
     }
     setSelected(shapeId);
@@ -89,9 +91,9 @@ export default function ShapeSelectScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={goToMenu} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.back}>← Retour</Text>
+            <Text style={styles.back}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{isDailySelect ? '☀ DAILY RUN' : 'CHOISIR UNE CLASSE'}</Text>
+          <Text style={styles.title}>{isDailySelect ? t('shape_select.daily_title') : t('shape_select.title')}</Text>
           <View style={{ width: 72 }} />
         </View>
 
@@ -121,12 +123,12 @@ export default function ShapeSelectScreen() {
                 </Text>
                 {isLocked && (
                   <Text style={[styles.shapeRunCount, { color: '#DD8833' }]}>
-                    🔒 Premium
+                    {t('shape_select.premium_locked')}
                   </Text>
                 )}
                 {!isLocked && sStats.runs > 0 && (
                   <Text style={[styles.shapeRunCount, { color: selected === s.id ? s.color + 'AA' : PALETTE.textDim }]}>
-                    {sStats.runs} run{sStats.runs > 1 ? 's' : ''}
+                    {sStats.runs > 1 ? t('shape_select.runs_count_plural', { count: sStats.runs }) : t('shape_select.runs_count', { count: sStats.runs })}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -166,18 +168,18 @@ export default function ShapeSelectScreen() {
               {/* Stats de run (si déjà joué avec cette forme) */}
               {shapeStats.runs > 0 && (
                 <View style={styles.runStatsBox}>
-                  <Text style={styles.runStatsTitle}>TES STATS AVEC {shape.name.toUpperCase()}</Text>
+                  <Text style={styles.runStatsTitle}>{t('shape_select.your_stats', { name: shape.name.toUpperCase() })}</Text>
                   <View style={styles.runStatsRow}>
-                    <RunStat label="Runs"        value={shapeStats.runs} />
-                    <RunStat label="Victoires"   value={shapeStats.wins} color={PALETTE.charge} />
-                    <RunStat label="Winrate"     value={`${Math.round((shapeStats.wins / shapeStats.runs) * 100)}%`} color={shapeStats.wins > 0 ? PALETTE.triangle : PALETTE.textMuted} />
-                    <RunStat label="Best Score"  value={shapeStats.bestScore} color={PALETTE.upgradeRed} />
+                    <RunStat label={t('shape_select.runs')}       value={shapeStats.runs} />
+                    <RunStat label={t('shape_select.wins')}       value={shapeStats.wins} color={PALETTE.charge} />
+                    <RunStat label={t('shape_select.winrate')}    value={`${Math.round((shapeStats.wins / shapeStats.runs) * 100)}%`} color={shapeStats.wins > 0 ? PALETTE.triangle : PALETTE.textMuted} />
+                    <RunStat label={t('shape_select.best_score')} value={shapeStats.bestScore} color={PALETTE.upgradeRed} />
                   </View>
                 </View>
               )}
               {shapeStats.runs === 0 && (
                 <Text style={styles.neverPlayed}>
-                  Tu n'as jamais joué avec {shape.name}. Essaie !
+                  {t('shape_select.never_played', { name: shape.name })}
                 </Text>
               )}
 
@@ -189,7 +191,7 @@ export default function ShapeSelectScreen() {
         {/* Modificateur de run */}
         {isDailySelect ? (
           <View style={styles.modSection}>
-            <Text style={styles.modTitle}>MODIFICATEUR DU JOUR (FORCÉ)</Text>
+            <Text style={styles.modTitle}>{t('shape_select.daily_modifier_forced')}</Text>
             <View style={[styles.modBtn, styles.modBtnActive, { flexDirection: 'row', gap: 8 }]}>
               <Text style={styles.modIcon}>{dailyMod?.icon}</Text>
               <Text style={[styles.modNameActive]}>
@@ -200,7 +202,7 @@ export default function ShapeSelectScreen() {
           </View>
         ) : (
           <View style={styles.modSection}>
-            <Text style={styles.modTitle}>MODIFICATEUR</Text>
+            <Text style={styles.modTitle}>{t('shape_select.modifier_label')}</Text>
             <View style={styles.modRow}>
               {modChoices.map(mod => {
                 const isActive = selectedMod === mod.id;
@@ -238,9 +240,9 @@ export default function ShapeSelectScreen() {
             <Text style={styles.hardcoreIcon}>💀</Text>
             <View style={{ flex: 1 }}>
               <Text style={[styles.hardcoreName, meta.hardcoreMode && styles.hardcoreNameActive]}>
-                MODE HARDCORE{meta.hardcoreMode ? ' (ACTIF)' : ''}
+                {meta.hardcoreMode ? t('shape_select.hardcore_mode_active') : t('shape_select.hardcore_mode')}
               </Text>
-              <Text style={styles.hardcoreDesc}>La mort efface toute la méta-progression</Text>
+              <Text style={styles.hardcoreDesc}>{t('shape_select.hardcore_desc')}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -252,16 +254,18 @@ export default function ShapeSelectScreen() {
           activeOpacity={0.8}
         >
           <Text style={[styles.btnStartTxt, { color: shape?.color }]}>
-            {isDailySelect ? '☀' : '▶'}  {isDailySelect ? 'DAILY AVEC' : 'COMMENCER AVEC'} {shape?.name.toUpperCase()}
+            {isDailySelect ? t('shape_select.start_daily', { name: shape?.name.toUpperCase() }) : t('shape_select.start_run', { name: shape?.name.toUpperCase() })}
           </Text>
           {shapeStats.runs > 0 && shapeStats.wins === 0 && (
             <Text style={[styles.btnStartSub, { color: shape?.color + '88' }]}>
-              Encore jamais gagné avec cette forme — c'est le moment !
+              {t('shape_select.never_won')}
             </Text>
           )}
           {shapeStats.wins > 0 && (
             <Text style={[styles.btnStartSub, { color: shape?.color + '88' }]}>
-              {shapeStats.wins} victoire{shapeStats.wins > 1 ? 's' : ''} · Meilleur : {shapeStats.bestScore} pts
+              {shapeStats.wins > 1
+                ? t('shape_select.wins_best_plural', { wins: shapeStats.wins, best: shapeStats.bestScore })
+                : t('shape_select.wins_best', { wins: shapeStats.wins, best: shapeStats.bestScore })}
             </Text>
           )}
         </TouchableOpacity>

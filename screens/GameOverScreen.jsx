@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, G, Line } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
@@ -13,6 +14,7 @@ import { PALETTE, PERMANENT_UPGRADES_CATALOG } from '../constants';
 const TOTAL_UNLOCKS = PERMANENT_UPGRADES_CATALOG.length;
 
 export default function GameOverScreen() {
+  const { t } = useTranslation();
   const run            = useGameStore(s => s.run);
   const meta           = useGameStore(s => s.meta);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
@@ -36,27 +38,27 @@ export default function GameOverScreen() {
 
         {/* ── Titre + record ─────────────────────────────────────────────── */}
         <View style={styles.titleBox}>
-          <Text style={styles.title}>RIFT EFFONDRÉ</Text>
-          {isNewBest && <Text style={styles.newBest}>★ NOUVEAU RECORD ★</Text>}
+          <Text style={styles.title}>{t('game_over.title')}</Text>
+          {isNewBest && <Text style={styles.newBest}>{t('game_over.new_record')}</Text>}
         </View>
 
         {/* ── Score ──────────────────────────────────────────────────────── */}
         <View style={styles.scoreBox}>
-          <Text style={styles.scoreLabel}>SCORE FINAL</Text>
+          <Text style={styles.scoreLabel}>{t('game_over.score_label')}</Text>
           <Text style={[styles.scoreValue, isNewBest && { color: PALETTE.charge }]}>
             {run.score.toLocaleString()}
           </Text>
           {meta.bestScore > 0 && !isNewBest && (
-            <Text style={styles.prevBest}>Meilleur : {meta.bestScore.toLocaleString()}</Text>
+            <Text style={styles.prevBest}>{t('game_over.prev_best', { score: meta.bestScore.toLocaleString() })}</Text>
           )}
         </View>
 
         {/* ── Stats du run ───────────────────────────────────────────────── */}
         <View style={styles.statsGrid}>
-          <RunStat icon="⚔" label="Salles"    value={run.roomsCleared} />
-          <RunStat icon="☠" label="Kills"     value={killsThisRun} color={PALETTE.upgradeRed} />
-          <RunStat icon="✨" label="Upgrades"  value={activeUpgrades.length} color={PALETTE.charge} />
-          <RunStat icon="◈" label="Étage"     value={run.floor} />
+          <RunStat icon="⚔" label={t('game_over.stat_rooms')}    value={run.roomsCleared} />
+          <RunStat icon="☠" label={t('game_over.stat_kills')}    value={killsThisRun} color={PALETTE.upgradeRed} />
+          <RunStat icon="✨" label={t('game_over.stat_upgrades')} value={activeUpgrades.length} color={PALETTE.charge} />
+          <RunStat icon="◈" label={t('game_over.stat_floor')}    value={run.floor} />
         </View>
 
         {/* ── Progression dans le donjon ─────────────────────────────────── */}
@@ -81,17 +83,17 @@ export default function GameOverScreen() {
         {/* ── Boutons ────────────────────────────────────────────────────── */}
         <View style={styles.buttons}>
           <TouchableOpacity style={styles.btnRetry} onPress={goToShapeSelect} activeOpacity={0.8}>
-            <Text style={styles.btnRetryTxt}>▶  RELEVER LE DÉFI</Text>
+            <Text style={styles.btnRetryTxt}>{t('game_over.retry')}</Text>
             <Text style={styles.btnRetrySub}>
-              {newUnlock ? `Tu commences avec ${newUnlock.name}` : 'Un upgrade t\'attend à ta mort'}
+              {newUnlock ? t('game_over.retry_sub_unlock', { name: newUnlock.name }) : t('game_over.retry_sub_default')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnMenu} onPress={goToMenu} activeOpacity={0.8}>
-            <Text style={styles.btnMenuTxt}>Menu principal</Text>
+            <Text style={styles.btnMenuTxt}>{t('common.menu')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.runCount}>Run #{meta.totalRuns} · {meta.totalKills} kills au total</Text>
+        <Text style={styles.runCount}>{t('game_over.run_count', { run: meta.totalRuns, kills: meta.totalKills })}</Text>
 
       </ScrollView>
     </SafeAreaView>
@@ -125,12 +127,13 @@ function RunStat({ icon, label, value, color }) {
 }
 
 function LayerProgress({ layerReached, total, pct }) {
+  const { t } = useTranslation();
   const getMsg = () => {
-    if (layerReached === 0) return "Tu n'as survécu qu'à la première salle.";
-    if (pct < 0.34) return `Couche ${layerReached}/${total} — Le Rift t'a consumé trop tôt.`;
-    if (pct < 0.67) return `Couche ${layerReached}/${total} — Tu avais trouvé ton rythme.`;
-    if (pct < 1.0)  return `Couche ${layerReached}/${total} — Si proche du bout...`;
-    return `Couche ${layerReached}/${total} — Tu étais au seuil de la fermeture.`;
+    if (layerReached === 0) return t('game_over.layer_msg_zero');
+    if (pct < 0.34) return t('game_over.layer_msg_early', { reached: layerReached, total });
+    if (pct < 0.67) return t('game_over.layer_msg_mid', { reached: layerReached, total });
+    if (pct < 1.0)  return t('game_over.layer_msg_late', { reached: layerReached, total });
+    return t('game_over.layer_msg_end', { reached: layerReached, total });
   };
 
   const barColor = pct < 0.34 ? PALETTE.upgradeRed
@@ -140,9 +143,9 @@ function LayerProgress({ layerReached, total, pct }) {
   return (
     <View style={styles.layerBox}>
       <View style={styles.layerHeader}>
-        <Text style={styles.sectionTitle}>PROGRESSION</Text>
+        <Text style={styles.sectionTitle}>{t('game_over.progression')}</Text>
         <Text style={[styles.layerFraction, { color: barColor }]}>
-          {layerReached}/{total} couches
+          {t('game_over.layers_count', { reached: layerReached, total })}
         </Text>
       </View>
 
@@ -170,14 +173,15 @@ function LayerProgress({ layerReached, total, pct }) {
 }
 
 function UnlockCard({ unlock }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.unlockBox}>
-      <Text style={styles.unlockLabel}>🏆 DÉBLOQUÉ POUR TES PROCHAINS RUNS</Text>
+      <Text style={styles.unlockLabel}>{t('game_over.unlocked_label')}</Text>
       <View style={styles.unlockCard}>
         <Text style={styles.unlockIcon}>{unlock.icon || '✦'}</Text>
         <View style={styles.unlockTexts}>
           <Text style={styles.unlockName}>{unlock.name}</Text>
-          <Text style={styles.unlockDesc}>Passif permanent actif sur tous les futurs runs</Text>
+          <Text style={styles.unlockDesc}>{t('game_over.unlock_passive')}</Text>
         </View>
       </View>
     </View>
@@ -185,29 +189,31 @@ function UnlockCard({ unlock }) {
 }
 
 function NextUnlockHint({ count }) {
-  const next = PERMANENT_UPGRADES_CATALOG[count]; // Aperçu du prochain possible
+  const { t } = useTranslation();
+  const remaining = PERMANENT_UPGRADES_CATALOG.length - count;
   return (
     <View style={styles.nextUnlockBox}>
-      <Text style={styles.nextUnlockTitle}>✦ PROCHAIN UPGRADE PERMANENT DISPONIBLE</Text>
+      <Text style={styles.nextUnlockTitle}>{t('game_over.next_unlock_title')}</Text>
       <View style={styles.nextUnlockCard}>
         <Text style={styles.nextUnlockQuestion}>?</Text>
         <View style={styles.nextUnlockTexts}>
-          <Text style={styles.nextUnlockName}>Upgrade mystère</Text>
+          <Text style={styles.nextUnlockName}>{t('game_over.next_unlock_name')}</Text>
           <Text style={styles.nextUnlockDesc}>
-            {PERMANENT_UPGRADES_CATALOG.length - count} upgrade{PERMANENT_UPGRADES_CATALOG.length - count > 1 ? 's' : ''} encore à découvrir
+            {remaining > 1 ? t('game_over.next_unlock_desc_plural', { count: remaining }) : t('game_over.next_unlock_desc', { count: remaining })}
           </Text>
         </View>
       </View>
-      <Text style={styles.nextUnlockHint}>Rejoue pour le débloquer à ta prochaine mort</Text>
+      <Text style={styles.nextUnlockHint}>{t('game_over.next_unlock_hint')}</Text>
     </View>
   );
 }
 
 function NewAchievements({ achievements }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.newAchBox}>
       <Text style={styles.newAchLabel}>
-        {'🏅 SUCCÈS DÉBLOQUÉ' + (achievements.length > 1 ? 'S' : '')}
+        {achievements.length > 1 ? t('game_over.achievements_label_plural') : t('game_over.achievements_label')}
       </Text>
       {achievements.map(a => (
         <View key={a.id} style={styles.newAchCard}>
@@ -223,11 +229,12 @@ function NewAchievements({ achievements }) {
 }
 
 function BuildSummary({ upgrades }) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(null);
 
   return (
     <View style={styles.runUpgrades}>
-      <Text style={styles.sectionTitle}>BUILD CE RUN</Text>
+      <Text style={styles.sectionTitle}>{t('game_over.build_title')}</Text>
       <View style={styles.upgradesList}>
         {upgrades.map((u, i) => {
           const hex = upgradeHex(u.color);
