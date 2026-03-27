@@ -35,7 +35,7 @@ function randomSeed() {
 
 export async function createRoom(playerName, mode = '1v1') {
   ensureSupabase();
-  const safeName = (playerName || '').trim().slice(0, 16);
+  const safeName = (playerName || '').trim().slice(0, 22);
   if (safeName.length < 2) throw new Error('Pseudo trop court');
   const safeMode = ['1v1', 'coop'].includes(mode) ? mode : '1v1';
 
@@ -61,7 +61,7 @@ export async function createRoom(playerName, mode = '1v1') {
 
 export async function joinRoom(code, playerName) {
   ensureSupabase();
-  const safeName = (playerName || '').trim().slice(0, 16);
+  const safeName = (playerName || '').trim().slice(0, 22);
   if (safeName.length < 2) throw new Error('Pseudo trop court');
   const safeCode = normalizeCode(code);
   if (safeCode.length !== 4) throw new Error('Code invalide');

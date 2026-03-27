@@ -25,7 +25,7 @@ export async function submitScore({ playerName, score, shape, kills, layers, won
   if (!playerName?.trim()) return;
 
   // Clamping défensif — rejette les valeurs impossibles en jeu normal
-  const safeName   = playerName.trim().slice(0, 16);
+  const safeName   = playerName.trim().slice(0, 22);
   const safeScore  = Math.max(0, Math.min(MAX_SCORE,  Math.floor(Number(score)  || 0)));
   const safeKills  = Math.max(0, Math.min(MAX_KILLS,  Math.floor(Number(kills)  || 0)));
   const safeLayers = Math.max(0, Math.min(MAX_LAYERS, Math.floor(Number(layers) || 0)));
