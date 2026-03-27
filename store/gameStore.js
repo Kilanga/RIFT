@@ -31,11 +31,18 @@ export const INITIAL_META = {
   runHistory:        [],   // 5 dernières runs [{score, shape, kills, layers, won, date}]
   localLeaderboard:  [],   // Top 5 scores [{score, shape, kills, layers, won, date}]
   playerName:        '',   // Pseudo online (leaderboard Supabase)
+  talentPoints:      0,    // Points dépensables dans l'arbre de talents
+  unlockedTalents:   [],   // IDs des talents débloqués
   shapeStats: {
     triangle: { runs: 0, bestScore: 0, wins: 0 },
     circle:   { runs: 0, bestScore: 0, wins: 0 },
     hexagon:  { runs: 0, bestScore: 0, wins: 0 },
   },
+  isPremium:         false,     // Accès au contenu premium (Spectre, Hardcore, thème)
+  hardcoreMode:      false,     // La mort réinitialise toute la méta-progression
+  premiumTheme:      'default', // 'default' ou 'neon' (thème alternatif)
+  gridTheme:         'default', // Thème cosmétique actif du plateau de jeu
+  purchasedThemes:   [],        // Thèmes achetés individuellement
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -70,6 +77,13 @@ const useGameStore = create(
             runHistory:       persisted.meta?.runHistory       || [],
             localLeaderboard: persisted.meta?.localLeaderboard || [],
             playerName:       persisted.meta?.playerName       || '',
+            talentPoints:     persisted.meta?.talentPoints     ?? 0,
+            unlockedTalents:  persisted.meta?.unlockedTalents  || [],
+            isPremium:        persisted.meta?.isPremium         ?? false,
+            hardcoreMode:     persisted.meta?.hardcoreMode      ?? false,
+            premiumTheme:     persisted.meta?.premiumTheme      ?? 'default',
+            gridTheme:        persisted.meta?.gridTheme         ?? 'default',
+            purchasedThemes:  persisted.meta?.purchasedThemes   || [],
           },
         }),
       }

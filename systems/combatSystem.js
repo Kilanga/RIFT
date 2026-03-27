@@ -11,28 +11,90 @@ const BLOCKER_MOVE_P  = 0.25;
 // ─── Point d'entrée ───────────────────────────────────────────────────────────
 
 /**
- * Calcule l'action d'un ennemi pour son tour
- * @returns {{ moved, newX, newY, playerDamage, logs, turnCountUpdate? }}
+ * Applique les statuts actifs d'un ennemi et retourne les effets résolus.
+ * Appelé AVANT le traitement de l'action de l'ennemi.
+ * @returns {{ skipTurn, skipMovement, dotDamage, updatedStatuses }}
  */
-export function processEnemyTurn(enemyId, state) {
+export function resolveEnemyStatuses(enemy) {
+  let skipTurn      = false;
+  let skipMovement  = false;
+  let dotDamage     = 0;
+  const updatedStatuses = [];
+
+  for (const s of (enemy.statuses || [])) {
+    const remaining = { ...s, duration: s.duration - 1 };
+
+    switch (s.id) {
+      case 'burn':
+        dotDamage += s.value || 2;
+        break;
+      case 'freeze':
+        skipMovement = true;
+        break;
+      case 'stun':
+        skipTurn = true;
+        break;
+      case 'vulnerable':
+        // Consommé dans calculateDamage — juste décrémenter
+        break;
+      default:
+        break;
+    }
+
+    if (remaining.duration > 0) updatedStatuses.push(remaining);
+  }
+
+  return { skipTurn, skipMovement, dotDamage, updatedStatuses };
+}
+
+/**
+ * Fusionne un nouveau statut dans la liste existante.
+ * Si le statut existe déjà : refresh la durée (max des deux), additionne la valeur pour burn.
+ */
+export function mergeEnemyStatus(statuses, newStatus) {
+  const existing = statuses.find(s => s.id === newStatus.id);
+  if (!existing) return [...statuses, { ...newStatus }];
+  return statuses.map(s =>
+    s.id === newStatus.id
+      ? { ...s, duration: Math.max(s.duration, newStatus.duration), value: (s.value || 0) + (newStatus.value || 0) }
+      : s
+  );
+}
+
+/**
+ * Calcule l'action d'un ennemi pour son tour
+ * @returns {{ moved, newX, newY, playerDamage, logs, turnCountUpdate?, healActions?, summon? }}
+ */
+export function processEnemyTurn(enemyId, state, skipMovement = false) {
   const { enemies, player, currentRoom } = state;
   const enemy = enemies.find(e => e.id === enemyId);
   if (!enemy || enemy.hp <= 0 || !currentRoom) return noAction();
 
   switch (enemy.behavior) {
-    case 'chase':      return processChaserTurn(enemy, player, enemies, currentRoom);
+    case 'chase':      return processChaserTurn(enemy, player, enemies, currentRoom, skipMovement);
     case 'shoot':      return processShooterTurn(enemy, player, enemies, currentRoom);
     case 'block':      return processBlockerTurn(enemy, player, enemies, currentRoom);
     case 'boss_void':  return processBossVoidTurn(enemy, player, enemies, currentRoom);
     case 'boss_pulse': return processBossPulseTurn(enemy, player, enemies, currentRoom);
     case 'boss_rift':  return processBossRiftTurn(enemy, player, enemies, currentRoom);
+    case 'heal':       return processHealerTurn(enemy, player, enemies, currentRoom);
+    case 'explode':    return processChaserTurn(enemy, player, enemies, currentRoom, skipMovement); // même IA que chaser
+    case 'summon':     return processSummonerTurn(enemy, player, enemies, currentRoom);
     default:           return noAction();
   }
 }
 
 // ─── Comportements ────────────────────────────────────────────────────────────
 
-function processChaserTurn(enemy, player, enemies, room) {
+function processChaserTurn(enemy, player, enemies, room, skipMovement = false) {
+  // Gelé : peut encore frapper au corps à corps, mais ne peut pas se déplacer
+  if (skipMovement) {
+    if (manhattanDist(enemy, player) === 1) {
+      return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: enemy.attack, logs: [`${enemy.type} frappe !`] };
+    }
+    return noAction();
+  }
+
   const path = findPathGreedy(enemy, player, enemies, room);
   if (!path || path.length === 0) return noAction();
 
@@ -185,6 +247,60 @@ function processBossRiftTurn(enemy, player, enemies, room) {
   }
 
   return { ...noAction(), turnCountUpdate: turn };
+}
+
+// ─── Nouveaux comportements ennemis ───────────────────────────────────────────
+
+function processHealerTurn(enemy, player, enemies, room) {
+  // Soigne les alliés adjacents de 2 PV, puis fuit le joueur
+  const adjAllies = enemies.filter(e =>
+    e.id !== enemy.id && e.hp > 0 && e.hp < e.maxHp &&
+    Math.abs(e.x - enemy.x) + Math.abs(e.y - enemy.y) === 1
+  );
+  const healActions = adjAllies.map(e => ({ id: e.id, amount: 2 }));
+
+  // Fuite : s'éloigne du joueur
+  const retreat = findRetreat(enemy, player, enemies, room);
+  if (retreat) {
+    return { moved: true, newX: retreat.x, newY: retreat.y, playerDamage: 0,
+             logs: healActions.length > 0 ? [`💚 Guérisseur soigne !`] : [], healActions };
+  }
+  return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: 0, logs: [], healActions };
+}
+
+function processSummonerTurn(enemy, player, enemies, room) {
+  const turn = (enemy.turnCount || 0) + 1;
+  const summonCount = enemy.summonCount || 0;
+
+  // Invoque un Chasseur tous les 3 tours si moins de 2 invocations actives
+  if (turn % 3 === 0 && summonCount < 2) {
+    // Cherche une case libre adjacente
+    const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+    let spawnPos = null;
+    for (const d of dirs) {
+      const nx = enemy.x + d.x, ny = enemy.y + d.y;
+      if (nx >= 0 && ny >= 0 && nx < room.width && ny < room.height &&
+          room.grid[ny]?.[nx] !== 'wall' && isCellFree(nx, ny, enemies, room)) {
+        spawnPos = { x: nx, y: ny };
+        break;
+      }
+    }
+    if (spawnPos) {
+      return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: 0,
+               logs: [`👹 Invocateur : un Chasseur apparaît !`],
+               summon: true, summonX: spawnPos.x, summonY: spawnPos.y,
+               summonCountUpdate: summonCount + 1, turnCountUpdate: turn };
+    }
+  }
+
+  // Fuite lente
+  const retreat = findRetreat(enemy, player, enemies, room);
+  if (retreat) {
+    return { moved: true, newX: retreat.x, newY: retreat.y, playerDamage: 0,
+             logs: [], turnCountUpdate: turn };
+  }
+  return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: 0,
+           logs: [], turnCountUpdate: turn };
 }
 
 // ─── Pathfinding & utilitaires ────────────────────────────────────────────────

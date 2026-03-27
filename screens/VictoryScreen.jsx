@@ -200,8 +200,9 @@ function BuildSummary({ upgrades }) {
 
       {/* Synergies */}
       <View style={styles.synergiesRow}>
-        {['red', 'blue', 'green'].map(color => {
+        {['red', 'blue', 'green', 'curse'].map(color => {
           const count  = upgrades.filter(u => u.color === color).length;
+          if (color === 'curse' && count === 0) return null;
           const active = count >= 3;
           const hex    = upgradeHex(color);
           return (
@@ -213,11 +214,16 @@ function BuildSummary({ upgrades }) {
               <Text style={[styles.synCount, { color: active ? hex : PALETTE.textMuted }]}>
                 {count}/3
               </Text>
-              {active && <Text style={[styles.synActive, { color: hex }]}>✦</Text>}
+              {active && <Text style={[styles.synActive, { color: hex }]}>{color === 'curse' ? '☠' : '✦'}</Text>}
             </View>
           );
         })}
       </View>
+      {upgrades.filter(u => u.color === 'curse').length >= 3 && (
+        <View style={styles.curseBanner}>
+          <Text style={styles.curseBannerTxt}>☠ PACTE MAUDIT — ×2 À TOUS LES EFFETS</Text>
+        </View>
+      )}
 
       {/* Liste upgrades */}
       <View style={styles.upgradesList}>
@@ -397,6 +403,20 @@ const styles = StyleSheet.create({
   },
   chipTxt: { fontSize: 11 },
   chipSyn: { fontSize: 9 },
+  curseBanner: {
+    backgroundColor: '#2A0044',
+    borderWidth:     1,
+    borderColor:     '#AA44CC',
+    borderRadius:    8,
+    paddingVertical: 7,
+    alignItems:      'center',
+  },
+  curseBannerTxt: {
+    color:         '#CC66FF',
+    fontSize:      11,
+    fontWeight:    'bold',
+    letterSpacing: 2,
+  },
   chipDesc: {
     marginTop:       4,
     backgroundColor: PALETTE.bgDark,

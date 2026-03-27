@@ -35,8 +35,8 @@ export const ALL_UPGRADES = [
   },
   {
     id: 'overload', name: 'Surcharge', color: UPGRADE_COLORS.RED, rarity: 'common', maxStack: 3,
-    description: '+2 Attaque.',
-    effect: { type: 'stat', stat: 'attack', value: 2 },
+    description: '+3 Attaque.',
+    effect: { type: 'stat', stat: 'attack', value: 3 },
     tags: ['stat', 'dégâts'],
   },
 
@@ -61,8 +61,8 @@ export const ALL_UPGRADES = [
   },
   {
     id: 'absorb', name: 'Absorption', color: UPGRADE_COLORS.BLUE, rarity: 'common', maxStack: 3,
-    description: '+1 Défense.',
-    effect: { type: 'stat', stat: 'defense', value: 1 },
+    description: '+2 Défense.',
+    effect: { type: 'stat', stat: 'defense', value: 2 },
     tags: ['stat', 'défense'],
   },
   {
@@ -221,6 +221,26 @@ export const ALL_UPGRADES = [
     tags: ['survie', 'risque', 'malus'],
   },
 
+  // ── Statuts ennemis ───────────────────────────────────────────────────────
+  {
+    id: 'ignition', name: 'Ignition', color: UPGRADE_COLORS.RED, rarity: 'rare', maxStack: 2,
+    description: 'Chaque attaque inflige Brûlure : 3 dégâts/tour pendant 2 tours. Cumulable.',
+    effect: { type: 'passive', trigger: 'onAttack', action: 'applyBurn', value: 3, duration: 2 },
+    tags: ['dégâts', 'statut', 'brûlure'],
+  },
+  {
+    id: 'gelbomb', name: 'Gelbomb', color: UPGRADE_COLORS.BLUE, rarity: 'rare', maxStack: 1,
+    description: 'Chaque attaque gèle la cible 1 tour (bloque le déplacement).',
+    effect: { type: 'passive', trigger: 'onAttack', action: 'applyFreeze', duration: 1 },
+    tags: ['contrôle', 'statut', 'gel'],
+  },
+  {
+    id: 'shockwave', name: 'Onde de Choc', color: UPGRADE_COLORS.RED, rarity: 'epic', maxStack: 1,
+    description: 'À chaque kill : étourdit les ennemis adjacents au joueur pendant 1 tour.',
+    effect: { type: 'passive', trigger: 'onKill', action: 'applyStunAdjacent', duration: 1 },
+    tags: ['contrôle', 'statut', 'stun', 'kill'],
+  },
+
   // ── Malédictions (upgrades négatives pures) ───────────────────────────────
   {
     id: 'fragilite', name: 'Fragilité', color: UPGRADE_COLORS.CURSE, rarity: 'curse', maxStack: 1,
@@ -309,12 +329,15 @@ export function applySynergies(upgrades) {
 export function computePlayerStats(basePlayer, activeUpgrades) {
   let stats = { ...basePlayer };
 
+  // Synnergie malédiction : ×2 à tous les effets si 3 upgrades maudites
+  const curseMult = hasCurseSynergy(activeUpgrades) ? 2 : 1;
+
   activeUpgrades.forEach(u => {
     if (u.effect.type === 'stat') {
       // Support single stat or multi-stat changes array
       const changes = u.effect.changes || [{ stat: u.effect.stat, value: u.effect.value }];
       changes.forEach(({ stat, value }) => {
-        if (stats[stat] !== undefined) stats[stat] += value;
+        if (stats[stat] !== undefined) stats[stat] += value * curseMult;
       });
     }
   });
@@ -342,6 +365,7 @@ export function computePlayerStats(basePlayer, activeUpgrades) {
 export function getUpgradeById(id)             { return UPGRADE_MAP[id] || null; }
 export function hasUpgrade(upgrades, id)       { return upgrades.some(u => u.id === id); }
 export function getUpgradesByColor(upgrades, color) { return upgrades.filter(u => u.color === color); }
+export function hasCurseSynergy(upgrades)      { return upgrades.filter(u => u.color === UPGRADE_COLORS.CURSE).length >= 3; }
 
 /**
  * Résumé des synergies pour l'UI (badge de couleur)

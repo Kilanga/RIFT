@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PALETTE, PERMANENT_UPGRADES_CATALOG, PLAYER_SHAPES, CLASS_INFO } from '../constants';
-import { Assassin, Arcaniste, Colosse } from '../components/ClassSilhouettes';
+import { Assassin, Arcaniste, Colosse, Spectre } from '../components/ClassSilhouettes';
 import { ACHIEVEMENTS_CATALOG } from '../store/achievements';
 import { fetchTopScores, fetchDailyScores } from '../services/leaderboardService';
 import PlayerNameModal from '../components/PlayerNameModal';
@@ -22,12 +22,15 @@ const ORBIT_INTERVAL   = 80; // ms → ~12 fps
 
 
 export default function MenuScreen() {
-  const meta             = useGameStore(s => s.meta);
-  const run              = useGameStore(s => s.run);
-  const goToShapeSelect  = useGameStore(s => s.goToShapeSelect);
-  const startDailyRun    = useGameStore(s => s.startDailyRun);
-  const goToMultiplayer  = useGameStore(s => s.goToMultiplayer);
-  const resumeRun        = useGameStore(s => s.resumeRun);
+  const meta                = useGameStore(s => s.meta);
+  const run                 = useGameStore(s => s.run);
+  const goToShapeSelect     = useGameStore(s => s.goToShapeSelect);
+  const goToDailyShapeSelect = useGameStore(s => s.goToDailyShapeSelect);
+  const goToTalentTree      = useGameStore(s => s.goToTalentTree);
+  const goToPremiumShop     = useGameStore(s => s.goToPremiumShop);
+  const setPremiumTheme     = useGameStore(s => s.setPremiumTheme);
+  const goToMultiplayer     = useGameStore(s => s.goToMultiplayer);
+  const resumeRun           = useGameStore(s => s.resumeRun);
 
   // ── Animation orbitale ───────────────────────────────────────────────────
   const [angle, setAngle] = useState(0);
@@ -62,7 +65,7 @@ export default function MenuScreen() {
 
   const handleDailyRun = () => {
     if (!meta.playerName) { setShowNameModal(true); return; }
-    goToShapeSelect(); // ira vers startDailyRun depuis ShapeSelectScreen
+    goToDailyShapeSelect();
   };
 
   const unlockedCount = meta.permanentUpgrades.length;
@@ -93,31 +96,58 @@ export default function MenuScreen() {
             <Text style={styles.btnResumeSub}>Couche {run.currentLayerIndex} · Score {run.score}</Text>
           </TouchableOpacity>
         )}
-        <View style={styles.buttonsRow}>
-          <TouchableOpacity style={[styles.btnPlay, { flex: 1 }]} onPress={goToShapeSelect} activeOpacity={0.75}>
-            <Text style={styles.btnPlayTxt}>▶  JOUER</Text>
-            {meta.totalRuns > 0 && (
-              <Text style={styles.btnPlaySub}>Run #{meta.totalRuns + 1}</Text>
-            )}
-          </TouchableOpacity>
+        <View style={styles.buttonsCol}>
+          <View style={styles.buttonsRow}>
+            <TouchableOpacity style={[styles.btnPlay, { flex: 1 }]} onPress={goToShapeSelect} activeOpacity={0.75}>
+              <Text style={styles.btnPlayTxt}>▶  JOUER</Text>
+              {meta.totalRuns > 0 && (
+                <Text style={styles.btnPlaySub}>Run #{meta.totalRuns + 1}</Text>
+              )}
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.btnDaily} onPress={handleDailyRun} activeOpacity={0.75}>
-            <Text style={styles.btnDailyIcon}>☀</Text>
-            <Text style={styles.btnDailyTxt}>DAILY</Text>
-            <Text style={styles.btnDailySub}>RUN</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.btnDaily} onPress={handleDailyRun} activeOpacity={0.75}>
+              <Text style={styles.btnDailyIcon}>☀</Text>
+              <Text style={styles.btnDailyTxt}>DAILY</Text>
+              <Text style={styles.btnDailySub}>RUN</Text>
+            </TouchableOpacity>
+          </View>
 
-          <View style={styles.btnRightCol}>
-            <TouchableOpacity style={styles.btnMulti} onPress={goToMultiplayer} activeOpacity={0.75}>
+          <View style={styles.btnBottomRow}>
+            <TouchableOpacity style={[styles.btnMulti, { flex: 1 }]} onPress={goToMultiplayer} activeOpacity={0.75}>
               <Text style={styles.btnMultiTxt}>⚔</Text>
               <Text style={styles.btnMultiLabel}>MULTI</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.btnHelp} onPress={() => setShowTutorial(true)} activeOpacity={0.75}>
+            <TouchableOpacity style={[styles.btnPremium, meta.isPremium && styles.btnPremiumActive, { flex: 1 }]} onPress={goToPremiumShop} activeOpacity={0.75}>
+              <Text style={styles.btnPremiumTxt}>{meta.isPremium ? '★' : '💎'}</Text>
+              <Text style={styles.btnPremiumLabel}>PRO</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btnHelp, { flex: 1 }]} onPress={() => setShowTutorial(true)} activeOpacity={0.75}>
               <Text style={styles.btnHelpTxt}>?</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btnTalents, { flex: 1 }]} onPress={goToTalentTree} activeOpacity={0.75}>
+              <Text style={styles.btnTalentsTxt}>✨</Text>
+              {(meta.talentPoints || 0) > 0 && (
+                <View style={styles.talentBadge}>
+                  <Text style={styles.talentBadgeTxt}>{meta.talentPoints}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
 
+
+        {/* ── Toggle thème néon (premium) ────────────────────────────────── */}
+        {meta.isPremium && (
+          <TouchableOpacity
+            style={styles.themeToggle}
+            onPress={() => setPremiumTheme(meta.premiumTheme === 'neon' ? 'default' : 'neon')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.themeToggleTxt}>
+              {meta.premiumTheme === 'neon' ? '🌌 THÈME NÉON (actif)' : '⬛ THÈME PAR DÉFAUT'}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── Progression permanente ─────────────────────────────────────── */}
         <PermanentProgress upgrades={meta.permanentUpgrades} meta={meta} />
@@ -171,10 +201,11 @@ export default function MenuScreen() {
 function AnimatedLogo({ angle }) {
   const t = (angle * Math.PI) / 180;
 
-  // Pulsations légères, déphasées de 120° pour chaque classe
-  const r1 = 18 * (1 + 0.05 * Math.sin(t * 1.8));
-  const r2 = 18 * (1 + 0.05 * Math.sin(t * 1.8 + 2.09));
-  const r3 = 18 * (1 + 0.05 * Math.sin(t * 1.8 + 4.19));
+  // Pulsations légères, déphasées de 90° pour chaque classe (4 classes)
+  const r1 = 16 * (1 + 0.05 * Math.sin(t * 1.8));
+  const r2 = 16 * (1 + 0.05 * Math.sin(t * 1.8 + 1.57));
+  const r3 = 16 * (1 + 0.05 * Math.sin(t * 1.8 + 3.14));
+  const r4 = 16 * (1 + 0.05 * Math.sin(t * 1.8 + 4.71));
 
   // Intensité de la fissure (plus lente)
   const rift = 0.45 + 0.25 * Math.sin(t * 1.2);
@@ -189,14 +220,16 @@ function AnimatedLogo({ angle }) {
       <Line x1={12} y1={106} x2={128} y2={106} stroke="#5511CC" strokeWidth={1.5} opacity={rift * 0.6} />
 
       {/* Halos colorés derrière chaque silhouette */}
-      <Circle cx={24}  cy={74} r={22} fill={PALETTE.triangle} opacity={0.09} />
-      <Circle cx={70}  cy={74} r={22} fill={PALETTE.circle}   opacity={0.09} />
-      <Circle cx={116} cy={74} r={22} fill={PALETTE.hexagon}  opacity={0.09} />
+      <Circle cx={17}  cy={74} r={17} fill={PALETTE.triangle} opacity={0.09} />
+      <Circle cx={51}  cy={74} r={17} fill={PALETTE.circle}   opacity={0.09} />
+      <Circle cx={89}  cy={74} r={17} fill={PALETTE.hexagon}  opacity={0.09} />
+      <Circle cx={123} cy={74} r={17} fill="#BB44FF"          opacity={0.09} />
 
-      {/* Les trois silhouettes des classes */}
-      <Assassin  cx={24}  cy={74} r={r1} color={PALETTE.triangle} />
-      <Arcaniste cx={70}  cy={74} r={r2} color={PALETTE.circle}   />
-      <Colosse   cx={116} cy={74} r={r3} color={PALETTE.hexagon}  />
+      {/* Les quatre silhouettes des classes */}
+      <Assassin  cx={17}  cy={74} r={r1} color={PALETTE.triangle} />
+      <Arcaniste cx={51}  cy={74} r={r2} color={PALETTE.circle}   />
+      <Colosse   cx={89}  cy={74} r={r3} color={PALETTE.hexagon}  />
+      <Spectre   cx={123} cy={74} r={r4} color="#BB44FF"          />
 
       {/* Sol / base */}
       <Line x1={4}   y1={106} x2={136} y2={106} stroke="#221144" strokeWidth={1.5} opacity={0.75} />
@@ -215,6 +248,7 @@ function ClassSilhouette({ shape, color, size = 44 }) {
   const r  = s * 0.22;
   const Component = shape === PLAYER_SHAPES.TRIANGLE ? Assassin
                   : shape === PLAYER_SHAPES.CIRCLE   ? Arcaniste
+                  : shape === PLAYER_SHAPES.SPECTRE  ? Spectre
                   : Colosse;
   return (
     <Svg width={s} height={s}>
@@ -619,7 +653,9 @@ const styles = StyleSheet.create({
   btnResumeTxt: { color: PALETTE.upgradeGreen, fontSize: 17, fontWeight: 'bold', letterSpacing: 3 },
   btnResumeSub: { color: PALETTE.upgradeGreen + '99', fontSize: 11, letterSpacing: 1 },
 
+  buttonsCol: { width: '100%', gap: 10 },
   buttonsRow: { width: '100%', flexDirection: 'row', gap: 10 },
+  btnBottomRow: { flexDirection: 'row', gap: 8 },
   btnPlay: {
     alignItems:        'center',
     backgroundColor:   '#001A10',
@@ -664,6 +700,20 @@ const styles = StyleSheet.create({
   btnMultiTxt:   { color: PALETTE.circle, fontSize: 14 },
   btnMultiLabel: { color: PALETTE.circle + 'BB', fontSize: 7, fontWeight: 'bold', letterSpacing: 1 },
 
+  btnPremium: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#1A0A00',
+    borderWidth:     1,
+    borderColor:     '#DD8833',
+    borderRadius:    10,
+    width:           46,
+    paddingVertical: 7,
+    gap:             2,
+  },
+  btnPremiumTxt:   { color: '#FFAA44', fontSize: 14 },
+  btnPremiumLabel: { color: '#DD8833', fontSize: 7, fontWeight: 'bold', letterSpacing: 1 },
+
   btnHelp: {
     alignItems:      'center',
     justifyContent:  'center',
@@ -675,6 +725,47 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   btnHelpTxt: { color: PALETTE.textMuted, fontSize: 18, fontWeight: 'bold' },
+
+  btnTalents: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#0D0A1A',
+    borderWidth:     1,
+    borderColor:     '#9966FF',
+    borderRadius:    10,
+    width:           46,
+    paddingVertical: 7,
+  },
+  btnTalentsTxt: { color: '#BB88FF', fontSize: 16 },
+  talentBadge: {
+    position:        'absolute',
+    top:             -4,
+    right:           -4,
+    backgroundColor: '#9966FF',
+    borderRadius:    7,
+    minWidth:        14,
+    height:          14,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 2,
+  },
+  talentBadgeTxt: { color: '#fff', fontSize: 9, fontWeight: 'bold' },
+
+  btnPremiumActive: {
+    borderColor:     '#FFD700',
+    backgroundColor: '#1A1400',
+  },
+
+  themeToggle: {
+    alignSelf:       'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth:     1,
+    borderColor:     '#9966FF66',
+    borderRadius:    10,
+    backgroundColor: '#0D0A1A',
+  },
+  themeToggleTxt: { color: '#BB88FF', fontSize: 11, letterSpacing: 1 },
 
   deathHint: { color: PALETTE.textDim, fontSize: 11, letterSpacing: 1, textAlign: 'center' },
 

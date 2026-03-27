@@ -17,8 +17,9 @@ const RARITY_COLORS = {
   common: PALETTE.textMuted,
   rare:   '#88CCFF',
   epic:   '#FF88FF',
+  curse:  '#CC66FF',
 };
-const RARITY_LABELS = { common: 'COMMUN', rare: 'RARE', epic: 'ÉPIQUE' };
+const RARITY_LABELS = { common: 'COMMUN', rare: 'RARE', epic: 'ÉPIQUE', curse: 'MAUDIT' };
 
 export default function UpgradeModal() {
   const upgradeChoices = useGameStore(s => s.upgradeChoices);
@@ -139,11 +140,15 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
 // ─── Barre de synergies ───────────────────────────────────────────────────────
 
 function SynergyBar({ upgrades, choices }) {
-  const counts = {
-    [UPGRADE_COLORS.RED]:   upgrades.filter(u => u.color === UPGRADE_COLORS.RED).length,
-    [UPGRADE_COLORS.BLUE]:  upgrades.filter(u => u.color === UPGRADE_COLORS.BLUE).length,
-    [UPGRADE_COLORS.GREEN]: upgrades.filter(u => u.color === UPGRADE_COLORS.GREEN).length,
-  };
+  const allColors = [UPGRADE_COLORS.RED, UPGRADE_COLORS.BLUE, UPGRADE_COLORS.GREEN, UPGRADE_COLORS.CURSE];
+  const curseInChoices = choices.some(c => c.color === UPGRADE_COLORS.CURSE);
+  const curseInActive  = upgrades.some(u => u.color === UPGRADE_COLORS.CURSE);
+  const counts = Object.fromEntries(
+    allColors
+      // N'affiche la ligne curse que s'il y en a déjà ou si c'est proposé
+      .filter(c => c !== UPGRADE_COLORS.CURSE || curseInActive || curseInChoices)
+      .map(c => [c, upgrades.filter(u => u.color === c).length])
+  );
 
   return (
     <View style={styles.synergyBar}>
@@ -169,7 +174,7 @@ function SynergyBar({ upgrades, choices }) {
               ))}
             </View>
             <Text style={[styles.synCount, { color: active ? hex : almost ? hex : PALETTE.textMuted }]}>
-              {count}/3{active ? ' ✦' : almost ? ' →' : ''}
+              {count}/3{active ? (color === UPGRADE_COLORS.CURSE ? ' ☠' : ' ✦') : almost ? ' →' : ''}
             </Text>
           </View>
         );
@@ -205,11 +210,11 @@ function wouldActivateSynergy(upgrade, activeUpgrades) {
 }
 
 function upgradeHex(color) {
-  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
+  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
 }
 
 function colorLabel(color) {
-  return { red: 'OFFENSIF', blue: 'UTILITAIRE', green: 'SOUTIEN' }[color] || color;
+  return { red: 'OFFENSIF', blue: 'UTILITAIRE', green: 'SOUTIEN', curse: 'MAUDIT' }[color] || color;
 }
 
 const hexPts = (cx, cy, r) =>

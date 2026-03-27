@@ -4,8 +4,8 @@
  * Orchestre les composants selon la phase en cours
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useGameStore from '../store/gameStore';
 import { GAME_PHASES, PALETTE, ROOM_TYPES, CLASS_INFO } from '../constants';
@@ -15,6 +15,7 @@ import CombatLog            from '../components/CombatLog';
 import UpgradeModal         from '../components/UpgradeModal';
 import RestRoomOverlay      from '../components/RestRoomOverlay';
 import ShopOverlay          from '../components/ShopOverlay';
+import EventRoomOverlay     from '../components/EventRoomOverlay';
 import PauseModal           from '../components/PauseModal';
 import BossIntroOverlay     from '../components/BossIntroOverlay';
 
@@ -29,6 +30,20 @@ export default function GameScreen() {
   const bossIntroType  = useGameStore(s => s.bossIntroType);
   const blinkUsed      = useGameStore(s => s.blinkUsed);
   const useBlink       = useGameStore(s => s.useBlink);
+
+  const lastCritAt = useGameStore(s => s.lastCritAt);
+  const shakeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!lastCritAt) return;
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 9,  duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -9, duration: 40, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6,  duration: 35, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -6, duration: 35, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0,  duration: 30, useNativeDriver: true }),
+    ]).start();
+  }, [lastCritAt]);
 
   const [paused, setPaused] = useState(false);
   const [showUpgrades, setShowUpgrades] = useState(false);
@@ -48,7 +63,7 @@ export default function GameScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
+      <Animated.View style={[styles.container, { transform: [{ translateX: shakeAnim }] }]}>
 
         {/* ── Header de salle ─────────────────────────────────────────── */}
         <View style={styles.header}>
@@ -145,8 +160,9 @@ export default function GameScreen() {
               <GameGrid />
             </View>
           )}
-          {phase === GAME_PHASES.REST_ROOM && <RestRoomOverlay />}
-          {phase === GAME_PHASES.SHOP_ROOM && <ShopOverlay />}
+          {phase === GAME_PHASES.REST_ROOM  && <RestRoomOverlay />}
+          {phase === GAME_PHASES.SHOP_ROOM  && <ShopOverlay />}
+          {phase === GAME_PHASES.EVENT_ROOM && <EventRoomOverlay />}
         </View>
 
         {/* ── Log de combat ───────────────────────────────────────────── */}
@@ -179,6 +195,11 @@ export default function GameScreen() {
           <Pressable style={styles.modalOverlay} onPress={() => setShowUpgrades(false)}>
             <Pressable style={styles.upgradesSheet} onPress={() => {}}>
               <Text style={styles.upgradesSheetTitle}>UPGRADES ACTIFS</Text>
+              {activeUpgrades.filter(u => u.color === 'curse').length >= 3 && (
+                <View style={styles.curseSynergyBanner}>
+                  <Text style={styles.curseSynergyTxt}>☠ PACTE MAUDIT — ×2 À TOUS LES EFFETS</Text>
+                </View>
+              )}
               <ScrollView showsVerticalScrollIndicator={false}>
                 {activeUpgrades.map((u, i) => (
                   <View key={`${u.id}_${i}`} style={[styles.upgradeCard, { borderColor: upgradeHex(u.color) }]}>
@@ -186,7 +207,8 @@ export default function GameScreen() {
                     <View style={styles.upgradeCardBody}>
                       <Text style={[styles.upgradeCardName, { color: upgradeHex(u.color) }]}>{u.name.toUpperCase()}</Text>
                       <Text style={styles.upgradeCardDesc}>{u.description}</Text>
-                      {u.synergyActive && <Text style={styles.synergeBadge}>✦ SYNERGIE ACTIVE</Text>}
+                      {u.synergyActive && u.color !== 'curse' && <Text style={styles.synergeBadge}>✦ SYNERGIE ACTIVE</Text>}
+                      {u.synergyActive && u.color === 'curse' && <Text style={[styles.synergeBadge, { color: '#AA44CC' }]}>☠ PACTE MAUDIT</Text>}
                     </View>
                   </View>
                 ))}
@@ -195,7 +217,7 @@ export default function GameScreen() {
           </Pressable>
         </Modal>
 
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -390,6 +412,22 @@ const styles = StyleSheet.create({
     fontWeight:    'bold',
     letterSpacing: 3,
     textAlign:     'center',
+  },
+  curseSynergyBanner: {
+    backgroundColor: '#2A0044',
+    borderWidth:     1,
+    borderColor:     '#AA44CC',
+    borderRadius:    8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    marginTop:       8,
+    alignItems:      'center',
+  },
+  curseSynergyTxt: {
+    color:         '#CC66FF',
+    fontSize:      11,
+    fontWeight:    'bold',
+    letterSpacing: 2,
   },
   upgradeCard: {
     flexDirection:   'row',

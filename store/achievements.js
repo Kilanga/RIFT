@@ -174,6 +174,20 @@ export const ACHIEVEMENTS_CATALOG = [
     desc: 'Survivre grâce au Second Souffle',
     check: (meta, run, extra) => extra && extra.usedSecondWind === true,
   },
+  {
+    id:   'damne',
+    name: 'Damné',
+    icon: '☠',
+    desc: 'Réunir 3 malédictions dans un même run',
+    check: (meta, run, extra) => extra && extra.curseCount >= 3,
+  },
+  {
+    id:   'maudit_triomphant',
+    name: 'Maudit Triomphant',
+    icon: '💀',
+    desc: 'Terminer un run avec le Pacte Maudit actif',
+    check: (meta, run, extra) => extra && extra.curseSynergyActive === true,
+  },
 ];
 
 // ─── Vérificateur ─────────────────────────────────────────────────────────────

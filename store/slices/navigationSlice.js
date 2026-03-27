@@ -5,10 +5,14 @@
 
 import { buildProceduralMap } from '../../utils/procGen';
 import { pickPermanentUpgrades } from '../../utils/metaHelpers';
+import { getModifierById, getDailyModifier } from '../../utils/modifierCatalog';
+import { getTalentById } from '../../utils/talentCatalog';
+import { getUpgradeById, getUpgradeChoices } from '../../systems/upgradeSystem';
 import { PLAYER_SHAPES, GAME_PHASES } from '../../constants';
 import { hapticError } from '../../utils/haptics';
 import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
 import { submitScore } from '../../services/leaderboardService';
+import { fetchServerPurchases } from '../../services/stripeService';
 
 function applyPermanentBonuses(permanentUpgrades) {
   const bonuses = {};
@@ -52,20 +56,58 @@ const INITIAL_RUN = {
 
 export const createNavigationSlice = (set, get) => ({
 
-  player:     { ...INITIAL_PLAYER },
-  playerBase: { ...INITIAL_PLAYER }, // stats avant upgrades, pour recalcul
-  run:        { ...INITIAL_RUN },
-  roomMap:    [],
-  phase:      GAME_PHASES.MENU,
+  player:        { ...INITIAL_PLAYER },
+  playerBase:    { ...INITIAL_PLAYER }, // stats avant upgrades, pour recalcul
+  run:           { ...INITIAL_RUN },
+  roomMap:       [],
+  phase:         GAME_PHASES.MENU,
+  isDailySelect: false,
 
   setPlayerName: (name) => set(s => ({ meta: { ...s.meta, playerName: name.trim().slice(0, 16) } })),
 
-  goToShapeSelect:   () => set({ phase: GAME_PHASES.SHAPE_SELECT }),
-  goToMultiplayer:   () => set({ phase: GAME_PHASES.MULTIPLAYER }),
+  goToShapeSelect:       () => set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: false }),
+  goToDailyShapeSelect: () => set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: true }),
+  goToTalentTree:        () => set({ phase: GAME_PHASES.TALENT_TREE }),
+  goToPremiumShop:       () => set({ phase: GAME_PHASES.PREMIUM_SHOP }),
+  goToMultiplayer:       () => set({ phase: GAME_PHASES.MULTIPLAYER }),
+
+  setPremium:          () => set(s => ({ meta: { ...s.meta, isPremium: true } })),
+  toggleHardcoreMode:  () => set(s => ({ meta: { ...s.meta, hardcoreMode: !s.meta.hardcoreMode } })),
+  setPremiumTheme: (theme) => set(s => ({ meta: { ...s.meta, premiumTheme: theme } })),
+  setGridTheme:    (id)    => set(s => ({ meta: { ...s.meta, gridTheme: id } })),
+  addPurchasedTheme: (id) => set(s => ({
+    meta: {
+      ...s.meta,
+      purchasedThemes: s.meta.purchasedThemes?.includes(id)
+        ? s.meta.purchasedThemes
+        : [...(s.meta.purchasedThemes || []), id],
+      gridTheme: id,
+    },
+  })),
+
+  /**
+   * Synchronise l'état premium/achats avec la vérité serveur (Stripe).
+   * Appelé au démarrage — silencieux si offline.
+   */
+  syncPurchases: async () => {
+    const result = await fetchServerPurchases();
+    if (!result) return; // offline, on garde l'état AsyncStorage
+    set(s => ({
+      meta: {
+        ...s.meta,
+        isPremium:       result.isPremium      || s.meta.isPremium,
+        purchasedThemes: Array.from(new Set([
+          ...(s.meta.purchasedThemes || []),
+          ...result.purchasedThemes,
+        ])),
+      },
+    }));
+  },
 
   goToMenu: () => {
     set({
       phase:                GAME_PHASES.MENU,
+      isDailySelect:        false,
       currentRoom:          null,
       enemies:              [],
       activeUpgrades:       [],
@@ -103,8 +145,11 @@ export const createNavigationSlice = (set, get) => ({
       const shapeStats = state.meta.shapeStats || {};
       const prevShape  = shapeStats[shape] || { runs: 0, bestScore: 0, wins: 0 };
 
+      const modifier   = run.modifier || { scoreMult: 1.0 };
+      const runScore   = Math.round(run.score * modifier.scoreMult);
+
       const runEntry = {
-        score:  run.score,
+        score:  runScore,
         shape,
         kills:  run.killsThisRun || 0,
         layers: run.currentLayerIndex,
@@ -118,12 +163,12 @@ export const createNavigationSlice = (set, get) => ({
       const newMeta = {
         ...state.meta,
         totalRuns:  state.meta.totalRuns + 1,
-        bestScore:  Math.max(state.meta.bestScore, run.score),
+        bestScore:  Math.max(state.meta.bestScore, runScore),
         shapeStats: {
           ...shapeStats,
           [shape]: {
             runs:      prevShape.runs + 1,
-            bestScore: Math.max(prevShape.bestScore, run.score),
+            bestScore: Math.max(prevShape.bestScore, runScore),
             wins:      prevShape.wins,
           },
         },
@@ -132,7 +177,7 @@ export const createNavigationSlice = (set, get) => ({
       };
 
       newMeta.lastRunSummary = {
-        score:         run.score,
+        score:         runScore,
         layersCleared: run.currentLayerIndex,
         killsThisRun:  run.killsThisRun || 0,
         shape,
@@ -158,20 +203,63 @@ export const createNavigationSlice = (set, get) => ({
     });
   },
 
-  startRun: (shape = PLAYER_SHAPES.TRIANGLE, isDailyRun = false, multiOptions = null) => {
+  startRun: (shape = PLAYER_SHAPES.TRIANGLE, isDailyRun = false, multiOptions = null, modifierId = 'standard') => {
     const { meta } = get();
     // Génération procédurale — seed fixe si multijoueur/daily, sinon aléatoire
     const { map: runMap, seed: mapSeed, actBoundaries } = buildProceduralMap(multiOptions?.seed);
 
+    const modifier   = getModifierById(modifierId);
     const bonuses    = applyPermanentBonuses(meta.permanentUpgrades);
     const basePlayer = { ...INITIAL_PLAYER, shape, ...bonuses };
-    // PV de départ = PV max (les bonus permanents de maxHp doivent être pleins au départ)
-    basePlayer.hp = basePlayer.maxHp;
+
+    // Appliquer les statDeltas du modificateur
+    if (modifier.statDeltas) {
+      modifier.statDeltas.forEach(({ stat, delta, mult }) => {
+        if (delta !== undefined) basePlayer[stat] = (basePlayer[stat] || 0) + delta;
+        if (mult  !== undefined) basePlayer[stat] = Math.max(1, Math.round((basePlayer[stat] || 0) * mult));
+      });
+    }
+
+    // Classe Spectre : PV réduits, attaque élevée, défense nulle
+    if (shape === PLAYER_SHAPES.SPECTRE) {
+      basePlayer.maxHp  = 15;
+      basePlayer.attack = 6;
+      basePlayer.defense = 0;
+    }
+
+    // Talents permanents : stat bonuses + passifs de départ
+    const startingUpgrades = [];
+    (meta.unlockedTalents || []).forEach(talentId => {
+      const t = getTalentById(talentId);
+      if (!t) return;
+      if (t.statBonus) {
+        basePlayer[t.statBonus.stat] = (basePlayer[t.statBonus.stat] || 0) + t.statBonus.value;
+      }
+      if (t.passive === 'start_fragments') {
+        basePlayer.fragments = (basePlayer.fragments || 0) + t.passiveValue;
+      }
+      if (t.passive === 'free_critique') {
+        const critiqueUpgrade = getUpgradeById('critique');
+        if (critiqueUpgrade) startingUpgrades.push(critiqueUpgrade);
+      }
+      if (t.passive === 'start_upgrade') {
+        const choices = getUpgradeChoices(startingUpgrades, 1);
+        if (choices.length > 0) startingUpgrades.push(choices[0]);
+      }
+    });
+
+    // Contrainte start_1hp
+    if (modifier.constraints?.includes('start_1hp')) {
+      basePlayer.hp = 1;
+    } else {
+      basePlayer.hp = basePlayer.maxHp;
+    }
 
     set({
       player:               basePlayer,
       playerBase:           { ...basePlayer },
       secondWindUsed:       false,
+      isDailySelect:        false,
       run:                  {
         ...INITIAL_RUN,
         startedAt:     Date.now(),
@@ -180,9 +268,10 @@ export const createNavigationSlice = (set, get) => ({
         actBoundaries: actBoundaries || [],
         multiCode:     multiOptions?.multiCode || null,
         multiRole:     multiOptions?.multiRole || null,
+        modifier:      modifier,
       },
       enemies:              [],
-      activeUpgrades:       [],
+      activeUpgrades:       startingUpgrades,
       upgradeChoices:       [],
       pendingUpgradeChoice: false,
       roomMap:              runMap,
@@ -195,9 +284,10 @@ export const createNavigationSlice = (set, get) => ({
 
   startDailyRun: (shape = PLAYER_SHAPES.TRIANGLE) => {
     // Seed basé sur la date — identique pour tous les joueurs le même jour
-    const now   = new Date();
-    const daily = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-    get().startRun(shape, true, { seed: daily });
+    const now      = new Date();
+    const daily    = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+    const dailyMod = getDailyModifier();
+    get().startRun(shape, true, { seed: daily }, dailyMod.id);
   },
 
   selectNode: (nodeId) => {
@@ -210,11 +300,16 @@ export const createNavigationSlice = (set, get) => ({
   },
 
   onPlayerDeath: () => {
+    if (get().phase === GAME_PHASES.GAME_OVER) return; // évite le double-fire (corruption + tour ennemi)
     const { run } = get();
-    const currentMeta    = get().meta;
-    const metaForPick  = { ...currentMeta, totalRuns: currentMeta.totalRuns + 1 };
+    const currentMeta   = get().meta;
+    const metaForPick   = { ...currentMeta, totalRuns: currentMeta.totalRuns + 1 };
     const newPermanents = pickPermanentUpgrades(currentMeta.permanentUpgrades, metaForPick, 1);
     const newPermanent  = newPermanents[0] || null;
+
+    // Calcul du score final avec multiplicateur de modificateur (hors set())
+    const modifier   = run.modifier || { scoreMult: 1.0 };
+    const finalScore = Math.round(run.score * modifier.scoreMult);
 
     hapticError();
 
@@ -224,7 +319,7 @@ export const createNavigationSlice = (set, get) => ({
       const prevShape  = shapeStats[shape] || { runs: 0, bestScore: 0, wins: 0 };
 
       const runEntry = {
-        score:   run.score,
+        score:   finalScore,
         shape,
         kills:   run.killsThisRun || 0,
         layers:  run.currentLayerIndex,
@@ -240,7 +335,8 @@ export const createNavigationSlice = (set, get) => ({
       const newMeta = {
         ...state.meta,
         totalRuns:         state.meta.totalRuns + 1,
-        bestScore:         Math.max(state.meta.bestScore, run.score),
+        bestScore:         Math.max(state.meta.bestScore, finalScore),
+        talentPoints:      (state.meta.talentPoints || 0) + 1,
         permanentUpgrades: newPermanent
           ? [...state.meta.permanentUpgrades, ...newPermanents]
           : state.meta.permanentUpgrades,
@@ -248,13 +344,20 @@ export const createNavigationSlice = (set, get) => ({
           ...shapeStats,
           [shape]: {
             runs:      prevShape.runs + 1,
-            bestScore: Math.max(prevShape.bestScore, run.score),
+            bestScore: Math.max(prevShape.bestScore, finalScore),
             wins:      prevShape.wins,
           },
         },
         runHistory:       newRunHistory,
         localLeaderboard: newLeaderboard,
       };
+
+      // Hardcore mode : perte totale de la méta à la mort
+      if (state.meta.hardcoreMode) {
+        newMeta.permanentUpgrades = [];
+        newMeta.unlockedTalents   = [];
+        newMeta.talentPoints      = 0;
+      }
 
       // Achievements à la mort (total runs, total kills, collector…)
       const newAch = checkNewAchievements(newMeta, state.run);
@@ -263,7 +366,7 @@ export const createNavigationSlice = (set, get) => ({
       }
 
       newMeta.lastRunSummary = {
-        score:           state.run.score,
+        score:           finalScore,
         layersCleared:   state.run.currentLayerIndex,
         killsThisRun:    state.run.killsThisRun || 0,
         shape,
@@ -289,7 +392,7 @@ export const createNavigationSlice = (set, get) => ({
     if (finalMeta.playerName) {
       submitScore({
         playerName: finalMeta.playerName,
-        score:      run.score,
+        score:      finalScore,
         shape:      get().player.shape,
         kills:      run.killsThisRun || 0,
         layers:     run.currentLayerIndex,

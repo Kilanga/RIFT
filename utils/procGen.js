@@ -27,6 +27,22 @@ const ENEMY_TEMPLATES = {
     attack: 2, defense: 1, speed: 1,
     behavior: 'block', scoreValue: 20, color: '#888899',
   },
+  [ENEMY_TYPES.HEALER]: {
+    type: ENEMY_TYPES.HEALER, hp: 8, maxHp: 8,
+    attack: 1, defense: 0, speed: 1,
+    behavior: 'heal', scoreValue: 15, color: '#44FF88', statuses: [],
+  },
+  [ENEMY_TYPES.EXPLOSIVE]: {
+    type: ENEMY_TYPES.EXPLOSIVE, hp: 6, maxHp: 6,
+    attack: 1, defense: 0, speed: 2,
+    behavior: 'explode', scoreValue: 12, color: '#FF8800', statuses: [],
+  },
+  [ENEMY_TYPES.SUMMONER]: {
+    type: ENEMY_TYPES.SUMMONER, hp: 15, maxHp: 15,
+    attack: 2, defense: 0, speed: 1,
+    behavior: 'summon', scoreValue: 25, color: '#CC44FF',
+    statuses: [], summonCount: 0, turnCount: 0,
+  },
   // Mini-boss (fin acte 1) — plus accessible
   [ENEMY_TYPES.BOSS_VOID]: {
     type: ENEMY_TYPES.BOSS_VOID, hp: 25, maxHp: 25,
@@ -52,34 +68,50 @@ const ENEMY_TEMPLATES = {
 /**
  * Génère une salle complète selon son type et l'étage courant
  */
-export function generateRoom(type, floor = 1) {
+export function generateRoom(type, floor = 1, seed = null) {
+  const rng = seed === null || seed === undefined
+    ? Math.random
+    : mulberry32(Number(seed) >>> 0);
+
   switch (type) {
-    case ROOM_TYPES.COMBAT:     return generateCombatRoom(floor);
+    case ROOM_TYPES.COMBAT:     return generateCombatRoom(floor, rng);
+    case ROOM_TYPES.ELITE:      return generateEliteRoom(floor, rng);
+    case ROOM_TYPES.EVENT:      return generateEventRoom();
     case ROOM_TYPES.BOSS_MINI:  return generateBossRoom(floor, 'mini');
     case ROOM_TYPES.BOSS:       return generateBossRoom(floor, 'normal');
     case ROOM_TYPES.BOSS_FINAL: return generateBossRoom(floor, 'final');
     case ROOM_TYPES.REST:       return generateRestRoom();
-    case ROOM_TYPES.SHOP:       return generateShopRoom();
-    default:                    return generateCombatRoom(floor);
+    case ROOM_TYPES.SHOP:       return generateShopRoom(rng);
+    default:                    return generateCombatRoom(floor, rng);
   }
 }
 
 // ─── Générateurs ─────────────────────────────────────────────────────────────
 
-function generateCombatRoom(floor) {
+function generateCombatRoom(floor, rng) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
 
-  addRandomWalls(grid, width, height, 0.08);
+  addRandomWalls(grid, width, height, 0.08, rng);
+  addLavaTraps(grid, width, height, floor, rng);
 
   const enemyCount = Math.min(1 + Math.floor(floor / 2), 4);
-  const enemies = spawnEnemies(grid, width, height, enemyCount, floor, [
-    ENEMY_TYPES.CHASER,
-    ENEMY_TYPES.SHOOTER,
-    ENEMY_TYPES.BLOCKER,
-  ]);
+  const availableTypes = [ENEMY_TYPES.CHASER, ENEMY_TYPES.SHOOTER, ENEMY_TYPES.BLOCKER];
+  if (floor >= 3) availableTypes.push(ENEMY_TYPES.HEALER);
+  if (floor >= 4) availableTypes.push(ENEMY_TYPES.EXPLOSIVE);
+  if (floor >= 5) availableTypes.push(ENEMY_TYPES.SUMMONER);
 
-  return { type: ROOM_TYPES.COMBAT, width, height, grid, enemies, playerStart: { x: 1, y: 1 } };
+  const enemies = spawnEnemies(grid, width, height, enemyCount, floor, availableTypes, rng);
+
+  const room = { type: ROOM_TYPES.COMBAT, width, height, grid, enemies, playerStart: { x: 1, y: 1 } };
+
+  // Paires de téléporteurs (~30% de chance à partir de l'étage 2)
+  if (floor >= 2 && rng() < 0.3) {
+    const pairs = addTeleportPairs(grid, width, height, rng);
+    if (pairs.length > 0) room.teleportPairs = pairs;
+  }
+
+  return room;
 }
 
 function generateBossRoom(floor, tier = 'normal') {
@@ -128,6 +160,30 @@ function generateBossRoom(floor, tier = 'normal') {
   };
 }
 
+function generateEliteRoom(floor, rng) {
+  const width = GRID_SIZE, height = GRID_SIZE;
+  const grid = createEmptyGrid(width, height);
+  addRandomWalls(grid, width, height, 0.08, rng);
+  addLavaTraps(grid, width, height, floor, rng);
+
+  // Ennemis plus nombreux et plus forts (floor+1 pour le scaling)
+  const enemyCount = Math.min(2 + Math.floor(floor / 2), 5);
+  const availableTypes = [ENEMY_TYPES.CHASER, ENEMY_TYPES.SHOOTER, ENEMY_TYPES.BLOCKER];
+  if (floor >= 2) availableTypes.push(ENEMY_TYPES.HEALER);
+  if (floor >= 3) availableTypes.push(ENEMY_TYPES.EXPLOSIVE);
+  if (floor >= 4) availableTypes.push(ENEMY_TYPES.SUMMONER);
+
+  const enemies = spawnEnemies(grid, width, height, enemyCount, floor + 1, availableTypes, rng);
+  return { type: ROOM_TYPES.ELITE, width, height, grid, enemies, playerStart: { x: 1, y: 1 }, isElite: true };
+}
+
+function generateEventRoom() {
+  const width = GRID_SIZE, height = GRID_SIZE;
+  const grid = createEmptyGrid(width, height);
+  // Salle vide — l'événement est géré par l'overlay
+  return { type: ROOM_TYPES.EVENT, width, height, grid, enemies: [], playerStart: { x: 4, y: 4 } };
+}
+
 function generateRestRoom() {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
@@ -145,7 +201,7 @@ function generateRestRoom() {
   };
 }
 
-function generateShopRoom() {
+function generateShopRoom(rng) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
 
@@ -158,7 +214,7 @@ function generateShopRoom() {
     type: ROOM_TYPES.SHOP, width, height, grid,
     enemies: [],
     playerStart: { x: 4, y: height - 2 },
-    shopItems: generateShopItems(),
+    shopItems: generateShopItems(rng),
     chestPositions,
   };
 }
@@ -174,14 +230,14 @@ function createEmptyGrid(width, height) {
   );
 }
 
-function addRandomWalls(grid, width, height, density) {
+function addRandomWalls(grid, width, height, density, rng) {
   const cx = Math.floor(width / 2);
   const cy = Math.floor(height / 2);
   for (let y = 2; y < height - 2; y++) {
     for (let x = 2; x < width - 2; x++) {
       if (x <= 2 && y <= 2) continue; // Zone spawn joueur
       if (Math.abs(x - cx) <= 1 && Math.abs(y - cy) <= 1) continue; // Centre libre
-      if (Math.random() < density) grid[y][x] = CELL_TYPES.WALL;
+      if (rng() < density) grid[y][x] = CELL_TYPES.WALL;
     }
   }
   ensureConnectivity(grid, width, height, 1, 1);
@@ -243,7 +299,7 @@ function addSymmetricPillars(grid, width, height) {
   ].forEach(({ x, y }) => { grid[y][x] = CELL_TYPES.WALL; });
 }
 
-function spawnEnemies(grid, width, height, count, floor, allowedTypes) {
+function spawnEnemies(grid, width, height, count, floor, allowedTypes, rng) {
   const enemies  = [];
   const occupied = new Set();
   const safeZone = 3;
@@ -251,15 +307,15 @@ function spawnEnemies(grid, width, height, count, floor, allowedTypes) {
 
   while (enemies.length < count && attempts < 150) {
     attempts++;
-    const x = randomInt(safeZone, width - 2);
-    const y = randomInt(safeZone, height - 2);
+    const x = randomInt(safeZone, width - 2, rng);
+    const y = randomInt(safeZone, height - 2, rng);
     const key = `${x},${y}`;
 
     if (grid[y][x] !== CELL_TYPES.EMPTY || occupied.has(key)) continue;
 
     occupied.add(key);
-    const type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
-    enemies.push({ ...scaledEnemy(ENEMY_TEMPLATES[type], floor), x, y, turnCount: 0, spiralStep: 0 });
+    const type = allowedTypes[Math.floor(rng() * allowedTypes.length)];
+    enemies.push({ ...scaledEnemy(ENEMY_TEMPLATES[type], floor), x, y, turnCount: 0, spiralStep: 0, statuses: [] });
   }
   return enemies;
 }
@@ -274,7 +330,41 @@ function scaledEnemy(template, floor) {
   };
 }
 
-function generateShopItems() {
+function addLavaTraps(grid, width, height, floor, rng) {
+  const count = Math.min(1 + Math.floor(floor / 3), 3);
+  const cx = Math.floor(width / 2), cy = Math.floor(height / 2);
+  let placed = 0, attempts = 0;
+  while (placed < count && attempts < 60) {
+    attempts++;
+    const x = randomInt(2, width - 3, rng);
+    const y = randomInt(2, height - 3, rng);
+    if (x <= 2 && y <= 2) continue;                           // zone spawn joueur
+    if (Math.abs(x - cx) <= 1 && Math.abs(y - cy) <= 1) continue; // centre libre
+    if (grid[y][x] !== CELL_TYPES.EMPTY) continue;
+    grid[y][x] = CELL_TYPES.LAVA;
+    placed++;
+  }
+}
+
+function addTeleportPairs(grid, width, height, rng) {
+  const positions = [];
+  let attempts = 0;
+  while (positions.length < 2 && attempts < 80) {
+    attempts++;
+    const x = randomInt(2, width - 3, rng);
+    const y = randomInt(2, height - 3, rng);
+    if (x <= 2 && y <= 2) continue;
+    if (grid[y][x] !== CELL_TYPES.EMPTY) continue;
+    if (positions.some(p => Math.abs(p.x - x) + Math.abs(p.y - y) < 4)) continue;
+    positions.push({ x, y });
+  }
+  if (positions.length < 2) return [];
+  grid[positions[0].y][positions[0].x] = CELL_TYPES.TELEPORT;
+  grid[positions[1].y][positions[1].x] = CELL_TYPES.TELEPORT;
+  return [{ a: positions[0], b: positions[1] }];
+}
+
+function generateShopItems(rng) {
   const upgradeIds = [
     'momentum', 'echo', 'fracture', 'shield_pulse', 'regen', 'leech',
     'vitality', 'absorb', 'thorns', 'overload', 'critique', 'combustion',
@@ -282,9 +372,10 @@ function generateShopItems() {
     'tranchant', 'berserker', 'cyclone', 'fortifie', 'esquive', 'vigile',
     'parasitisme', 'resistance', 'renaissance',
     'pacte_sang', 'verre_trempe', 'soif_sang', 'ame_maudite', 'contrat_mortel',
+    'ignition', 'gelbomb', 'shockwave',
   ];
-  const shuffle = [...upgradeIds].sort(() => Math.random() - 0.5);
-  return shuffle.slice(0, 3).map(id => ({ upgradeId: id, price: randomInt(3, 8), bought: false }));
+  const shuffle = [...upgradeIds].sort(() => rng() - 0.5);
+  return shuffle.slice(0, 3).map(id => ({ upgradeId: id, price: randomInt(3, 8, rng), bought: false }));
 }
 
 // ─── Générateur de carte procédural ──────────────────────────────────────────
@@ -348,11 +439,17 @@ function generateAct(rng, actIndex, layerOffset) {
         type = ROOM_TYPES.SHOP;
       } else {
         // Pondération selon l'acte (acte 3 plus dur, moins de repos)
-        const combatW = actIndex === 2 ? 0.65 : 0.55;
-        const restW   = actIndex === 2 ? 0.15 : 0.25;
-        type = r < combatW           ? ROOM_TYPES.COMBAT
-             : r < combatW + restW   ? ROOM_TYPES.REST
-             :                         ROOM_TYPES.SHOP;
+        const combatW = actIndex === 2 ? 0.52 : 0.45;
+        const restW   = actIndex === 2 ? 0.12 : 0.20;
+        const shopW   = 0.15;
+        const eliteW  = 0.08;
+        const eventW  = 0.08;
+        type = r < combatW                              ? ROOM_TYPES.COMBAT
+             : r < combatW + restW                      ? ROOM_TYPES.REST
+             : r < combatW + restW + shopW              ? ROOM_TYPES.SHOP
+             : r < combatW + restW + shopW + eliteW     ? ROOM_TYPES.ELITE
+             : r < combatW + restW + shopW + eliteW + eventW ? ROOM_TYPES.EVENT
+             :                                            ROOM_TYPES.COMBAT;
       }
 
       if (type === ROOM_TYPES.REST) hasRest = true;
@@ -361,10 +458,11 @@ function generateAct(rng, actIndex, layerOffset) {
     }
 
     // ── Règle post-génération : pas de doublons non-combat sur la même couche ─
+    const COMBAT_TYPES = [ROOM_TYPES.COMBAT, ROOM_TYPES.ELITE];
     if (layer.length > 1) {
       const seenNonCombat = new Set();
       for (let i = 0; i < layer.length; i++) {
-        if (layer[i] !== ROOM_TYPES.COMBAT) {
+        if (!COMBAT_TYPES.includes(layer[i])) {
           if (seenNonCombat.has(layer[i])) {
             layer[i] = ROOM_TYPES.COMBAT;
           } else {
@@ -450,6 +548,6 @@ export function buildProceduralMap(seed) {
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function randomInt(min, max, rng = Math.random) {
+  return Math.floor(rng() * (max - min + 1)) + min;
 }
