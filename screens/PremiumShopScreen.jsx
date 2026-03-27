@@ -185,7 +185,7 @@ export default function PremiumShopScreen() {
               <View key={theme.id} style={[styles.themeRow, isActive && styles.themeRowActive]}>
                 <View style={[styles.themePreview, { backgroundColor: theme.floor0, borderColor: theme.wallLine }]} />
                 <View style={styles.themeInfo}>
-                  <Text style={styles.themeEmoji}>{theme.emoji} {theme.name}</Text>
+                  <Text style={styles.themeEmoji}>{theme.emoji} {t(`cosmetic.${theme.id}.name`, { defaultValue: theme.name })}</Text>
                   {isFree && <Text style={styles.themeFreeTag}>{t('premium.theme_free')}</Text>}
                 </View>
                 {isFree || isPurchased ? (

@@ -118,7 +118,7 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
         <View style={styles.cardMeta}>
           <View style={styles.cardTopRow}>
             <Text style={[styles.cardName, { color: wouldSynergy || isEpic ? color : PALETTE.textPrimary }]}>
-              {upgrade.name}
+              {t(`upgrade.${upgrade.id}.name`, { defaultValue: upgrade.name })}
             </Text>
             <View style={styles.cardTags}>
               <Text style={[styles.cardRarity, { color: rarityColor }]}>
@@ -128,7 +128,7 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
             </View>
           </View>
           <Text style={[styles.cardDesc, { color: color + 'CC' }]} numberOfLines={2}>
-            {upgrade.description}
+            {t(`upgrade.${upgrade.id}.desc`, { defaultValue: upgrade.description })}
           </Text>
           {wouldSynergy && (
             <Text style={[styles.cardSynText, { color }]}>

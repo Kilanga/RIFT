@@ -22,12 +22,12 @@ export default function EventRoomOverlay() {
       {/* En-tête */}
       <View style={styles.header}>
         <Text style={styles.tag}>{t('event.tag')}</Text>
-        <Text style={styles.title}>{currentEvent.title}</Text>
+        <Text style={styles.title}>{t(`event.${currentEvent.id}.title`, { defaultValue: currentEvent.title })}</Text>
       </View>
 
       {/* Description */}
       <View style={styles.descBox}>
-        <Text style={styles.desc}>{currentEvent.description}</Text>
+        <Text style={styles.desc}>{t(`event.${currentEvent.id}.desc`, { defaultValue: currentEvent.description })}</Text>
       </View>
 
       {/* Choix */}
@@ -42,7 +42,7 @@ export default function EventRoomOverlay() {
               activeOpacity={locked ? 1 : 0.7}
             >
               <Text style={[styles.choiceLabel, locked && styles.choiceLabelLocked]}>
-                {choice.label}
+                {t(`event.${currentEvent.id}.choice_${choice.id}`, { defaultValue: choice.label })}
               </Text>
               {locked && (
                 <Text style={styles.lockedHint}>

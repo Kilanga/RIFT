@@ -482,11 +482,11 @@ function UpgradesModal({ visible, upgrades, onClose }) {
                     <View style={styles.modalCardBody}>
                       <View style={styles.modalCardTop}>
                         <Text style={[styles.modalCardName, { color: u.synergyActive ? hex : PALETTE.textPrimary }]}>
-                          {u.synergyActive ? '✦ ' : ''}{u.name}
+                          {u.synergyActive ? '✦ ' : ''}{t(`upgrade.${u.id}.name`, { defaultValue: u.name })}
                         </Text>
                         <View style={[styles.modalColorDot, { backgroundColor: hex }]} />
                       </View>
-                      <Text style={[styles.modalCardDesc, { color: hex + 'CC' }]}>{u.description}</Text>
+                      <Text style={[styles.modalCardDesc, { color: hex + 'CC' }]}>{t(`upgrade.${u.id}.desc`, { defaultValue: u.description })}</Text>
                     </View>
                   </View>
                 );

@@ -283,7 +283,7 @@ function LastRunCard({ run }) {
         {/* Classe */}
         <View style={[styles.lastRunShape, { borderColor: cls.color + '44' }]}>
           <ClassSilhouette shape={run.shape} color={cls.color} size={44} />
-          <Text style={[styles.lastRunShapeName, { color: cls.color }]}>{cls.name}</Text>
+          <Text style={[styles.lastRunShapeName, { color: cls.color }]}>{t(`class.${run.shape}.name`, { defaultValue: cls.name })}</Text>
         </View>
 
         {/* Stats */}
@@ -384,14 +384,14 @@ function PermanentProgress({ upgrades, meta }) {
                 <Text style={[styles.permSlotName, {
                   color: isOwned ? PALETTE.charge : isHidden ? PALETTE.textDim : condMet ? PALETTE.textMuted : PALETTE.textDim,
                 }]}>
-                  {isHidden ? '???' : u.name}
+                  {isHidden ? '???' : t(`perm_upgrade.${u.id}.name`, { defaultValue: u.name })}
                 </Text>
                 {isOwned && (
                   <Text style={[styles.permSlotCond, { color: PALETTE.charge + '77' }]}>{t('menu.perm_obtained')}</Text>
                 )}
                 {!isOwned && !isHidden && u.unlockCondition && (
                   <Text style={[styles.permSlotCond, { color: condMet ? PALETTE.triangle + 'AA' : PALETTE.textDim }]} numberOfLines={1}>
-                    {condMet ? '✓' : '○'} {u.unlockCondition.desc}
+                    {condMet ? '✓' : '○'} {t(`perm_upgrade.${u.id}.unlock_desc`, { defaultValue: u.unlockCondition.desc })}
                   </Text>
                 )}
                 {!isOwned && !isHidden && !u.unlockCondition && (
@@ -603,10 +603,10 @@ function AchievementsSection({ unlockedIds }) {
               <Text style={{ fontSize: 16, opacity: unlocked ? 1 : 0.15 }}>{a.icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.achName, { color: unlocked ? '#88CCFF' : PALETTE.textDim }]}>
-                  {unlocked ? a.name : '???'}
+                  {unlocked ? t(`achievement.${a.id}_name`, { defaultValue: a.name }) : '???'}
                 </Text>
                 {unlocked && (
-                  <Text style={styles.achDesc}>{a.desc}</Text>
+                  <Text style={styles.achDesc}>{t(`achievement.${a.id}_desc`, { defaultValue: a.desc })}</Text>
                 )}
               </View>
             </View>

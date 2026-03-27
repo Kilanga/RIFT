@@ -120,11 +120,6 @@
     "rarity_curse": "CURSED"
   },
 
-  "event": {
-    "tag": "EVENT",
-    "locked_hint": "Not enough fragments ({{count}} required)"
-  },
-
   "victory": {
     "title": "CLOSED",
     "title_pre": "THE RIFT IS",
@@ -371,21 +366,25 @@
 
   "class": {
     "triangle": {
+      "name": "Assassin",
       "passive": "Sharpened",
       "passive_desc": "Ignores 50% of enemy DEF on every attack.",
       "playstyle": "Aggressive · High damage · Fragile"
     },
     "circle": {
+      "name": "Arcanist",
       "passive": "Arcane Wave",
       "passive_desc": "Each attack hits all adjacent cells simultaneously (up to 8 enemies).",
       "playstyle": "AoE · Control · Versatile"
     },
     "hexagon": {
+      "name": "Colossus",
       "passive": "Riposte",
       "passive_desc": "Takes 50% of damage. Reflects 50% of ATK to each enemy that attacks.",
       "playstyle": "Defensive · Survival · Counter-attack"
     },
     "spectre": {
+      "name": "Specter",
       "passive": "Ethereal",
       "passive_desc": "Completely ignores enemy defense. Immune to traps (lava, teleporters). Reduced HP (15 max).",
       "playstyle": "Pure damage · Fragile · Premium",
@@ -409,5 +408,148 @@
     "abandon_confirm": "⚠ CONFIRM ABANDON?",
     "abandon_sub": "Score and kills will be lost",
     "cancel": "No, continue"
+  },
+
+  "modifier": {
+    "standard":       { "name": "Standard",        "desc": "No modifier. Normal score.",                                                                      "difficulty": "Normal" },
+    "pacifist":       { "name": "Non-Violence",     "desc": "You cannot attack directly — only Cyclone, Vigil and indirect effects.",                          "difficulty": "Extreme" },
+    "berserker_mode": { "name": "Berserker",        "desc": "Start with 1 HP. Second Wind disabled.",                                                          "difficulty": "Extreme" },
+    "no_upgrades":    { "name": "Bare Hands",       "desc": "No upgrade can be selected.",                                                                     "difficulty": "Hard" },
+    "glass_cannon":   { "name": "Glass Cannon",     "desc": "+5 ATK, but max HP halved.",                                                                      "difficulty": "Hard" },
+    "speed_run":      { "name": "Speed Run",        "desc": "Each room must be cleared in 5 turns or less, otherwise -10 HP.",                                 "difficulty": "Medium" },
+    "cursed_run":     { "name": "Cursed Run",       "desc": "Start with a random curse.",                                                                      "difficulty": "Medium" },
+    "double_trouble": { "name": "Double Trouble",   "desc": "Each combat room has 1 extra enemy.",                                                             "difficulty": "Medium" },
+    "fragile":        { "name": "Fragile",          "desc": "Defense is permanently set to 0.",                                                                "difficulty": "Easy" }
+  },
+
+  "talent": {
+    "tranchant":    { "name": "Sharpened Blade", "desc": "+1 ATK at the start of each run." },
+    "precision":    { "name": "Precision",       "desc": "Each run starts with 1 free Critical stack." },
+    "vigueur":      { "name": "Vigor",           "desc": "+5 max HP at the start of each run." },
+    "armure":       { "name": "Armor",           "desc": "+1 DEF at the start of each run." },
+    "constitution": { "name": "Constitution",    "desc": "+10 max HP at the start of each run." },
+    "resilience":   { "name": "Resilience",      "desc": "Heal 2 HP after each room cleared." },
+    "collecteur":   { "name": "Collector",       "desc": "Start each run with 3 fragments." },
+    "maestro":      { "name": "Maestro",         "desc": "Start each run with 1 random upgrade." }
+  },
+
+  "event": {
+    "tag": "EVENT",
+    "locked_hint": "Not enough fragments ({{count}} required)",
+    "mystery_altar": {
+      "title": "Altar of Sacrifices",
+      "desc":  "An ancient altar, stained with dried blood, awaits your offering. The magic here is old and hungry.",
+      "choice_sacrifice_hp":   "💔 Sacrifice 5 HP → +2 ATK",
+      "choice_sacrifice_frag": "◈ Sacrifice 5 fragments → Heal 12 HP",
+      "choice_ignore":         "↩ Ignore"
+    },
+    "rift_echo": {
+      "title": "Rift Shard",
+      "desc":  "A rift fragment floats in the air, vibrating with unstable energy. Absorbing it could transform you... or shatter you.",
+      "choice_absorb":  "✨ Absorb (50%: +4 ATK / 50%: -10 HP)",
+      "choice_channel": "⚡ Channel → +1 upgrade (free choice)",
+      "choice_ignore":  "↩ Ignore"
+    },
+    "wandering_merchant": {
+      "title": "Wandering Merchant",
+      "desc":  "A dusty merchant appears from nowhere, his cart filled with dubious curiosities.",
+      "choice_buy_hp":  "◈ Heal 15 HP (5 fragments)",
+      "choice_buy_atk": "◈ +3 ATK (8 fragments)",
+      "choice_ignore":  "↩ Leave"
+    },
+    "cursed_fountain": {
+      "title": "Cursed Fountain",
+      "desc":  "The water glows an unsettling purple. An inscription in an ancient tongue reads: \"every gift has a price\".",
+      "choice_drink_full":  "💧 Drink → max HP +8, but ATK -1",
+      "choice_drink_power": "⚗ Drain the dregs → ATK +3, DEF -1",
+      "choice_ignore":      "↩ Ignore"
+    },
+    "old_library": {
+      "title": "Forgotten Library",
+      "desc":  "Dusty grimoires pile up to the ceiling. The wisdom here has survived ages of silence.",
+      "choice_study":     "📚 Study → +80 score, -3 HP",
+      "choice_take_tome": "📖 Pocket a tome → +2 DEF, -4 max HP",
+      "choice_ignore":    "↩ Ignore"
+    },
+    "wounded_warrior": {
+      "title": "Wounded Warrior",
+      "desc":  "A fighter lies against the wall, half-conscious. He holds a relic in his trembling hand.",
+      "choice_help":   "🤝 Heal him → +1 upgrade (free choice)",
+      "choice_take":   "⚔ Take the relic → +6 ATK, -10 HP",
+      "choice_ignore": "↩ Walk away"
+    }
+  },
+
+  "cosmetic": {
+    "default": { "name": "Default" },
+    "blood":   { "name": "Blood" },
+    "ice":     { "name": "Ice" },
+    "void":    { "name": "Void" }
+  },
+
+  "perm_upgrade": {
+    "perm_hp1":      { "name": "+5 max HP",       "desc": "Start each run with 5 extra HP.",                          "unlock_desc": "Always available" },
+    "perm_atk1":     { "name": "+1 Attack",        "desc": "Base damage increased by 1.",                             "unlock_desc": "Always available" },
+    "perm_def1":     { "name": "+1 Defense",       "desc": "Reduces damage taken by 1 point.",                       "unlock_desc": "Always available" },
+    "perm_frag1":    { "name": "+3 Fragments",     "desc": "Start with 3 fragments for the shop.",                   "unlock_desc": "Always available" },
+    "perm_hp2":      { "name": "+8 max HP",        "desc": "Increased toughness. +8 starting HP.",                   "unlock_desc": "3 runs played" },
+    "perm_charge1":  { "name": "+2 max Charges",   "desc": "Charge capacity increased by 2.",                        "unlock_desc": "3 runs played" },
+    "perm_atk2":     { "name": "+2 Attack",        "desc": "Base damage increased by 2.",                            "unlock_desc": "6 runs played" },
+    "perm_frag2":    { "name": "+6 Fragments",     "desc": "Start with 6 extra fragments.",                          "unlock_desc": "6 runs played" },
+    "perm_def2":     { "name": "+2 Defense",       "desc": "Reinforced armor. Reduces damage by 2.",                 "unlock_desc": "12 runs played" },
+    "perm_hp3":      { "name": "+12 max HP",       "desc": "Increased vitality. +12 base HP.",                       "unlock_desc": "12 runs played" },
+    "perm_slayer":   { "name": "Slayer +1 ATK",    "desc": "+1 ATK. Combat experience forges you.",                  "unlock_desc": "20 enemies killed" },
+    "perm_slayer2":  { "name": "+2 ATK",           "desc": "+2 ATK. The Rift has hardened you.",                     "unlock_desc": "80 enemies killed" },
+    "perm_victor":   { "name": "+10 HP",           "desc": "+10 max HP. Reward of the first victory.",               "unlock_desc": "Win 1 run" },
+    "perm_veteran":  { "name": "+3 ATK",           "desc": "+3 ATK. Mastery earned through victories.",              "unlock_desc": "Win 3 runs" },
+    "perm_pierce":   { "name": "+2 ATK",           "desc": "+2 ATK. Triangle mastery.",                              "unlock_desc": "Win with the Triangle" },
+    "perm_aura":     { "name": "+6 HP",            "desc": "+6 max HP. Circle mastery.",                             "unlock_desc": "Win with the Circle" },
+    "perm_fortress": { "name": "+2 DEF",           "desc": "+2 DEF. Hexagon mastery.",                               "unlock_desc": "Win with the Hexagon" },
+    "perm_scorer":   { "name": "+8 Fragments",     "desc": "+8 starting fragments. The merchant's secret.",          "unlock_desc": "Score of 600" },
+    "perm_master":   { "name": "+4 ATK",           "desc": "+4 ATK. Rift Master — win with all 3 classes.",          "unlock_desc": "Win with all 3 classes" },
+    "perm_transcend":{ "name": "+20 HP",           "desc": "+20 max HP. The highest progression.",                   "unlock_desc": "Win 8 runs" }
+  },
+
+  "upgrade": {
+    "momentum":       { "name": "Momentum",           "desc": "Each move charges an attack. Max charge → damage ×2." },
+    "echo":           { "name": "Echo",               "desc": "Attacks bounce to the nearest enemy (60% damage)." },
+    "fracture":       { "name": "Fracture",           "desc": "Killed enemies explode → 30% of their HP as AoE." },
+    "chain_reaction": { "name": "Chain Reaction",     "desc": "After each kill, next attack +50%." },
+    "overload":       { "name": "Overload",           "desc": "+3 Attack." },
+    "shield_pulse":   { "name": "Shield Pulse",       "desc": "After taking damage → shield for 1 turn." },
+    "resonance":      { "name": "Resonance",          "desc": "3 upgrades of the same color → all stats ×2." },
+    "blink":          { "name": "Blink",              "desc": "Once per room: teleport to a random empty cell." },
+    "absorb":         { "name": "Absorb",             "desc": "+2 Defense." },
+    "phase_shift":    { "name": "Phase Shift",        "desc": "Blockers ignore you for 2 turns after moving." },
+    "critique":       { "name": "Critical Strike",    "desc": "+15% chance to triple damage (stackable)." },
+    "combustion":     { "name": "Combustion",         "desc": "Combo x2+: deal 3 damage to all adjacent enemies. Stackable." },
+    "regen":          { "name": "Regeneration",       "desc": "+1 HP per room cleared." },
+    "vitality":       { "name": "Vitality",           "desc": "+4 max HP." },
+    "leech":          { "name": "Life Steal",         "desc": "+1 HP per enemy killed." },
+    "overgrowth":     { "name": "Overgrowth",         "desc": "Each green upgrade → +3 HP instantly." },
+    "thorns":         { "name": "Thorns",             "desc": "Reflects 2 damage to each attacker. Stackable." },
+    "second_wind":    { "name": "Second Wind",        "desc": "Once per run: survive a fatal blow with 1 HP." },
+    "regain":         { "name": "Regain",             "desc": "When shield absorbs a hit: +2 HP. Stackable." },
+    "tranchant":      { "name": "Piercing",           "desc": "Pierce 2 pts of enemy defense per attack. Stackable." },
+    "berserker":      { "name": "Berserker",          "desc": "Below 30% HP: ATK doubled." },
+    "cyclone":        { "name": "Cyclone",            "desc": "Each attack also hits adjacent enemies for 50% damage." },
+    "fortifie":       { "name": "Fortified",          "desc": "Start of each room: shield automatically active." },
+    "esquive":        { "name": "Dodge",              "desc": "20% chance to completely dodge an attack per stack." },
+    "vigile":         { "name": "Vigil",              "desc": "End of each turn: deal 1 damage to adjacent enemies. Stackable." },
+    "parasitisme":    { "name": "Parasitism",         "desc": "On combo (×2+): heal 3 HP. Stackable." },
+    "resistance":     { "name": "Resistance",         "desc": "If HP > 50%: damage taken reduced by 35%." },
+    "renaissance":    { "name": "Renaissance",        "desc": "End of room: heal up to 60% of max HP." },
+    "pacte_sang":     { "name": "Blood Pact",         "desc": "+8 ATK — but −8 max HP. Power has a price." },
+    "verre_trempe":   { "name": "Tempered Glass",     "desc": "+5 DEF — but −4 ATK. Armored, but clumsy." },
+    "soif_sang":      { "name": "Bloodthirst",        "desc": "+5 ATK — but lose 1 HP per kill." },
+    "ame_maudite":    { "name": "Cursed Soul",        "desc": "+6 ATK — but each hit received deals +2 bonus damage." },
+    "contrat_mortel": { "name": "Death Contract",     "desc": "+12 max HP — but start each room at 60% HP." },
+    "ignition":       { "name": "Ignition",           "desc": "Each attack inflicts Burn: 3 damage/turn for 2 turns. Stackable." },
+    "gelbomb":        { "name": "Gelbomb",            "desc": "Each attack freezes the target for 1 turn (blocks movement)." },
+    "shockwave":      { "name": "Shockwave",          "desc": "On each kill: stun adjacent enemies for 1 turn." },
+    "fragilite":      { "name": "Fragility",          "desc": "☠ CURSE — −5 max HP and −1 DEF." },
+    "malediction":    { "name": "Malediction",        "desc": "☠ CURSE — Each move costs 1 HP." },
+    "fardeau":        { "name": "Burden",             "desc": "☠ CURSE — Each enemy attack deals +2 bonus damage." },
+    "corruption":     { "name": "Corruption",         "desc": "☠ CURSE — Lose 1 HP at the start of each enemy turn." }
   }
 }

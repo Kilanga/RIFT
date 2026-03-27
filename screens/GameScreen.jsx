@@ -207,8 +207,8 @@ export default function GameScreen() {
                   <View key={`${u.id}_${i}`} style={[styles.upgradeCard, { borderColor: upgradeHex(u.color) }]}>
                     <View style={[styles.upgradeCardBar, { backgroundColor: upgradeHex(u.color) }]} />
                     <View style={styles.upgradeCardBody}>
-                      <Text style={[styles.upgradeCardName, { color: upgradeHex(u.color) }]}>{u.name.toUpperCase()}</Text>
-                      <Text style={styles.upgradeCardDesc}>{u.description}</Text>
+                      <Text style={[styles.upgradeCardName, { color: upgradeHex(u.color) }]}>{t(`upgrade.${u.id}.name`, { defaultValue: u.name }).toUpperCase()}</Text>
+                      <Text style={styles.upgradeCardDesc}>{t(`upgrade.${u.id}.desc`, { defaultValue: u.description })}</Text>
                       {u.synergyActive && u.color !== 'curse' && <Text style={styles.synergeBadge}>{t('game.synergy_active')}</Text>}
                       {u.synergyActive && u.color === 'curse' && <Text style={[styles.synergeBadge, { color: '#AA44CC' }]}>{t('game.synergy_cursed')}</Text>}
                     </View>
