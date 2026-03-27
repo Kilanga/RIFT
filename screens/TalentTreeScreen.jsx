@@ -5,20 +5,22 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
 import { TALENT_CATALOG } from '../utils/talentCatalog';
 
-const CATEGORY_LABELS = {
-  offense: { label: 'OFFENSIF',    color: PALETTE.upgradeRed },
-  defense: { label: 'DÉFENSIF',    color: PALETTE.upgradeBlue },
-  utility: { label: 'UTILITAIRE',  color: PALETTE.upgradeGreen },
+const CATEGORY_COLOR = {
+  offense: PALETTE.upgradeRed,
+  defense: PALETTE.upgradeBlue,
+  utility: PALETTE.upgradeGreen,
 };
 
 const TALENT_COLOR = '#9966FF';
 
 export default function TalentTreeScreen() {
+  const { t } = useTranslation();
   const meta        = useGameStore(s => s.meta);
   const goToMenu    = useGameStore(s => s.goToMenu);
   const unlockTalent = useGameStore(s => s.unlockTalent);
@@ -39,9 +41,9 @@ export default function TalentTreeScreen() {
             activeOpacity={0.7}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={styles.back}>← Retour</Text>
+            <Text style={styles.back}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>TALENTS</Text>
+          <Text style={styles.title}>{t('talent_tree.title')}</Text>
           <View style={styles.pointsBadge}>
             <Text style={styles.pointsIcon}>✨</Text>
             <Text style={styles.pointsTxt}>{talentPoints}</Text>
@@ -50,17 +52,19 @@ export default function TalentTreeScreen() {
 
         <Text style={styles.subtitle}>
           {talentPoints === 0
-            ? 'Termine des runs pour gagner des points.'
-            : `${talentPoints} point${talentPoints > 1 ? 's' : ''} à dépenser`}
+            ? t('talent_tree.subtitle_no_points')
+            : talentPoints > 1
+              ? t('talent_tree.subtitle_points_plural', { count: talentPoints })
+              : t('talent_tree.subtitle_points', { count: talentPoints })}
         </Text>
 
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
           {categories.map(cat => {
-            const catTalents = TALENT_CATALOG.filter(t => t.category === cat);
-            const { label, color } = CATEGORY_LABELS[cat];
+            const catTalents = TALENT_CATALOG.filter(tal => tal.category === cat);
+            const color = CATEGORY_COLOR[cat];
             return (
               <View key={cat} style={styles.section}>
-                <Text style={[styles.sectionTitle, { color }]}>{label}</Text>
+                <Text style={[styles.sectionTitle, { color }]}>{t(`talent_tree.category_${cat}`)}</Text>
                 {catTalents.map(talent => {
                   const isUnlocked   = unlockedTalents.includes(talent.id);
                   const reqMet       = !talent.requires || unlockedTalents.includes(talent.requires);
@@ -84,7 +88,7 @@ export default function TalentTreeScreen() {
                             {talent.name}
                           </Text>
                           {isUnlocked ? (
-                            <Text style={styles.unlockedBadge}>✓ DÉBLOQUÉ</Text>
+                            <Text style={styles.unlockedBadge}>{t('talent_tree.unlocked_badge')}</Text>
                           ) : (
                             <View style={[styles.costBadge, !canAfford && styles.costBadgeInsuffisant]}>
                               <Text style={styles.costTxt}>✨ {talent.cost}</Text>
@@ -92,7 +96,7 @@ export default function TalentTreeScreen() {
                           )}
                         </View>
                         <Text style={[styles.talentDesc, locked && styles.talentDescLocked]}>
-                          {locked ? `Nécessite : ${TALENT_CATALOG.find(t => t.id === talent.requires)?.name}` : talent.desc}
+                          {locked ? t('talent_tree.requires', { name: TALENT_CATALOG.find(tal => tal.id === talent.requires)?.name }) : talent.desc}
                         </Text>
                       </View>
                       {canUnlock && (
@@ -101,7 +105,7 @@ export default function TalentTreeScreen() {
                           onPress={() => unlockTalent(talent.id)}
                           activeOpacity={0.8}
                         >
-                          <Text style={styles.unlockBtnTxt}>DÉBLOQUER</Text>
+                          <Text style={styles.unlockBtnTxt}>{t('talent_tree.unlock_btn')}</Text>
                         </TouchableOpacity>
                       )}
                     </View>

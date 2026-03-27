@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Modal, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, Rect, Line, G, Text as SvgText } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
@@ -14,6 +15,7 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const NODE_SIZE = 48;
 
 export default function MapScreen() {
+  const { t } = useTranslation();
   const roomMap              = useGameStore(s => s.roomMap);
   const run                  = useGameStore(s => s.run);
   const player               = useGameStore(s => s.player);
@@ -45,26 +47,30 @@ export default function MapScreen() {
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.btnBack} onPress={pauseRun} activeOpacity={0.7}>
-            <Text style={styles.btnBackTxt}>← MENU</Text>
+            <Text style={styles.btnBackTxt}>{t('map.back_menu')}</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.floorLabel}>
               {run.isDailyRun ? '☀ DAILY' : `SEED #${run.mapSeed || '—'}`}
             </Text>
-            <Text style={styles.roomCount}>{run.roomsCleared} salle{run.roomsCleared !== 1 ? 's' : ''} terminée{run.roomsCleared !== 1 ? 's' : ''}</Text>
+            <Text style={styles.roomCount}>
+              {run.roomsCleared !== 1
+                ? t('map.rooms_cleared_plural', { count: run.roomsCleared })
+                : t('map.rooms_cleared', { count: run.roomsCleared })}
+            </Text>
           </View>
           {!showAbandonConfirm ? (
             <TouchableOpacity style={styles.btnAbandon} onPress={() => setShowAbandonConfirm(true)} activeOpacity={0.7}>
-              <Text style={styles.btnAbandonTxt}>ABANDONNER</Text>
+              <Text style={styles.btnAbandonTxt}>{t('map.abandon')}</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.abandonConfirmRow}>
-              <Text style={styles.abandonConfirmTxt}>Sûr ?</Text>
+              <Text style={styles.abandonConfirmTxt}>{t('map.are_you_sure')}</Text>
               <TouchableOpacity style={styles.btnConfirmYes} onPress={abandonRun} activeOpacity={0.7}>
-                <Text style={styles.btnConfirmYesTxt}>OUI</Text>
+                <Text style={styles.btnConfirmYesTxt}>{t('map.yes')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnConfirmNo} onPress={() => setShowAbandonConfirm(false)} activeOpacity={0.7}>
-                <Text style={styles.btnConfirmNoTxt}>NON</Text>
+                <Text style={styles.btnConfirmNoTxt}>{t('map.no')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -76,12 +82,12 @@ export default function MapScreen() {
           <View style={styles.actionBtns}>
             {activeUpgrades.length > 0 && (
               <TouchableOpacity style={styles.btnUpgrades} onPress={() => setShowUpgradesModal(true)} activeOpacity={0.7}>
-                <Text style={styles.btnUpgradesTxt}>UPGRADES ({activeUpgrades.length})</Text>
+                <Text style={styles.btnUpgradesTxt}>{t('map.upgrades_btn', { count: activeUpgrades.length })}</Text>
               </TouchableOpacity>
             )}
             <View style={styles.scoreBox}>
               <Text style={styles.scoreVal}>{run.score}</Text>
-              <Text style={styles.scoreLbl}>score</Text>
+              <Text style={styles.scoreLbl}>{t('map.score_label')}</Text>
             </View>
           </View>
         </View>
@@ -99,11 +105,11 @@ export default function MapScreen() {
         {/* ── Aperçu prochaine couche ─────────────────────────────────── */}
         {nextTypes.length > 0 && (
           <View style={styles.nextRow}>
-            <Text style={styles.nextLabel}>PROCHAINE COUCHE :</Text>
+            <Text style={styles.nextLabel}>{t('map.next_layer')}</Text>
             {nextTypes.map(type => (
               <View key={type} style={[styles.nextBadge, { borderColor: roomColor(type) }]}>
                 <Text style={[styles.nextBadgeTxt, { color: roomColor(type) }]}>
-                  {roomIcon(type)} {roomLabel(type)}
+                  {roomIcon(type)} {roomLabel(type, t)}
                 </Text>
               </View>
             ))}
@@ -124,18 +130,21 @@ export default function MapScreen() {
         {/* ── Légende ─────────────────────────────────────────────────── */}
         <View style={styles.legend}>
           {[
-            { type: ROOM_TYPES.COMBAT,     label: 'Combat'    },
-            { type: ROOM_TYPES.REST,       label: 'Repos'     },
-            { type: ROOM_TYPES.SHOP,       label: 'Shop'      },
-            { type: ROOM_TYPES.BOSS_MINI,  label: 'Mini-Boss' },
-            { type: ROOM_TYPES.BOSS,       label: 'Boss'      },
-            { type: ROOM_TYPES.BOSS_FINAL, label: 'Final'     },
-          ].map(({ type, label }) => (
-            <View key={label} style={styles.legendItem}>
-              <Text style={{ fontSize: 11 }}>{roomIcon(type)}</Text>
-              <Text style={[styles.legendTxt, { color: roomColor(type) }]}>{label}</Text>
-            </View>
-          ))}
+            { type: ROOM_TYPES.COMBAT,     labelKey: 'map.legend_combat'    },
+            { type: ROOM_TYPES.REST,       labelKey: 'map.legend_rest'      },
+            { type: ROOM_TYPES.SHOP,       labelKey: 'map.legend_shop'      },
+            { type: ROOM_TYPES.BOSS_MINI,  labelKey: 'map.legend_boss_mini' },
+            { type: ROOM_TYPES.BOSS,       labelKey: 'map.legend_boss'      },
+            { type: ROOM_TYPES.BOSS_FINAL, labelKey: 'map.legend_final'     },
+          ].map(({ type, labelKey }) => {
+            const label = t(labelKey);
+            return (
+              <View key={labelKey} style={styles.legendItem}>
+                <Text style={{ fontSize: 11 }}>{roomIcon(type)}</Text>
+                <Text style={[styles.legendTxt, { color: roomColor(type) }]}>{label}</Text>
+              </View>
+            );
+          })}
         </View>
 
       </View>
@@ -146,6 +155,7 @@ export default function MapScreen() {
 // ─── Barre de progression du run ──────────────────────────────────────────────
 
 function RunProgress({ layerIndex, total, roomMap, run }) {
+  const { t } = useTranslation();
   const actBoundaries = run?.actBoundaries || [];
 
   // Calcul de l'acte courant
@@ -155,9 +165,9 @@ function RunProgress({ layerIndex, total, roomMap, run }) {
   return (
     <View style={styles.progressBox}>
       <View style={styles.progressHeader}>
-        <Text style={styles.progressLabel}>ACTE {currentAct}/3</Text>
+        <Text style={styles.progressLabel}>{t('map.act_label', { act: currentAct })}</Text>
         <Text style={styles.progressFraction}>
-          Couche <Text style={{ color: PALETTE.triangle }}>{layerIndex}</Text>/{total}
+          {t('map.layer_fraction', { current: layerIndex, total })}
         </Text>
       </View>
 
@@ -169,7 +179,7 @@ function RunProgress({ layerIndex, total, roomMap, run }) {
           const actColor = actIdx === 0 ? PALETTE.upgradeBlue
                          : actIdx === 1 ? PALETTE.upgradeRed
                          : '#FF2266';
-          const actLabel = actIdx === 0 ? 'ACTE I' : actIdx === 1 ? 'ACTE II' : 'ACTE III';
+          const actLabel = actIdx === 0 ? t('map.act_i') : actIdx === 1 ? t('map.act_ii') : t('map.act_iii');
           return (
             <View key={actIdx} style={styles.progressActGroup}>
               <Text style={[styles.progressActLabel, { color: actColor + (currentAct === actIdx+1 ? 'FF' : '55') }]}>
@@ -211,6 +221,7 @@ function RunProgress({ layerIndex, total, roomMap, run }) {
 // ─── Arbre de salles SVG ──────────────────────────────────────────────────────
 
 function MapTree({ roomMap, selectableIds, currentNodeId, onSelect }) {
+  const { t } = useTranslation();
   const LAYER_H = 92;
   const svgW    = SCREEN_W - 40;
   const svgH    = roomMap.length * LAYER_H + 50;
@@ -261,6 +272,7 @@ function MapTree({ roomMap, selectableIds, currentNodeId, onSelect }) {
                 isSelectable={selectableIds.includes(node.id)}
                 isCleared={node.cleared}
                 isCurrent={node.id === currentNodeId}
+                tFn={t}
               />
             );
           })
@@ -299,7 +311,7 @@ function MapTree({ roomMap, selectableIds, currentNodeId, onSelect }) {
 
 // ─── Nœud de carte (visuel SVG uniquement, sans onPress) ──────────────────────
 
-function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent }) {
+function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent, tFn }) {
   const color   = roomColor(node.type);
   const r       = NODE_SIZE / 2 - 2;
   const opacity = isCleared ? 0.35 : isSelectable ? 1 : 0.25;
@@ -323,7 +335,7 @@ function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent }) {
       )}
       <SvgText x={cx} y={cy + r + 14} textAnchor="middle"
         fill={isSelectable ? color : PALETTE.textDim} fontSize={9}>
-        {roomLabel(node.type)}
+        {roomLabel(node.type, tFn)}
       </SvgText>
     </G>
   );
@@ -404,14 +416,24 @@ function roomIcon(type) {
   }[type] || '?';
 }
 
-function roomLabel(type) {
+function roomLabel(type, t) {
+  if (!t) {
+    return {
+      [ROOM_TYPES.COMBAT]:     'Combat',
+      [ROOM_TYPES.REST]:       'Rest',
+      [ROOM_TYPES.SHOP]:       'Shop',
+      [ROOM_TYPES.BOSS_MINI]:  'Mini-Boss',
+      [ROOM_TYPES.BOSS]:       'Boss',
+      [ROOM_TYPES.BOSS_FINAL]: 'FINAL BOSS',
+    }[type] || '?';
+  }
   return {
-    [ROOM_TYPES.COMBAT]:     'Combat',
-    [ROOM_TYPES.REST]:       'Repos',
-    [ROOM_TYPES.SHOP]:       'Shop',
-    [ROOM_TYPES.BOSS_MINI]:  'Mini-Boss',
-    [ROOM_TYPES.BOSS]:       'Boss',
-    [ROOM_TYPES.BOSS_FINAL]: 'BOSS FINAL',
+    [ROOM_TYPES.COMBAT]:     t('map.legend_combat'),
+    [ROOM_TYPES.REST]:       t('map.legend_rest'),
+    [ROOM_TYPES.SHOP]:       t('map.legend_shop'),
+    [ROOM_TYPES.BOSS_MINI]:  t('map.legend_boss_mini'),
+    [ROOM_TYPES.BOSS]:       t('map.legend_boss'),
+    [ROOM_TYPES.BOSS_FINAL]: t('map.legend_final'),
   }[type] || '?';
 }
 
@@ -431,13 +453,14 @@ const starPts    = (cx, cy, ro, ri, n) =>
 // ─── Modal upgrades ───────────────────────────────────────────────────────────
 
 function UpgradesModal({ visible, upgrades, onClose }) {
+  const { t } = useTranslation();
   if (!visible) return null;
   return (
     <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.modalBox} onPress={e => e.stopPropagation()}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>✦ UPGRADES ACTIFS</Text>
+            <Text style={styles.modalTitle}>✦ {t('game.upgrades_active')}</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <Text style={styles.modalCloseTxt}>✕</Text>
             </TouchableOpacity>

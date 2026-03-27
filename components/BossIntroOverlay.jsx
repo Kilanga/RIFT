@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, Polygon, G, Line } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { PALETTE, ENEMY_TYPES } from '../constants';
 
 const BOSS_DATA = {
@@ -30,6 +31,7 @@ const BOSS_DATA = {
 };
 
 export default function BossIntroOverlay({ bossType }) {
+  const { t } = useTranslation();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export default function BossIntroOverlay({ bossType }) {
 
       {/* Barre de compte à rebours */}
       <View style={styles.countdown}>
-        <Text style={styles.countdownTxt}>Préparation au combat…</Text>
+        <Text style={styles.countdownTxt}>{t('boss_intro.preparing')}</Text>
         <View style={styles.countdownBar}>
           <View
             style={[

@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStripe } from '@stripe/stripe-react-native';
 
@@ -20,24 +21,13 @@ const PREMIUM_COLOR = '#9966FF';
 const PRICE_EUR     = '2,99 €';
 
 const FEATURES = [
-  {
-    icon:  '👻',
-    title: 'Classe Spectre',
-    desc:  'Éthéré : ignore la défense ennemie, immune aux pièges. PV réduits, attaque élevée.',
-  },
-  {
-    icon:  '💀',
-    title: 'Mode Hardcore',
-    desc:  'La mort réinitialise toute la méta-progression. Pour les joueurs qui cherchent l\'ultime défi.',
-  },
-  {
-    icon:  '🌌',
-    title: 'Thème Néon',
-    desc:  'Interface violet néon — fond plus sombre, ambiance rift.',
-  },
+  { icon: '👻', titleKey: 'premium.feature_spectre_title', descKey: 'premium.feature_spectre_desc' },
+  { icon: '💀', titleKey: 'premium.feature_hardcore_title', descKey: 'premium.feature_hardcore_desc' },
+  { icon: '🌌', titleKey: 'premium.feature_neon_title',    descKey: 'premium.feature_neon_desc' },
 ];
 
 export default function PremiumShopScreen() {
+  const { t } = useTranslation();
   const goToMenu          = useGameStore(s => s.goToMenu);
   const setPremium        = useGameStore(s => s.setPremium);
   const isPremium         = useGameStore(s => s.meta.isPremium);
@@ -118,9 +108,9 @@ export default function PremiumShopScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={goToMenu} activeOpacity={0.7}>
-            <Text style={styles.backTxt}>← Retour</Text>
+            <Text style={styles.backTxt}>{t('common.back')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>PREMIUM</Text>
+          <Text style={styles.title}>{t('premium.title')}</Text>
           <View style={{ width: 72 }} />
         </View>
 
@@ -130,28 +120,28 @@ export default function PremiumShopScreen() {
             /* ── Déjà premium ───────────────────────────────────────────── */
             <View style={styles.alreadyBox}>
               <Text style={styles.alreadyIcon}>★</Text>
-              <Text style={styles.alreadyTitle}>PREMIUM ACTIVÉ</Text>
-              <Text style={styles.alreadySub}>Merci pour ton soutien !</Text>
+              <Text style={styles.alreadyTitle}>{t('premium.already_active')}</Text>
+              <Text style={styles.alreadySub}>{t('premium.already_sub')}</Text>
             </View>
           ) : (
             /* ── Bandeau prix ───────────────────────────────────────────── */
             <View style={styles.priceBox}>
               <Text style={styles.priceAmount}>{PRICE_EUR}</Text>
-              <Text style={styles.priceSub}>Paiement unique · Débloqué pour toujours</Text>
+              <Text style={styles.priceSub}>{t('premium.price_sub')}</Text>
             </View>
           )}
 
           {/* ── Features ──────────────────────────────────────────────── */}
-          <Text style={styles.sectionLabel}>CONTENU INCLUS</Text>
+          <Text style={styles.sectionLabel}>{t('premium.included_content')}</Text>
           {FEATURES.map((f, i) => (
             <View key={i} style={styles.featureCard}>
               <Text style={styles.featureIcon}>{f.icon}</Text>
               <View style={styles.featureInfo}>
                 <View style={styles.featureRow}>
-                  <Text style={styles.featureTitle}>{f.title}</Text>
+                  <Text style={styles.featureTitle}>{t(f.titleKey)}</Text>
                   {isPremium && <Text style={styles.checkBadge}>✓</Text>}
                 </View>
-                <Text style={styles.featureDesc}>{f.desc}</Text>
+                <Text style={styles.featureDesc}>{t(f.descKey)}</Text>
               </View>
             </View>
           ))}
@@ -172,44 +162,44 @@ export default function PremiumShopScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Text style={styles.buyBtnTxt}>DÉBLOQUER PREMIUM</Text>
+                    <Text style={styles.buyBtnTxt}>{t('premium.unlock_btn')}</Text>
                     <Text style={styles.buyBtnPrice}>{PRICE_EUR}</Text>
                   </>
                 )}
               </TouchableOpacity>
-              <Text style={styles.secureTxt}>🔒 Paiement sécurisé via Stripe</Text>
-              <Text style={styles.noSubscriptionTxt}>Aucun abonnement · Pas de publicités</Text>
+              <Text style={styles.secureTxt}>{t('premium.secure_payment')}</Text>
+              <Text style={styles.noSubscriptionTxt}>{t('premium.no_subscription')}</Text>
             </View>
           )}
 
           {/* ── Thèmes cosmétiques (achat séparé) ──────────────────────── */}
-          <Text style={[styles.sectionLabel, { marginTop: 14 }]}>THÈMES DU PLATEAU</Text>
-          <Text style={styles.themeSectionSub}>Achats indépendants · 0,99 € chacun</Text>
+          <Text style={[styles.sectionLabel, { marginTop: 14 }]}>{t('premium.themes_section')}</Text>
+          <Text style={styles.themeSectionSub}>{t('premium.themes_sub')}</Text>
           {!!errorMsg && <Text style={styles.errorTxt}>{errorMsg}</Text>}
-          {GRID_THEMES_LIST.map(t => {
-            const isFree     = t.id === 'default';
-            const isPurchased = purchasedThemes.includes(t.id);
-            const isActive   = gridTheme === t.id;
-            const isBuying   = loadingTheme === t.id;
+          {GRID_THEMES_LIST.map(theme => {
+            const isFree      = theme.id === 'default';
+            const isPurchased = purchasedThemes.includes(theme.id);
+            const isActive    = gridTheme === theme.id;
+            const isBuying    = loadingTheme === theme.id;
             return (
-              <View key={t.id} style={[styles.themeRow, isActive && styles.themeRowActive]}>
-                <View style={[styles.themePreview, { backgroundColor: t.floor0, borderColor: t.wallLine }]} />
+              <View key={theme.id} style={[styles.themeRow, isActive && styles.themeRowActive]}>
+                <View style={[styles.themePreview, { backgroundColor: theme.floor0, borderColor: theme.wallLine }]} />
                 <View style={styles.themeInfo}>
-                  <Text style={styles.themeEmoji}>{t.emoji} {t.name}</Text>
-                  {isFree && <Text style={styles.themeFreeTag}>Gratuit</Text>}
+                  <Text style={styles.themeEmoji}>{theme.emoji} {theme.name}</Text>
+                  {isFree && <Text style={styles.themeFreeTag}>{t('premium.theme_free')}</Text>}
                 </View>
                 {isFree || isPurchased ? (
                   <TouchableOpacity
                     style={[styles.themeUseBtn, isActive && styles.themeUseBtnActive]}
-                    onPress={() => setGridTheme(t.id)}
+                    onPress={() => setGridTheme(theme.id)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.themeUseBtnTxt}>{isActive ? '✓ Actif' : 'Utiliser'}</Text>
+                    <Text style={styles.themeUseBtnTxt}>{isActive ? t('premium.theme_active') : t('premium.theme_use')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
                     style={[styles.themeBuyBtn, isBuying && styles.buyBtnDisabled]}
-                    onPress={() => handleBuyTheme(t.id)}
+                    onPress={() => handleBuyTheme(theme.id)}
                     disabled={!!loadingTheme}
                     activeOpacity={0.85}
                   >

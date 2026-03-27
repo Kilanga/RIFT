@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
+import './utils/i18n';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

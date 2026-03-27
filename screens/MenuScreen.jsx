@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
@@ -22,6 +23,7 @@ const ORBIT_INTERVAL   = 80; // ms → ~12 fps
 
 
 export default function MenuScreen() {
+  const { t } = useTranslation();
   const meta                = useGameStore(s => s.meta);
   const run                 = useGameStore(s => s.run);
   const goToShapeSelect     = useGameStore(s => s.goToShapeSelect);
@@ -92,23 +94,23 @@ export default function MenuScreen() {
         {/* ── Boutons ────────────────────────────────────────────────────── */}
         {run?.isPaused && (
           <TouchableOpacity style={styles.btnResume} onPress={resumeRun} activeOpacity={0.75}>
-            <Text style={styles.btnResumeTxt}>▶  REPRENDRE LA RUN</Text>
-            <Text style={styles.btnResumeSub}>Couche {run.currentLayerIndex} · Score {run.score}</Text>
+            <Text style={styles.btnResumeTxt}>{t('menu.resume')}</Text>
+            <Text style={styles.btnResumeSub}>{t('menu.resume_sub', { layer: run.currentLayerIndex, score: run.score })}</Text>
           </TouchableOpacity>
         )}
         <View style={styles.buttonsCol}>
           <View style={styles.buttonsRow}>
             <TouchableOpacity style={[styles.btnPlay, { flex: 1 }]} onPress={goToShapeSelect} activeOpacity={0.75}>
-              <Text style={styles.btnPlayTxt}>▶  JOUER</Text>
+              <Text style={styles.btnPlayTxt}>{t('menu.play')}</Text>
               {meta.totalRuns > 0 && (
-                <Text style={styles.btnPlaySub}>Run #{meta.totalRuns + 1}</Text>
+                <Text style={styles.btnPlaySub}>{t('menu.run_number', { number: meta.totalRuns + 1 })}</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.btnDaily} onPress={handleDailyRun} activeOpacity={0.75}>
               <Text style={styles.btnDailyIcon}>☀</Text>
-              <Text style={styles.btnDailyTxt}>DAILY</Text>
-              <Text style={styles.btnDailySub}>RUN</Text>
+              <Text style={styles.btnDailyTxt}>{t('menu.daily')}</Text>
+              <Text style={styles.btnDailySub}>{t('menu.daily_run')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -144,7 +146,7 @@ export default function MenuScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.themeToggleTxt}>
-              {meta.premiumTheme === 'neon' ? '🌌 THÈME NÉON (actif)' : '⬛ THÈME PAR DÉFAUT'}
+              {meta.premiumTheme === 'neon' ? t('menu.theme_neon') : t('menu.theme_default')}
             </Text>
           </TouchableOpacity>
         )}
@@ -258,23 +260,24 @@ function ClassSilhouette({ shape, color, size = 44 }) {
 }
 
 function LastRunCard({ run }) {
+  const { t } = useTranslation();
   const cls     = CLASS_INFO[run.shape] || CLASS_INFO[PLAYER_SHAPES.TRIANGLE];
   const TOTAL_L = 6;
   const progress = Math.min(run.layersCleared, TOTAL_L);
   const pct      = progress / TOTAL_L;
 
   const getMessage = () => {
-    if (run.abandoned) return 'Run abandonnée.';
-    if (run.won) return '🏆 Run complétée !';
-    if (pct === 0) return 'Le Rift t\'a consumé dès le début.';
-    if (pct < 0.34) return 'Tu peux aller beaucoup plus loin.';
-    if (pct < 0.67) return 'Tu avais trouvé ton rythme. Presque.';
-    return 'Si proche... Encore une run.';
+    if (run.abandoned) return t('menu.run_abandoned');
+    if (run.won) return t('menu.run_won');
+    if (pct === 0) return t('menu.run_consumed_early');
+    if (pct < 0.34) return t('menu.run_can_do_better');
+    if (pct < 0.67) return t('menu.run_found_rhythm');
+    return t('menu.run_so_close');
   };
 
   return (
     <View style={styles.lastRunCard}>
-      <Text style={styles.lastRunTitle}>DERNIÈRE RUN</Text>
+      <Text style={styles.lastRunTitle}>{t('menu.last_run')}</Text>
 
       <View style={styles.lastRunRow}>
         {/* Classe */}
@@ -297,7 +300,7 @@ function LastRunCard({ run }) {
             <Text style={[styles.lastRunStatVal, { color: run.won ? PALETTE.charge : PALETTE.textPrimary }]}>
               {progress}/{TOTAL_L}
             </Text>
-            <Text style={styles.lastRunStatLbl}>Couches</Text>
+            <Text style={styles.lastRunStatLbl}>{t('menu.layers_label')}</Text>
           </View>
         </View>
       </View>
@@ -321,6 +324,7 @@ function LastRunCard({ run }) {
 // ─── Progression permanente ───────────────────────────────────────────────────
 
 function PermanentProgress({ upgrades, meta }) {
+  const { t } = useTranslation();
   const count       = upgrades.length;
   const remaining   = TOTAL_UNLOCKS - count;
   const unlockedIds = upgrades.map(u => u.id);
@@ -346,16 +350,14 @@ function PermanentProgress({ upgrades, meta }) {
   return (
     <View style={styles.permBox}>
       <View style={styles.permHeader}>
-        <Text style={styles.permTitle}>UPGRADES PERMANENTS</Text>
+        <Text style={styles.permTitle}>{t('menu.perm_upgrades_title')}</Text>
         <Text style={styles.permCount}>
           <Text style={{ color: count > 0 ? PALETTE.charge : PALETTE.textMuted }}>{count}</Text>
           <Text style={styles.permCountTotal}>/{TOTAL_UNLOCKS}</Text>
         </Text>
       </View>
 
-      <Text style={styles.permMechanic}>
-        ✦ Chaque mort te rapporte un upgrade — si la condition est remplie
-      </Text>
+      <Text style={styles.permMechanic}>{t('menu.perm_mechanic')}</Text>
 
       {/* Grille */}
       <View style={styles.permGrid}>
@@ -385,7 +387,7 @@ function PermanentProgress({ upgrades, meta }) {
                   {isHidden ? '???' : u.name}
                 </Text>
                 {isOwned && (
-                  <Text style={[styles.permSlotCond, { color: PALETTE.charge + '77' }]}>✓ obtenu</Text>
+                  <Text style={[styles.permSlotCond, { color: PALETTE.charge + '77' }]}>{t('menu.perm_obtained')}</Text>
                 )}
                 {!isOwned && !isHidden && u.unlockCondition && (
                   <Text style={[styles.permSlotCond, { color: condMet ? PALETTE.triangle + 'AA' : PALETTE.textDim }]} numberOfLines={1}>
@@ -393,7 +395,7 @@ function PermanentProgress({ upgrades, meta }) {
                   </Text>
                 )}
                 {!isOwned && !isHidden && !u.unlockCondition && (
-                  <Text style={[styles.permSlotCond, { color: PALETTE.triangle + 'AA' }]}>✓ dans le tirage</Text>
+                  <Text style={[styles.permSlotCond, { color: PALETTE.triangle + 'AA' }]}>{t('menu.perm_in_draw')}</Text>
                 )}
               </View>
             </View>
@@ -403,12 +405,12 @@ function PermanentProgress({ upgrades, meta }) {
 
       {remaining > 0 && (
         <Text style={styles.permHint}>
-          {remaining} upgrade{remaining > 1 ? 's' : ''} encore à découvrir
+          {remaining > 1 ? t('menu.perm_remaining_plural', { count: remaining }) : t('menu.perm_remaining', { count: remaining })}
         </Text>
       )}
       {remaining === 0 && (
         <Text style={[styles.permHint, { color: PALETTE.charge }]}>
-          ✦ Tous les upgrades permanents débloqués !
+          {t('menu.perm_all_unlocked')}
         </Text>
       )}
     </View>
@@ -421,25 +423,26 @@ const SHAPE_ICON_OL  = { triangle: '▲', circle: '●', hexagon: '⬡' };
 const SHAPE_COLOR_OL = { triangle: PALETTE.triangle, circle: PALETTE.circle, hexagon: PALETTE.hexagon };
 
 function OnlineLeaderboard({ topScores, dailyScores, loading, dailyTab, onTabChange, playerName, onSetName }) {
+  const { t } = useTranslation();
   const entries = dailyTab ? dailyScores : topScores;
 
   return (
     <View style={styles.olBox}>
       {/* Header avec tabs */}
       <View style={styles.olHeader}>
-        <Text style={styles.olTitle}>🌐  CLASSEMENT MONDIAL</Text>
+        <Text style={styles.olTitle}>{t('menu.leaderboard_world')}</Text>
         <View style={styles.olTabs}>
           <TouchableOpacity
             style={[styles.olTab, !dailyTab && styles.olTabActive]}
             onPress={() => onTabChange(false)}
           >
-            <Text style={[styles.olTabTxt, !dailyTab && { color: PALETTE.textPrimary }]}>GLOBAL</Text>
+            <Text style={[styles.olTabTxt, !dailyTab && { color: PALETTE.textPrimary }]}>{t('menu.leaderboard_global')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.olTab, dailyTab && styles.olTabActive]}
             onPress={() => onTabChange(true)}
           >
-            <Text style={[styles.olTabTxt, dailyTab && { color: PALETTE.charge }]}>☀ DAILY</Text>
+            <Text style={[styles.olTabTxt, dailyTab && { color: PALETTE.charge }]}>{t('menu.leaderboard_daily')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -447,20 +450,20 @@ function OnlineLeaderboard({ topScores, dailyScores, loading, dailyTab, onTabCha
       {/* Pseudo du joueur */}
       {playerName ? (
         <TouchableOpacity onPress={onSetName} activeOpacity={0.7}>
-          <Text style={styles.olPlayer}>Joueur : <Text style={{ color: PALETTE.triangle }}>{playerName}</Text>  ✎</Text>
+          <Text style={styles.olPlayer}>{t('menu.leaderboard_player')}<Text style={{ color: PALETTE.triangle }}>{playerName}</Text>  ✎</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity style={styles.olSetNameBtn} onPress={onSetName} activeOpacity={0.8}>
-          <Text style={styles.olSetNameTxt}>+ Configurer ton pseudo pour apparaître ici</Text>
+          <Text style={styles.olSetNameTxt}>{t('menu.leaderboard_set_name')}</Text>
         </TouchableOpacity>
       )}
 
       {/* Lignes du classement */}
       {loading ? (
-        <Text style={styles.olLoading}>Chargement…</Text>
+        <Text style={styles.olLoading}>{t('common.loading')}</Text>
       ) : entries.length === 0 ? (
         <Text style={styles.olEmpty}>
-          {dailyTab ? 'Aucun score aujourd\'hui. Sois le premier !' : 'Aucun score encore.'}
+          {dailyTab ? t('menu.leaderboard_empty_daily') : t('menu.leaderboard_empty')}
         </Text>
       ) : (
         entries.map((e, i) => {
@@ -499,11 +502,12 @@ const SHAPE_ICON = { triangle: '▲', circle: '●', hexagon: '⬡' };
 const SHAPE_COLOR = { triangle: PALETTE.triangle, circle: PALETTE.circle, hexagon: PALETTE.hexagon };
 
 function LocalLeaderboard({ entries }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.lbBox}>
       <View style={styles.lbHeader}>
-        <Text style={styles.lbTitle}>MEILLEURS SCORES</Text>
-        <Text style={styles.lbSub}>Top {entries.length}</Text>
+        <Text style={styles.lbTitle}>{t('menu.best_scores')}</Text>
+        <Text style={styles.lbSub}>{t('menu.top_count', { count: entries.length })}</Text>
       </View>
       {entries.map((e, i) => {
         const shapeColor = SHAPE_COLOR[e.shape] || PALETTE.textMuted;
@@ -538,9 +542,10 @@ function LocalLeaderboard({ entries }) {
 // ─── Historique des runs ──────────────────────────────────────────────────────
 
 function RunHistory({ entries }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.histBox}>
-      <Text style={styles.histTitle}>HISTORIQUE — {entries.length} DERNIERS RUNS</Text>
+      <Text style={styles.histTitle}>{t('menu.run_history', { count: entries.length })}</Text>
       <View style={styles.histList}>
         {entries.map((e, i) => {
           const shapeColor = SHAPE_COLOR[e.shape] || PALETTE.textMuted;
@@ -569,13 +574,14 @@ function RunHistory({ entries }) {
 // ─── Succès ───────────────────────────────────────────────────────────────────
 
 function AchievementsSection({ unlockedIds }) {
+  const { t } = useTranslation();
   const count = unlockedIds.length;
   const total = ACHIEVEMENTS_CATALOG.length;
 
   return (
     <View style={styles.achBox}>
       <View style={styles.achHeader}>
-        <Text style={styles.achTitle}>SUCCÈS</Text>
+        <Text style={styles.achTitle}>{t('menu.achievements_title')}</Text>
         <Text style={styles.achCount}>
           <Text style={{ color: count > 0 ? '#88CCFF' : PALETTE.textMuted }}>{count}</Text>
           <Text style={styles.achCountTotal}>/{total}</Text>
@@ -609,12 +615,12 @@ function AchievementsSection({ unlockedIds }) {
       </View>
       {count < total && (
         <Text style={styles.achHint}>
-          {total - count} succès encore à déverrouiller
+          {t('menu.achievements_remaining', { count: total - count })}
         </Text>
       )}
       {count === total && (
         <Text style={[styles.achHint, { color: '#88CCFF' }]}>
-          ✦ Tous les succès débloqués — Maître du Rift !
+          {t('menu.achievements_all')}
         </Text>
       )}
     </View>

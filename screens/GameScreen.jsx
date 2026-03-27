@@ -6,6 +6,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable, Animated } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useGameStore from '../store/gameStore';
 import { GAME_PHASES, PALETTE, ROOM_TYPES, CLASS_INFO } from '../constants';
@@ -20,6 +21,7 @@ import PauseModal           from '../components/PauseModal';
 import BossIntroOverlay     from '../components/BossIntroOverlay';
 
 export default function GameScreen() {
+  const { t } = useTranslation();
   const phase          = useGameStore(s => s.phase);
   const player         = useGameStore(s => s.player);
   const run            = useGameStore(s => s.run);
@@ -126,7 +128,7 @@ export default function GameScreen() {
             { backgroundColor: isPlayerTurn ? '#002211' : '#220000', borderColor: isPlayerTurn ? '#00CC66' : '#CC3333' },
           ]}>
             <Text style={[styles.turnTxt, { color: isPlayerTurn ? '#00FF88' : '#FF5555' }]}>
-              {isPlayerTurn ? '▶ TON TOUR' : '◌ ENNEMIS…'}
+              {isPlayerTurn ? t('game.your_turn') : t('game.enemy_turn')}
             </Text>
           </View>
           {aliveEnemies.length > 0 && (
@@ -136,7 +138,7 @@ export default function GameScreen() {
           {/* Bouton Upgrades */}
           {activeUpgrades.length > 0 && (
             <TouchableOpacity style={styles.upgradesBtn} onPress={() => setShowUpgrades(true)} activeOpacity={0.7}>
-              <Text style={styles.upgradesBtnTxt}>UPGRADES ({activeUpgrades.length})</Text>
+              <Text style={styles.upgradesBtnTxt}>{t('game.upgrades_btn', { count: activeUpgrades.length })}</Text>
             </TouchableOpacity>
           )}
 
@@ -148,7 +150,7 @@ export default function GameScreen() {
               disabled={blinkUsed}
               activeOpacity={0.7}
             >
-              <Text style={[styles.blinkBtnTxt, blinkUsed && styles.blinkBtnTxtUsed]}>⚡ BLINK</Text>
+              <Text style={[styles.blinkBtnTxt, blinkUsed && styles.blinkBtnTxtUsed]}>{t('game.blink')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -194,10 +196,10 @@ export default function GameScreen() {
         <Modal visible={showUpgrades} transparent animationType="slide" onRequestClose={() => setShowUpgrades(false)}>
           <Pressable style={styles.modalOverlay} onPress={() => setShowUpgrades(false)}>
             <Pressable style={styles.upgradesSheet} onPress={() => {}}>
-              <Text style={styles.upgradesSheetTitle}>UPGRADES ACTIFS</Text>
+              <Text style={styles.upgradesSheetTitle}>{t('game.upgrades_active')}</Text>
               {activeUpgrades.filter(u => u.color === 'curse').length >= 3 && (
                 <View style={styles.curseSynergyBanner}>
-                  <Text style={styles.curseSynergyTxt}>☠ PACTE MAUDIT — ×2 À TOUS LES EFFETS</Text>
+                  <Text style={styles.curseSynergyTxt}>{t('game.curse_synergy')}</Text>
                 </View>
               )}
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -207,8 +209,8 @@ export default function GameScreen() {
                     <View style={styles.upgradeCardBody}>
                       <Text style={[styles.upgradeCardName, { color: upgradeHex(u.color) }]}>{u.name.toUpperCase()}</Text>
                       <Text style={styles.upgradeCardDesc}>{u.description}</Text>
-                      {u.synergyActive && u.color !== 'curse' && <Text style={styles.synergeBadge}>✦ SYNERGIE ACTIVE</Text>}
-                      {u.synergyActive && u.color === 'curse' && <Text style={[styles.synergeBadge, { color: '#AA44CC' }]}>☠ PACTE MAUDIT</Text>}
+                      {u.synergyActive && u.color !== 'curse' && <Text style={styles.synergeBadge}>{t('game.synergy_active')}</Text>}
+                      {u.synergyActive && u.color === 'curse' && <Text style={[styles.synergeBadge, { color: '#AA44CC' }]}>{t('game.synergy_cursed')}</Text>}
                     </View>
                   </View>
                 ))}
@@ -225,13 +227,14 @@ export default function GameScreen() {
 // ─── Sous-composants ──────────────────────────────────────────────────────────
 
 function RoomBadge({ type }) {
+  const { t } = useTranslation();
   const labels = {
-    [ROOM_TYPES.COMBAT]:     { txt: '⚔ COMBAT',     color: PALETTE.roomCombat },
-    [ROOM_TYPES.REST]:       { txt: '+ REPOS',       color: PALETTE.roomRest   },
-    [ROOM_TYPES.SHOP]:       { txt: '◆ BOUTIQUE',    color: PALETTE.roomShop   },
-    [ROOM_TYPES.BOSS_MINI]:  { txt: '☠ MINI-BOSS',  color: PALETTE.roomBoss   },
-    [ROOM_TYPES.BOSS]:       { txt: '★ BOSS',        color: PALETTE.roomBoss   },
-    [ROOM_TYPES.BOSS_FINAL]: { txt: '💀 BOSS FINAL', color: '#FF2266'          },
+    [ROOM_TYPES.COMBAT]:     { txt: t('game.room_combat'),     color: PALETTE.roomCombat },
+    [ROOM_TYPES.REST]:       { txt: t('game.room_rest'),       color: PALETTE.roomRest   },
+    [ROOM_TYPES.SHOP]:       { txt: t('game.room_shop'),       color: PALETTE.roomShop   },
+    [ROOM_TYPES.BOSS_MINI]:  { txt: t('game.room_boss_mini'),  color: PALETTE.roomBoss   },
+    [ROOM_TYPES.BOSS]:       { txt: t('game.room_boss'),       color: PALETTE.roomBoss   },
+    [ROOM_TYPES.BOSS_FINAL]: { txt: t('game.room_boss_final'), color: '#FF2266'          },
   };
   const { txt, color } = labels[type] || { txt: '?', color: PALETTE.textMuted };
 

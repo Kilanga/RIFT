@@ -5,12 +5,14 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Polygon, Circle, G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PALETTE, UPGRADE_COLORS } from '../constants';
 import { getUpgradeById } from '../systems/upgradeSystem';
 
 export default function ShopOverlay() {
+  const { t } = useTranslation();
   const player      = useGameStore(s => s.player);
   const currentRoom = useGameStore(s => s.currentRoom);
   const buyShopItem = useGameStore(s => s.buyShopItem);
@@ -22,11 +24,11 @@ export default function ShopOverlay() {
     <View style={styles.container}>
       {/* En-tête */}
       <View style={styles.header}>
-        <Text style={styles.title}>◆ MARCHANDE DE FRAGMENTS</Text>
+        <Text style={styles.title}>{t('shop.title')}</Text>
         <View style={styles.wallet}>
           <Text style={styles.fragmentIcon}>◈</Text>
           <Text style={styles.fragmentCount}>{player.fragments}</Text>
-          <Text style={styles.fragmentLabel}>fragments</Text>
+          <Text style={styles.fragmentLabel}>{t('shop.fragments_label')}</Text>
         </View>
       </View>
 
@@ -52,7 +54,7 @@ export default function ShopOverlay() {
 
       {/* Quitter */}
       <TouchableOpacity style={styles.btnLeave} onPress={leaveRoom} activeOpacity={0.8}>
-        <Text style={styles.btnLeaveTxt}>Quitter la boutique →</Text>
+        <Text style={styles.btnLeaveTxt}>{t('shop.leave')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -61,8 +63,14 @@ export default function ShopOverlay() {
 // ─── Item de shop ─────────────────────────────────────────────────────────────
 
 function ShopItem({ upgrade, price, bought, canAfford, onBuy }) {
+  const { t } = useTranslation();
   const color     = upgradeHex(upgrade.color);
-  const rarityTxt = { common: 'COMMUN', rare: 'RARE', epic: 'ÉPIQUE', curse: 'MAUDIT' }[upgrade.rarity] || 'COMMUN';
+  const rarityTxt = {
+    common: t('shop.rarity_common'),
+    rare:   t('shop.rarity_rare'),
+    epic:   t('shop.rarity_epic'),
+    curse:  t('shop.rarity_curse'),
+  }[upgrade.rarity] || t('shop.rarity_common');
 
   return (
     <TouchableOpacity
@@ -93,7 +101,7 @@ function ShopItem({ upgrade, price, bought, canAfford, onBuy }) {
       {/* Prix */}
       <View style={styles.priceBox}>
         {bought ? (
-          <Text style={styles.boughtTxt}>✓ Acheté</Text>
+          <Text style={styles.boughtTxt}>{t('shop.bought')}</Text>
         ) : (
           <View style={[styles.priceTag, { borderColor: canAfford ? color : PALETTE.textMuted }]}>
             <Text style={styles.fragIcon}>◈</Text>

@@ -6,10 +6,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Svg, { Circle, Polygon, G, Line } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
 
 export default function RestRoomOverlay() {
+  const { t } = useTranslation();
   const player           = useGameStore(s => s.player);
   const currentRoom      = useGameStore(s => s.currentRoom);
   const interactWithAltar = useGameStore(s => s.interactWithAltar);
@@ -22,7 +24,7 @@ export default function RestRoomOverlay() {
   return (
     <View style={styles.container}>
       {/* Titre */}
-      <Text style={styles.roomType}>◆ SALLE DE REPOS</Text>
+      <Text style={styles.roomType}>{t('rest.room_type')}</Text>
 
       {/* Autel animé (SVG statique) */}
       <View style={styles.altarBox}>
@@ -58,7 +60,7 @@ export default function RestRoomOverlay() {
       {/* Info PV */}
       <View style={styles.hpInfo}>
         <View style={styles.hpRow}>
-          <Text style={styles.hpLabel}>PV actuels</Text>
+          <Text style={styles.hpLabel}>{t('rest.hp_current')}</Text>
           <Text style={styles.hpValue}>{player.hp} / {player.maxHp}</Text>
         </View>
         <View style={styles.hpBar}>
@@ -67,13 +69,13 @@ export default function RestRoomOverlay() {
 
         {!isFull && (
           <View style={styles.hpRow}>
-            <Text style={styles.hpLabel}>Après soin</Text>
+            <Text style={styles.hpLabel}>{t('rest.hp_after')}</Text>
             <Text style={[styles.hpValue, { color: PALETTE.hp }]}>+{Math.min(healAmount, player.maxHp - player.hp)} → {hpAfter}</Text>
           </View>
         )}
 
         {isFull && (
-          <Text style={styles.fullText}>PV déjà au maximum</Text>
+          <Text style={styles.fullText}>{t('rest.hp_full')}</Text>
         )}
       </View>
 
@@ -85,13 +87,13 @@ export default function RestRoomOverlay() {
           activeOpacity={0.8}
         >
           <Text style={styles.btnHealTxt}>
-            {isFull ? '◆ Passer' : `💚 Se soigner (+${Math.min(healAmount, player.maxHp - player.hp)} PV)`}
+            {isFull ? t('rest.skip_btn') : t('rest.heal_btn', { amount: Math.min(healAmount, player.maxHp - player.hp) })}
           </Text>
         </TouchableOpacity>
 
         {!isFull && (
           <TouchableOpacity style={styles.btnSkip} onPress={leaveRoom} activeOpacity={0.8}>
-            <Text style={styles.btnSkipTxt}>Ignorer l'autel</Text>
+            <Text style={styles.btnSkipTxt}>{t('rest.skip_altar')}</Text>
           </TouchableOpacity>
         )}
       </View>

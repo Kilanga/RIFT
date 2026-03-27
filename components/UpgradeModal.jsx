@@ -8,6 +8,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   Modal, Pressable,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, Rect, G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
@@ -19,9 +20,10 @@ const RARITY_COLORS = {
   epic:   '#FF88FF',
   curse:  '#CC66FF',
 };
-const RARITY_LABELS = { common: 'COMMUN', rare: 'RARE', epic: 'ÉPIQUE', curse: 'MAUDIT' };
+// RARITY_LABELS are now produced via t() inside the component
 
 export default function UpgradeModal() {
+  const { t } = useTranslation();
   const upgradeChoices = useGameStore(s => s.upgradeChoices);
   const phase          = useGameStore(s => s.phase);
   const selectUpgrade  = useGameStore(s => s.selectUpgrade);
@@ -46,9 +48,9 @@ export default function UpgradeModal() {
 
             {/* ── En-tête ─────────────────────────────────────────────── */}
             <View style={styles.header}>
-              <Text style={styles.rewardLabel}>✦  RÉCOMPENSE  ✦</Text>
+              <Text style={styles.rewardLabel}>{t('upgrade_modal.reward')}</Text>
               <Text style={styles.subtitle}>
-                Upgrade #{activeUpgrades.length + 1}  ·  Salle {run.roomsCleared}
+                {t('upgrade_modal.subtitle', { num: activeUpgrades.length + 1, room: run.roomsCleared })}
               </Text>
             </View>
 
@@ -71,7 +73,7 @@ export default function UpgradeModal() {
               })}
             </View>
 
-            <Text style={styles.hint}>Appuie pour choisir</Text>
+            <Text style={styles.hint}>{t('upgrade_modal.hint')}</Text>
 
           </View>
         </SafeAreaView>
@@ -83,9 +85,16 @@ export default function UpgradeModal() {
 // ─── Carte compacte ───────────────────────────────────────────────────────────
 
 function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
+  const { t } = useTranslation();
   const color       = upgradeHex(upgrade.color);
   const rarityColor = RARITY_COLORS[upgrade.rarity] || RARITY_COLORS.common;
   const isEpic      = upgrade.rarity === 'epic';
+  const rarityLabels = {
+    common: t('upgrade_modal.rarity_common'),
+    rare:   t('upgrade_modal.rarity_rare'),
+    epic:   t('upgrade_modal.rarity_epic'),
+    curse:  t('upgrade_modal.rarity_curse'),
+  };
 
   return (
     <Pressable
@@ -113,7 +122,7 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
             </Text>
             <View style={styles.cardTags}>
               <Text style={[styles.cardRarity, { color: rarityColor }]}>
-                {RARITY_LABELS[upgrade.rarity] || 'COMMUN'}
+                {rarityLabels[upgrade.rarity] || t('upgrade_modal.rarity_common')}
               </Text>
               <View style={[styles.colorDot, { backgroundColor: color }]} />
             </View>
@@ -123,7 +132,7 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
           </Text>
           {wouldSynergy && (
             <Text style={[styles.cardSynText, { color }]}>
-              ✦ Déclenche synergie {colorLabel(upgrade.color)} !
+              {t('upgrade_modal.synergy_trigger', { color: colorLabel(upgrade.color, t) })}
             </Text>
           )}
         </View>
@@ -213,7 +222,15 @@ function upgradeHex(color) {
   return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
 }
 
-function colorLabel(color) {
+function colorLabel(color, t) {
+  if (t) {
+    return {
+      red:   t('upgrade_modal.color_offensive'),
+      blue:  t('upgrade_modal.color_utility'),
+      green: t('upgrade_modal.color_support'),
+      curse: t('upgrade_modal.color_cursed'),
+    }[color] || color;
+  }
   return { red: 'OFFENSIF', blue: 'UTILITAIRE', green: 'SOUTIEN', curse: 'MAUDIT' }[color] || color;
 }
 
