@@ -12,12 +12,14 @@ export const PLAYER_SHAPES = {
   TRIANGLE: 'triangle', // Assassin  — Pierce, attaque en ligne
   CIRCLE:   'circle',   // Arcaniste — AoE autour de lui
   HEXAGON:  'hexagon',  // Colosse   — Défense, riposte
+  SPECTRE:  'spectre',  // PREMIUM   — Téléportation passive
 };
 
 export const CLASS_INFO = {
   triangle: { name: 'Assassin',  short: 'ASS', color: '#00FFCC' },
   circle:   { name: 'Arcaniste', short: 'ARC', color: '#FF66FF' },
   hexagon:  { name: 'Colosse',   short: 'COL', color: '#66AAFF' },
+  spectre:  { name: 'Spectre',   short: 'SPE', color: '#BB44FF', locked: true, premium: true },
 };
 
 export const ENEMY_INFO = {
@@ -27,6 +29,9 @@ export const ENEMY_INFO = {
   boss_void:  { name: "L'Écho",           short: 'ÉCH', isBoss: true },
   boss_pulse: { name: 'Tonnerre Incarné', short: 'TON', isBoss: true },
   boss_rift:  { name: 'Le Dévoreur',      short: 'DÉV', isBoss: true, isFinal: true },
+  healer:    { name: 'Guérisseur',        short: 'GUÉ' },
+  explosive: { name: 'Explosif',          short: 'EXP' },
+  summoner:  { name: 'Invocateur',        short: 'INV' },
 };
 
 // ─── Couleurs d'upgrades (synergies) ─────────────────────────────────────────
@@ -45,6 +50,8 @@ export const ROOM_TYPES = {
   BOSS_MINI:  'boss_mini',   // Fin d'acte 1 — mini-boss
   BOSS:       'boss',        // Fin d'acte 2 — boss normal
   BOSS_FINAL: 'boss_final',  // Fin d'acte 3 — boss final (très fort)
+  ELITE:      'elite',       // Ennemis renforcés, double récompense
+  EVENT:      'event',       // Événement narratif avec choix
 };
 
 // ─── Phases de jeu ────────────────────────────────────────────────────────────
@@ -57,6 +64,9 @@ export const GAME_PHASES = {
   REST_ROOM:      'restRoom',
   SHOP_ROOM:      'shopRoom',
   UPGRADE_CHOICE: 'upgradeChoice',
+  EVENT_ROOM:     'eventRoom',
+  TALENT_TREE:    'talentTree',
+  PREMIUM_SHOP:   'premiumShop',
   GAME_OVER:      'gameOver',
   VICTORY:        'victory',
   MULTIPLAYER:    'multiplayer',
@@ -70,15 +80,20 @@ export const ENEMY_TYPES = {
   BOSS_VOID:   'boss_void',   // Mini-boss / Boss acte 1 — spirale
   BOSS_PULSE:  'boss_pulse',  // Boss acte 2 — onde de choc
   BOSS_RIFT:   'boss_rift',   // Boss final acte 3 — très puissant
+  HEALER:      'healer',      // Soigne les ennemis adjacents, fuit le joueur
+  EXPLOSIVE:   'explosive',   // Explose à la mort (AoE rayon 2)
+  SUMMONER:    'summoner',    // Invoque des Chasseurs tous les 3 tours
 };
 
 // ─── Types de cellules ────────────────────────────────────────────────────────
 export const CELL_TYPES = {
-  EMPTY:  'empty',
-  WALL:   'wall',
-  EXIT:   'exit',
-  CHEST:  'chest',
-  ALTAR:  'altar',
+  EMPTY:    'empty',
+  WALL:     'wall',
+  EXIT:     'exit',
+  CHEST:    'chest',
+  ALTAR:    'altar',
+  LAVA:     'lava',      // Inflige 2 dégâts quand le joueur marche dessus
+  TELEPORT: 'teleport',  // Téléporte vers la case liée
 };
 
 // ─── Palette de couleurs UI ───────────────────────────────────────────────────
@@ -113,6 +128,19 @@ export const PALETTE = {
   roomRest:     '#44FF88',
   roomShop:     '#FFCC44',
   roomBoss:     '#BB44FF',
+  roomElite:    '#FF8800',
+  roomEvent:    '#FF88FF',
+
+  // Nouveaux ennemis
+  healer:    '#44FF88',
+  explosive: '#FF8800',
+  summoner:  '#CC44FF',
+
+  // Statuts ennemis
+  statusBurn:       '#FF6600',
+  statusFreeze:     '#44CCFF',
+  statusStun:       '#AAAAAA',
+  statusVulnerable: '#FFFF44',
 
   // Jeu
   hp:           '#44FF88',

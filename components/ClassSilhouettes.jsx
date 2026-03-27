@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Circle, Polygon, Rect, Line, G } from 'react-native-svg';
+import { Circle, Polygon, Rect, Line, G, Ellipse } from 'react-native-svg';
 
 // Assassin : capuche, silhouette élancée, dague
 export function Assassin({ cx, cy, r, color }) {
@@ -86,6 +86,44 @@ export function Colosse({ cx, cy, r, color }) {
         stroke={color} strokeWidth={2.5} opacity={0.9} />
       <Line x1={cx + r*0.55} y1={cy - r*0.45} x2={cx + r*1.0} y2={cy - r*0.45}
         stroke={color} strokeWidth={2} opacity={0.7} />
+    </G>
+  );
+}
+
+// Spectre : silhouette fantomatique, capuche, bas de robe effiloché
+export function Spectre({ cx, cy, r, color }) {
+  return (
+    <G>
+      {/* Capuche profonde */}
+      <Polygon
+        points={`${cx},${cy - r*1.6} ${cx - r*0.6},${cy - r*0.65} ${cx + r*0.6},${cy - r*0.65}`}
+        fill={color} opacity={0.9}
+      />
+      {/* Tête floue */}
+      <Circle cx={cx} cy={cy - r*1.05} r={r*0.32} fill={color} opacity={0.65} />
+      {/* Yeux lumineux */}
+      <Circle cx={cx - r*0.12} cy={cy - r*1.08} r={r*0.07} fill="#FFFFFF" opacity={0.95} />
+      <Circle cx={cx + r*0.12} cy={cy - r*1.08} r={r*0.07} fill="#FFFFFF" opacity={0.95} />
+      {/* Corps vaporeux */}
+      <Polygon
+        points={`${cx - r*0.38},${cy - r*0.62} ${cx + r*0.38},${cy - r*0.62} ${cx + r*0.55},${cy + r*0.42} ${cx - r*0.55},${cy + r*0.42}`}
+        fill={color} opacity={0.55}
+      />
+      {/* Bas effiloché — 3 pointes */}
+      <Polygon
+        points={`${cx - r*0.55},${cy + r*0.42} ${cx - r*0.38},${cy + r*1.05} ${cx - r*0.18},${cy + r*0.55}`}
+        fill={color} opacity={0.5}
+      />
+      <Polygon
+        points={`${cx - r*0.18},${cy + r*0.55} ${cx},${cy + r*1.15} ${cx + r*0.18},${cy + r*0.55}`}
+        fill={color} opacity={0.55}
+      />
+      <Polygon
+        points={`${cx + r*0.18},${cy + r*0.55} ${cx + r*0.38},${cy + r*1.05} ${cx + r*0.55},${cy + r*0.42}`}
+        fill={color} opacity={0.5}
+      />
+      {/* Aura */}
+      <Ellipse cx={cx} cy={cy + r*0.2} rx={r*0.62} ry={r*0.18} fill={color} opacity={0.18} />
     </G>
   );
 }

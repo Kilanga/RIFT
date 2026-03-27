@@ -1,11 +1,21 @@
 /**
  * RIFT — Client Supabase
  * Connexion à la base de données online pour le leaderboard
+ *
+ * Les credentials sont lus depuis les variables d'environnement (fichier .env).
+ * Ne jamais hardcoder ces valeurs dans le code source.
  */
 
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL  = 'https://lvjtaduugtrdbuwpyvmw.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2anRhZHV1Z3RyZGJ1d3B5dm13Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NzczMTQsImV4cCI6MjA5MDA1MzMxNH0.VVe1HI2pZrHywcnc_TazareSPzsbRyS9RmfjV6UnDYo';
+const SUPABASE_URL  = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON;
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+if (!SUPABASE_URL || !SUPABASE_ANON) {
+  console.error('[Supabase] Variables d\'environnement manquantes. Vérifier le fichier .env');
+}
+
+export const supabase =
+  SUPABASE_URL && SUPABASE_ANON
+    ? createClient(SUPABASE_URL, SUPABASE_ANON)
+    : null;

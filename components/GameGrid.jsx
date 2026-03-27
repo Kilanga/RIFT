@@ -11,7 +11,8 @@ import Svg, { Polygon, Circle, Rect, Line, G, Text as SvgText } from 'react-nati
 
 import useGameStore from '../store/gameStore';
 import { PLAYER_SHAPES, GRID_SIZE, CELL_TYPES, ENEMY_TYPES, PALETTE } from '../constants';
-import { Assassin, Arcaniste, Colosse } from './ClassSilhouettes';
+import { Assassin, Arcaniste, Colosse, Spectre } from './ClassSilhouettes';
+import { GRID_THEMES } from '../utils/cosmeticCatalog';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const GRID_PADDING = 4;
@@ -21,9 +22,10 @@ const R         = CELL_SIZE * 0.33; // rayon de base des entités
 
 // ─── Couleurs d'indication selon la classe ────────────────────────────────────
 const CLASS_ARROW = {
-  [PLAYER_SHAPES.TRIANGLE]: { stroke: 'rgba(0,255,204,0.7)',  bg: 'rgba(0,255,204,0.08)'  },
+  [PLAYER_SHAPES.TRIANGLE]: { stroke: 'rgba(0,255,204,0.7)',   bg: 'rgba(0,255,204,0.08)'   },
   [PLAYER_SHAPES.CIRCLE]:   { stroke: 'rgba(255,102,255,0.7)', bg: 'rgba(255,102,255,0.08)' },
   [PLAYER_SHAPES.HEXAGON]:  { stroke: 'rgba(102,170,255,0.7)', bg: 'rgba(102,170,255,0.08)' },
+  [PLAYER_SHAPES.SPECTRE]:  { stroke: 'rgba(187,68,255,0.7)',  bg: 'rgba(187,68,255,0.08)'  },
 };
 
 export default function GameGrid() {
@@ -34,6 +36,10 @@ export default function GameGrid() {
   const damagePops   = useGameStore(s => s.damagePops);
   const isPlayerTurn = useGameStore(s => s.isPlayerTurn);
   const movePlayer   = useGameStore(s => s.movePlayer);
+  const gridThemeId      = useGameStore(s => s.meta?.gridTheme ?? 'default');
+  const purchasedThemes  = useGameStore(s => s.meta?.purchasedThemes ?? []);
+  const themeAccessible  = gridThemeId === 'default' || purchasedThemes.includes(gridThemeId);
+  const gridTheme        = GRID_THEMES[themeAccessible ? gridThemeId : 'default'] ?? GRID_THEMES.default;
 
   // Refs pour accéder aux valeurs courantes dans le PanResponder sans le recréer
   const playerRef       = useRef(player);
@@ -107,10 +113,10 @@ export default function GameGrid() {
 
             {grid.map((row, ry) =>
               row.map((cell, rx) => (
-                <CellShape key={`${ry}_${rx}`} cell={cell} rx={rx} ry={ry} />
+                <CellShape key={`${ry}_${rx}`} cell={cell} rx={rx} ry={ry} theme={gridTheme} />
               ))
             )}
-            <GridLines totalW={totalW} totalH={totalH} />
+            <GridLines totalW={totalW} totalH={totalH} theme={gridTheme} />
 
             {/* Ennemis morts (fantôme) */}
             {dyingEnemies.map(e => (
@@ -204,14 +210,16 @@ function DirectionHints({ player, grid, gridW, gridH, enemies, isPlayerTurn }) {
 
 // ─── Cellule ──────────────────────────────────────────────────────────────────
 
-function CellShape({ cell, rx, ry }) {
+function CellShape({ cell, rx, ry, theme }) {
   const x = rx * CELL_SIZE, y = ry * CELL_SIZE, s = CELL_SIZE;
   const bg = {
-    [CELL_TYPES.WALL]:  '#1A1A28',
-    [CELL_TYPES.EXIT]:  '#0D2010',
-    [CELL_TYPES.ALTAR]: '#1A0D2E',
-    [CELL_TYPES.CHEST]: '#2A2010',
-  }[cell] ?? ((rx + ry) % 2 === 0 ? '#0C0C16' : '#0A0A14');
+    [CELL_TYPES.WALL]:     theme.wall,
+    [CELL_TYPES.EXIT]:     '#0D2010',
+    [CELL_TYPES.ALTAR]:    '#1A0D2E',
+    [CELL_TYPES.CHEST]:    '#2A2010',
+    [CELL_TYPES.LAVA]:     '#2A0A00',
+    [CELL_TYPES.TELEPORT]: '#0A0A2A',
+  }[cell] ?? ((rx + ry) % 2 === 0 ? theme.floor0 : theme.floor1);
 
   return (
     <G>
@@ -221,22 +229,37 @@ function CellShape({ cell, rx, ry }) {
       {cell === CELL_TYPES.CHEST && <Rect x={x+s*0.25} y={y+s*0.25} width={s*0.5} height={s*0.5} fill={PALETTE.fragment} opacity={0.7} rx={2} />}
       {cell === CELL_TYPES.WALL  && (
         <G>
-          <Rect x={x+1} y={y+1} width={s-2} height={s-2} fill="#111120" rx={2} />
-          {/* Croix pour distinguer clairement les murs */}
-          <Line x1={x+s*0.3} y1={y+s*0.3} x2={x+s*0.7} y2={y+s*0.7} stroke="#2A2A40" strokeWidth={1.5} />
-          <Line x1={x+s*0.7} y1={y+s*0.3} x2={x+s*0.3} y2={y+s*0.7} stroke="#2A2A40" strokeWidth={1.5} />
+          <Rect x={x+1} y={y+1} width={s-2} height={s-2} fill={theme.wallInner} rx={2} />
+          <Line x1={x+s*0.3} y1={y+s*0.3} x2={x+s*0.7} y2={y+s*0.7} stroke={theme.wallLine} strokeWidth={1.5} />
+          <Line x1={x+s*0.7} y1={y+s*0.3} x2={x+s*0.3} y2={y+s*0.7} stroke={theme.wallLine} strokeWidth={1.5} />
+        </G>
+      )}
+      {cell === CELL_TYPES.LAVA && (
+        <G>
+          <Rect x={x} y={y} width={s} height={s} fill="#FF4400" opacity={0.18} />
+          {/* Bulles de lave */}
+          <Circle cx={x+s*0.35} cy={y+s*0.55} r={s*0.1} fill="#FF6600" opacity={0.6} />
+          <Circle cx={x+s*0.65} cy={y+s*0.4} r={s*0.08} fill="#FF8800" opacity={0.5} />
+          <Circle cx={x+s*0.5}  cy={y+s*0.7} r={s*0.07} fill="#FF4400" opacity={0.6} />
+        </G>
+      )}
+      {cell === CELL_TYPES.TELEPORT && (
+        <G>
+          <Circle cx={x+s/2} cy={y+s/2} r={s*0.32} fill="none" stroke="#6644FF" strokeWidth={1.5} opacity={0.7} />
+          <Circle cx={x+s/2} cy={y+s/2} r={s*0.18} fill="#6644FF" opacity={0.3} />
+          <Circle cx={x+s/2} cy={y+s/2} r={s*0.08} fill="#AA88FF" opacity={0.8} />
         </G>
       )}
     </G>
   );
 }
 
-function GridLines({ totalW, totalH }) {
+function GridLines({ totalW, totalH, theme }) {
   const lines = [];
   for (let x = 0; x <= totalW; x += CELL_SIZE)
-    lines.push(<Line key={`v${x}`} x1={x} y1={0} x2={x} y2={totalH} stroke={PALETTE.border} strokeWidth={0.4} />);
+    lines.push(<Line key={`v${x}`} x1={x} y1={0} x2={x} y2={totalH} stroke={theme.gridLine} strokeWidth={0.4} />);
   for (let y = 0; y <= totalH; y += CELL_SIZE)
-    lines.push(<Line key={`h${y}`} x1={0} y1={y} x2={totalW} y2={y} stroke={PALETTE.border} strokeWidth={0.4} />);
+    lines.push(<Line key={`h${y}`} x1={0} y1={y} x2={totalW} y2={y} stroke={theme.gridLine} strokeWidth={0.4} />);
   return <G>{lines}</G>;
 }
 
@@ -272,9 +295,10 @@ function PlayerToken({ player }) {
         strokeWidth={pulse ? 2 : 1} opacity={pulse ? 0.5 : 0.2} />
 
       {/* Silhouette selon la classe */}
-      {player.shape === PLAYER_SHAPES.TRIANGLE && <Assassin cx={cx} cy={cy} r={R * scale} color={color} />}
+      {player.shape === PLAYER_SHAPES.TRIANGLE && <Assassin  cx={cx} cy={cy} r={R * scale} color={color} />}
       {player.shape === PLAYER_SHAPES.CIRCLE   && <Arcaniste cx={cx} cy={cy} r={R * scale} color={color} />}
-      {player.shape === PLAYER_SHAPES.HEXAGON  && <Colosse cx={cx} cy={cy} r={R * scale} color={color} />}
+      {player.shape === PLAYER_SHAPES.HEXAGON  && <Colosse   cx={cx} cy={cy} r={R * scale} color={color} />}
+      {player.shape === PLAYER_SHAPES.SPECTRE  && <Spectre   cx={cx} cy={cy} r={R * scale} color={color} />}
 
       {/* Charges */}
       {player.maxCharges > 0 && (
@@ -295,17 +319,32 @@ function EntityToken({ entity: enemy, opacity = 1 }) {
   const r  = enemy.isBoss ? R * 1.3 : R;
   const color = enemy.color || '#FF4444';
 
+  const hitEnemyIds = useGameStore(s => s.hitEnemyIds);
+  const isHit = hitEnemyIds?.has(enemy.id);
+
   return (
     <G opacity={opacity}>
-      {enemy.type === ENEMY_TYPES.CHASER     && <Ecumeur   cx={cx} cy={cy} r={r} color={color} />}
+      {/* Flash de dégâts */}
+      {isHit && <Rect x={enemy.x * CELL_SIZE} y={enemy.y * CELL_SIZE} width={CELL_SIZE} height={CELL_SIZE} fill="#FFFFFF" opacity={0.25} />}
+
+      {enemy.type === ENEMY_TYPES.CHASER     && <Ecumeur    cx={cx} cy={cy} r={r} color={color} />}
       {enemy.type === ENEMY_TYPES.SHOOTER    && <Tirailleur cx={cx} cy={cy} r={r} color={color} />}
-      {enemy.type === ENEMY_TYPES.BLOCKER    && <Titan     cx={cx} cy={cy} r={r} color={color} />}
-      {enemy.type === ENEMY_TYPES.BOSS_VOID  && <Echo      cx={cx} cy={cy} r={r} color={color} />}
-      {enemy.type === ENEMY_TYPES.BOSS_PULSE && <Tonnerre  cx={cx} cy={cy} r={r} color={color} />}
-      {enemy.type === ENEMY_TYPES.BOSS_RIFT  && <Devoreur  cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.BLOCKER    && <Titan      cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.HEALER     && <Guerisseur cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.EXPLOSIVE  && <Explosif   cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.SUMMONER   && <Invocateur cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.BOSS_VOID  && <Echo       cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.BOSS_PULSE && <Tonnerre   cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.BOSS_RIFT  && <Devoreur   cx={cx} cy={cy} r={r} color={color} />}
+
       {opacity === 1 && (
         <MiniBar x={enemy.x * CELL_SIZE} y={enemy.y * CELL_SIZE + CELL_SIZE - 4}
           hp={enemy.hp} maxHp={enemy.maxHp} color="#FF4444" />
+      )}
+
+      {/* Icônes de statut */}
+      {opacity === 1 && enemy.statuses?.length > 0 && (
+        <StatusIcons cx={cx} cy={cy} statuses={enemy.statuses} />
       )}
     </G>
   );
@@ -481,6 +520,72 @@ function Devoreur({ cx, cy, r, color }) {
       <Line x1={cx+r*0.85} y1={cy+r*0.4} x2={cx+r*1.18} y2={cy+r*0.6} stroke={color} strokeWidth={2} />
     </G>
   );
+}
+
+// Guérisseur : silhouette mince avec croix de soin
+function Guerisseur({ cx, cy, r, color }) {
+  return (
+    <G>
+      <Circle cx={cx} cy={cy - r*0.85} r={r*0.32} fill={color} />
+      <Rect x={cx - r*0.2} y={cy - r*0.5} width={r*0.4} height={r*1.35} fill={color} rx={r*0.06} />
+      {/* Croix de soin */}
+      <Line x1={cx - r*0.4} y1={cy - r*0.05} x2={cx + r*0.4} y2={cy - r*0.05} stroke="#FFFFFF" strokeWidth={1.5} opacity={0.8} />
+      <Line x1={cx} y1={cy - r*0.45} x2={cx} y2={cy + r*0.35} stroke="#FFFFFF" strokeWidth={1.5} opacity={0.8} />
+    </G>
+  );
+}
+
+// Explosif : corps trapu, mèche visible
+function Explosif({ cx, cy, r, color }) {
+  return (
+    <G>
+      {/* Corps bombé */}
+      <Circle cx={cx} cy={cy + r*0.1} r={r*0.72} fill={color} />
+      {/* Mèche */}
+      <Line x1={cx} y1={cy - r*0.6} x2={cx + r*0.25} y2={cy - r*1.1} stroke="#FFCC00" strokeWidth={2} />
+      <Circle cx={cx + r*0.25} cy={cy - r*1.1} r={r*0.12} fill="#FFAA00" opacity={0.9} />
+      {/* X danger */}
+      <Line x1={cx - r*0.28} y1={cy - r*0.18} x2={cx + r*0.28} y2={cy + r*0.38} stroke={PALETTE.bg} strokeWidth={1.5} opacity={0.5} />
+      <Line x1={cx + r*0.28} y1={cy - r*0.18} x2={cx - r*0.28} y2={cy + r*0.38} stroke={PALETTE.bg} strokeWidth={1.5} opacity={0.5} />
+    </G>
+  );
+}
+
+// Invocateur : silhouette avec bâton et aura d'invocation
+function Invocateur({ cx, cy, r, color }) {
+  return (
+    <G>
+      <Circle cx={cx} cy={cy - r*0.9} r={r*0.32} fill={color} />
+      <Rect x={cx - r*0.18} y={cy - r*0.55} width={r*0.36} height={r*1.4} fill={color} rx={r*0.05} />
+      {/* Bâton */}
+      <Line x1={cx + r*0.18} y1={cy - r*0.3} x2={cx + r*0.7} y2={cy - r*0.9} stroke={color} strokeWidth={2} />
+      <Circle cx={cx + r*0.7} cy={cy - r*0.9} r={r*0.18} fill={color} opacity={0.9} />
+      {/* Aura */}
+      <Circle cx={cx} cy={cy} r={r*1.2} fill="none" stroke={color} strokeWidth={1} opacity={0.25} />
+    </G>
+  );
+}
+
+// ─── Icônes de statut ─────────────────────────────────────────────────────────
+
+function StatusIcons({ cx, cy, statuses }) {
+  const icons = statuses.slice(0, 3).map((s, i) => {
+    const offsetX = (i - Math.min(statuses.length - 1, 2) / 2) * (CELL_SIZE * 0.28);
+    const iconY = cy - R * 1.6;
+    const colors = { burn: '#FF6600', freeze: '#44CCFF', stun: '#AAAAAA', vulnerable: '#FFFF44' };
+    const labels = { burn: '🔥', freeze: '❄', stun: '💫', vulnerable: '⚠' };
+    const col = colors[s.id] || '#FFFFFF';
+    return (
+      <G key={s.id}>
+        <Circle cx={cx + offsetX} cy={iconY} r={CELL_SIZE * 0.1} fill={col} opacity={0.85} />
+        <SvgText x={cx + offsetX} y={iconY + CELL_SIZE * 0.04}
+          fill="#000" fontSize={CELL_SIZE * 0.12} textAnchor="middle" fontWeight="bold" opacity={0.9}>
+          {s.duration}
+        </SvgText>
+      </G>
+    );
+  });
+  return <G>{icons}</G>;
 }
 
 // ─── Floating damage number ───────────────────────────────────────────────────

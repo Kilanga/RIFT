@@ -4,12 +4,13 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PLAYER_SHAPES, PALETTE } from '../constants';
-import { Assassin, Arcaniste, Colosse } from '../components/ClassSilhouettes';
+import { Assassin, Arcaniste, Colosse, Spectre } from '../components/ClassSilhouettes';
+import { pickModifierChoices, getDailyModifier } from '../utils/modifierCatalog';
 
 const SHAPES = [
   {
@@ -42,16 +43,44 @@ const SHAPES = [
     passiveDesc: 'Reçoit 50 % des dégâts. Renvoie 50 % de son ATQ à chaque ennemi qui l\'attaque.',
     playstyle:   'Défensif · Survie · Contre-attaque',
   },
+  {
+    id:    PLAYER_SHAPES.SPECTRE,
+    name:  'Spectre',
+    color: '#CC88FF',
+    icon:  Spectre,
+    stats: { atk: 6, def: 0, vit: 5 },
+    passive:     'Éthéré',
+    passiveDesc: 'Ignore entièrement la défense ennemie. Immune aux pièges (lave, téléporteurs). PV réduits (15 max).',
+    playstyle:   'Dégâts purs · Fragile · Premium',
+    premium:     true,
+    premiumHint: '🔓 Débloque Premium pour accéder à cette classe',
+  },
 ];
 
 export default function ShapeSelectScreen() {
-  const [selected, setSelected] = useState(PLAYER_SHAPES.TRIANGLE);
-  const startRun   = useGameStore(s => s.startRun);
-  const goToMenu   = useGameStore(s => s.goToMenu);
-  const meta       = useGameStore(s => s.meta);
+  const [selected, setSelected]         = useState(PLAYER_SHAPES.TRIANGLE);
+  const [selectedMod, setSelectedMod]   = useState('standard');
+  const [modChoices]                    = useState(() => pickModifierChoices());
+  const startRun           = useGameStore(s => s.startRun);
+  const startDailyRun      = useGameStore(s => s.startDailyRun);
+  const goToMenu           = useGameStore(s => s.goToMenu);
+  const toggleHardcoreMode = useGameStore(s => s.toggleHardcoreMode);
+  const meta               = useGameStore(s => s.meta);
+  const isDailySelect      = useGameStore(s => s.isDailySelect);
+
+  const dailyMod = isDailySelect ? getDailyModifier() : null;
 
   const shape      = SHAPES.find(s => s.id === selected);
   const shapeStats = meta.shapeStats?.[selected] || { runs: 0, bestScore: 0, wins: 0 };
+
+  const handleSelectShape = (shapeId) => {
+    const s = SHAPES.find(sh => sh.id === shapeId);
+    if (s?.premium && !meta.isPremium) {
+      Alert.alert('Classe Premium', 'Débloque Premium pour accéder à Spectre.', [{ text: 'OK' }]);
+      return;
+    }
+    setSelected(shapeId);
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,7 +91,7 @@ export default function ShapeSelectScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={goToMenu} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.back}>← Retour</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>CHOISIR UNE CLASSE</Text>
+          <Text style={styles.title}>{isDailySelect ? '☀ DAILY RUN' : 'CHOISIR UNE CLASSE'}</Text>
           <View style={{ width: 72 }} />
         </View>
 
@@ -70,14 +99,16 @@ export default function ShapeSelectScreen() {
         <View style={styles.shapePicker}>
           {SHAPES.map(s => {
             const sStats = meta.shapeStats?.[s.id] || { runs: 0, bestScore: 0, wins: 0 };
+            const isLocked = s.premium && !meta.isPremium;
             return (
               <TouchableOpacity
                 key={s.id}
                 style={[
                   styles.shapeBtn,
                   selected === s.id && { borderColor: s.color, backgroundColor: s.color + '15' },
+                  isLocked && { opacity: 0.5 },
                 ]}
-                onPress={() => setSelected(s.id)}
+                onPress={() => handleSelectShape(s.id)}
                 activeOpacity={0.8}
               >
                 <Svg width={48} height={48} viewBox="0 0 56 56">
@@ -88,8 +119,12 @@ export default function ShapeSelectScreen() {
                 <Text style={[styles.shapeName, { color: selected === s.id ? s.color : PALETTE.textMuted }]}>
                   {s.name}
                 </Text>
-                {/* Mini stats sous le nom */}
-                {sStats.runs > 0 && (
+                {isLocked && (
+                  <Text style={[styles.shapeRunCount, { color: '#DD8833' }]}>
+                    🔒 Premium
+                  </Text>
+                )}
+                {!isLocked && sStats.runs > 0 && (
                   <Text style={[styles.shapeRunCount, { color: selected === s.id ? s.color + 'AA' : PALETTE.textDim }]}>
                     {sStats.runs} run{sStats.runs > 1 ? 's' : ''}
                   </Text>
@@ -151,14 +186,73 @@ export default function ShapeSelectScreen() {
           </ScrollView>
         )}
 
+        {/* Modificateur de run */}
+        {isDailySelect ? (
+          <View style={styles.modSection}>
+            <Text style={styles.modTitle}>MODIFICATEUR DU JOUR (FORCÉ)</Text>
+            <View style={[styles.modBtn, styles.modBtnActive, { flexDirection: 'row', gap: 8 }]}>
+              <Text style={styles.modIcon}>{dailyMod?.icon}</Text>
+              <Text style={[styles.modNameActive]}>
+                {dailyMod?.name}  ×{dailyMod?.scoreMult}
+              </Text>
+            </View>
+            <Text style={styles.modDesc}>{dailyMod?.description}</Text>
+          </View>
+        ) : (
+          <View style={styles.modSection}>
+            <Text style={styles.modTitle}>MODIFICATEUR</Text>
+            <View style={styles.modRow}>
+              {modChoices.map(mod => {
+                const isActive = selectedMod === mod.id;
+                const multTxt  = mod.scoreMult !== 1.0 ? ` ×${mod.scoreMult}` : '';
+                return (
+                  <TouchableOpacity
+                    key={mod.id}
+                    style={[styles.modBtn, isActive && styles.modBtnActive]}
+                    onPress={() => setSelectedMod(mod.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.modIcon}>{mod.icon}</Text>
+                    <Text style={[styles.modName, isActive && styles.modNameActive]}>
+                      {mod.name}{multTxt}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {selectedMod !== 'standard' && (
+              <Text style={styles.modDesc}>
+                {modChoices.find(m => m.id === selectedMod)?.description}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Toggle hardcore (premium uniquement) */}
+        {meta.isPremium && !isDailySelect && (
+          <TouchableOpacity
+            style={[styles.hardcoreBtn, meta.hardcoreMode && styles.hardcoreBtnActive]}
+            onPress={toggleHardcoreMode}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.hardcoreIcon}>💀</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.hardcoreName, meta.hardcoreMode && styles.hardcoreNameActive]}>
+                MODE HARDCORE{meta.hardcoreMode ? ' (ACTIF)' : ''}
+              </Text>
+              <Text style={styles.hardcoreDesc}>La mort efface toute la méta-progression</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Bouton lancer */}
         <TouchableOpacity
           style={[styles.btnStart, { borderColor: shape?.color, backgroundColor: (shape?.color || '#fff') + '15' }]}
-          onPress={() => startRun(selected)}
+          onPress={() => isDailySelect ? startDailyRun(selected) : startRun(selected, false, null, selectedMod)}
           activeOpacity={0.8}
         >
           <Text style={[styles.btnStartTxt, { color: shape?.color }]}>
-            ▶  COMMENCER AVEC {shape?.name.toUpperCase()}
+            {isDailySelect ? '☀' : '▶'}  {isDailySelect ? 'DAILY AVEC' : 'COMMENCER AVEC'} {shape?.name.toUpperCase()}
           </Text>
           {shapeStats.runs > 0 && shapeStats.wins === 0 && (
             <Text style={[styles.btnStartSub, { color: shape?.color + '88' }]}>
@@ -291,6 +385,45 @@ const styles = StyleSheet.create({
   runStatLbl:    { color: PALETTE.textMuted, fontSize: 9, textAlign: 'center' },
   neverPlayed:   { color: PALETTE.textDim, fontSize: 11, fontStyle: 'italic', textAlign: 'center' },
 
+
+  // Modificateurs
+  modSection: { gap: 6 },
+  modTitle:   { color: PALETTE.textMuted, fontSize: 9, letterSpacing: 2, fontWeight: 'bold' },
+  modRow:     { flexDirection: 'row', gap: 8 },
+  modBtn: {
+    flex:            1,
+    alignItems:      'center',
+    paddingVertical: 8,
+    borderWidth:     1,
+    borderColor:     PALETTE.border,
+    borderRadius:    8,
+    backgroundColor: PALETTE.bgCard,
+    gap:             2,
+  },
+  modBtnActive:   { borderColor: '#FF88FF', backgroundColor: '#FF88FF15' },
+  modIcon:        { fontSize: 16 },
+  modName:        { color: PALETTE.textMuted, fontSize: 10, textAlign: 'center' },
+  modNameActive:  { color: '#FF88FF', fontWeight: 'bold' },
+  modDesc:        { color: PALETTE.textDim, fontSize: 11, fontStyle: 'italic', textAlign: 'center' },
+
+  hardcoreBtn: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             12,
+    borderWidth:     1,
+    borderColor:     PALETTE.upgradeRed + '66',
+    borderRadius:    12,
+    padding:         12,
+    backgroundColor: PALETTE.bgCard,
+  },
+  hardcoreBtnActive: {
+    borderColor:     PALETTE.upgradeRed,
+    backgroundColor: PALETTE.upgradeRed + '18',
+  },
+  hardcoreIcon:     { fontSize: 22 },
+  hardcoreName:     { color: PALETTE.textMuted, fontSize: 13, fontWeight: 'bold' },
+  hardcoreNameActive: { color: PALETTE.upgradeRed },
+  hardcoreDesc:     { color: PALETTE.textDim, fontSize: 11, marginTop: 2 },
 
   btnStart: {
     borderWidth:     2,

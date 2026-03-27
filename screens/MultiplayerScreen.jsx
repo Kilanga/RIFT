@@ -13,7 +13,7 @@ import useGameStore from '../store/gameStore';
 import { PALETTE, PLAYER_SHAPES } from '../constants';
 import {
   createRoom, joinRoom, startGame, leaveRoom,
-  subscribeToRoom, updatePlayerState,
+  subscribeToRoom,
 } from '../services/multiplayerService';
 
 const MODES = [
@@ -95,7 +95,7 @@ export default function MultiplayerScreen() {
         setRoom(updated);
         // Si la partie démarre → lancer le run avec le seed partagé
         if (updated.status === 'playing') {
-          handleGameStart(joined.code, updated.seed);
+          handleGameStart(joined.code, updated.seed, 'guest');
         }
       });
     } catch (e) {
@@ -112,7 +112,7 @@ export default function MultiplayerScreen() {
     setLoading(true);
     try {
       await startGame(room.code);
-      handleGameStart(room.code, room.seed);
+      handleGameStart(room.code, room.seed, 'host');
     } catch (e) {
       setError(e.message || 'Erreur au démarrage');
     } finally {
@@ -120,11 +120,11 @@ export default function MultiplayerScreen() {
     }
   };
 
-  const handleGameStart = (code, seed) => {
+  const handleGameStart = (code, seed, startRole) => {
     if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
     // Lance le run en passant le code room (pour sync scores en cours de partie)
     // Le seed garantit la même carte pour les deux joueurs
-    startRun(PLAYER_SHAPES.TRIANGLE, false, { multiCode: code, multiRole: role, seed });
+    startRun(PLAYER_SHAPES.TRIANGLE, false, { multiCode: code, multiRole: startRole, seed });
   };
 
   // ── Quitter la room ─────────────────────────────────────────────────────────

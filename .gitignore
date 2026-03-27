@@ -2,3 +2,8 @@ node_modules/
 .expo/
 *.log
 .claude/
+
+# Variables d'environnement — NE PAS committer
+.env
+.env.local
+.env.*.local

@@ -62,7 +62,7 @@ export default function ShopOverlay() {
 
 function ShopItem({ upgrade, price, bought, canAfford, onBuy }) {
   const color     = upgradeHex(upgrade.color);
-  const rarityTxt = { common: 'COMMUN', rare: 'RARE', epic: 'ÉPIQUE' }[upgrade.rarity];
+  const rarityTxt = { common: 'COMMUN', rare: 'RARE', epic: 'ÉPIQUE', curse: 'MAUDIT' }[upgrade.rarity] || 'COMMUN';
 
   return (
     <TouchableOpacity
@@ -106,7 +106,7 @@ function ShopItem({ upgrade, price, bought, canAfford, onBuy }) {
 }
 
 function upgradeHex(color) {
-  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
+  return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
 }
 
 const styles = StyleSheet.create({
