@@ -27,7 +27,7 @@ export default function MultiplayerScreen() {
   const goToMenu   = useGameStore(s => s.goToMenu);
   const startRun   = useGameStore(s => s.startRun);
   const meta       = useGameStore(s => s.meta);
-  const playerName = meta.playerName || t('multiplayer.player_label').replace(':', '').trim();
+  const playerName = meta.playerName || t('multiplayer.default_player');
 
   const [screen,   setScreen]   = useState('lobby');  // 'lobby' | 'create' | 'join' | 'room'
   const [mode,     setMode]     = useState('1v1');

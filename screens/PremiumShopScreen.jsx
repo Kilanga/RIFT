@@ -18,7 +18,6 @@ import { createPaymentIntent, createThemePaymentIntent } from '../services/strip
 import { GRID_THEMES_LIST } from '../utils/cosmeticCatalog';
 
 const PREMIUM_COLOR = '#9966FF';
-const PRICE_EUR     = '2,99 €';
 
 const FEATURES = [
   { icon: '👻', titleKey: 'premium.feature_spectre_title', descKey: 'premium.feature_spectre_desc' },
@@ -126,7 +125,7 @@ export default function PremiumShopScreen() {
           ) : (
             /* ── Bandeau prix ───────────────────────────────────────────── */
             <View style={styles.priceBox}>
-              <Text style={styles.priceAmount}>{PRICE_EUR}</Text>
+              <Text style={styles.priceAmount}>{t('premium.price_amount')}</Text>
               <Text style={styles.priceSub}>{t('premium.price_sub')}</Text>
             </View>
           )}
@@ -163,7 +162,7 @@ export default function PremiumShopScreen() {
                 ) : (
                   <>
                     <Text style={styles.buyBtnTxt}>{t('premium.unlock_btn')}</Text>
-                    <Text style={styles.buyBtnPrice}>{PRICE_EUR}</Text>
+                    <Text style={styles.buyBtnPrice}>{t('premium.price_amount')}</Text>
                   </>
                 )}
               </TouchableOpacity>
