@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name:        'RIFT',
     slug:        'rift-roguelite',
-    version:     '1.0.0',
+    version:     '1.2.0',
     orientation: 'portrait',
     backgroundColor: '#0A0A0F',
     splash: {
@@ -17,7 +17,8 @@ module.exports = {
       adaptiveIcon: {
         backgroundColor: '#0A0A0F',
       },
-      package: 'com.rift.roguelite',
+      package:     'com.rift.roguelite',
+      versionCode: 1,
     },
     web: {
       bundler: 'metro',
