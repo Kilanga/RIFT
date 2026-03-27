@@ -51,7 +51,7 @@ export default function MapScreen() {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.floorLabel}>
-              {run.isDailyRun ? '☀ DAILY' : `SEED #${run.mapSeed || '—'}`}
+              {run.isDailyRun ? t('map.daily_badge') : t('map.seed_label', { seed: run.mapSeed || '—' })}
             </Text>
             <Text style={styles.roomCount}>
               {run.roomsCleared !== 1

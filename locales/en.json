@@ -189,6 +189,7 @@
     "mode_coop_desc": "Co-operative — progress together on the same map.\n(Coming soon)",
     "mode_soon": "SOON",
     "player_label": "Player:",
+    "default_player": "Player",
     "player_warning": "(set your username in the menu)",
     "create": "+ CREATE",
     "create_sub": "Generates a code to share",
@@ -236,6 +237,7 @@
     "title": "PREMIUM",
     "already_active": "PREMIUM ACTIVE",
     "already_sub": "Thank you for your support!",
+    "price_amount": "€2.99",
     "price_sub": "One-time payment · Unlocked forever",
     "included_content": "INCLUDED CONTENT",
     "unlock_btn": "UNLOCK PREMIUM",
@@ -276,7 +278,9 @@
     "act_i": "ACT I",
     "act_ii": "ACT II",
     "act_iii": "ACT III",
-    "layer_fraction": "Layer {{current}}/{{total}}"
+    "layer_fraction": "Layer {{current}}/{{total}}",
+    "daily_badge": "☀ DAILY",
+    "seed_label": "SEED #{{seed}}"
   },
 
   "achievement": {

@@ -189,6 +189,7 @@
     "mode_coop_desc": "Coopératif — progressez ensemble sur la même carte.\n(Bientôt disponible)",
     "mode_soon": "BIENTÔT",
     "player_label": "Joueur :",
+    "default_player": "Joueur",
     "player_warning": "(configure ton pseudo dans le menu)",
     "create": "+ CRÉER",
     "create_sub": "Génère un code à partager",
@@ -236,6 +237,7 @@
     "title": "PREMIUM",
     "already_active": "PREMIUM ACTIVÉ",
     "already_sub": "Merci pour ton soutien !",
+    "price_amount": "2,99 €",
     "price_sub": "Paiement unique · Débloqué pour toujours",
     "included_content": "CONTENU INCLUS",
     "unlock_btn": "DÉBLOQUER PREMIUM",
@@ -276,7 +278,9 @@
     "act_i": "ACTE I",
     "act_ii": "ACTE II",
     "act_iii": "ACTE III",
-    "layer_fraction": "Couche {{current}}/{{total}}"
+    "layer_fraction": "Couche {{current}}/{{total}}",
+    "daily_badge": "☀ DAILY",
+    "seed_label": "SEED #{{seed}}"
   },
 
   "achievement": {
