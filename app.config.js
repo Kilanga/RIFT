@@ -19,6 +19,7 @@ module.exports = {
       },
       package:     'com.rift.roguelite',
       versionCode: 1,
+      locales:     ['fr'],
     },
     web: {
       bundler: 'metro',
