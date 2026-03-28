@@ -8,6 +8,7 @@ import { applySynergies, getUpgradeChoices, getUpgradeById, computePlayerStats, 
 import { pickPermanentUpgrades } from '../../utils/metaHelpers';
 import { ROOM_TYPES, GAME_PHASES, ENEMY_TYPES } from '../../constants';
 import { hapticSuccess, hapticMedium } from '../../utils/haptics';
+import { playSfx } from '../../services/audioService';
 import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
 import { submitScore } from '../../services/leaderboardService';
 import { pickRandomEvent } from '../../utils/eventCatalog';
@@ -361,6 +362,7 @@ export const createProgressionSlice = (set, get) => ({
     if (!chosen) return;
 
     hapticMedium();
+    playSfx('upgrade_pick');
 
     const newUpgrades  = [...activeUpgrades, chosen];
     const synergized   = applySynergies(newUpgrades);
@@ -437,6 +439,7 @@ export const createProgressionSlice = (set, get) => ({
     const { currentRoom } = get();
     if (!currentRoom?.altarPos) return;
 
+    playSfx('heal');
     get().healPlayer(currentRoom.healAmount || 8);
     get().addLog(`💚 +${currentRoom.healAmount || 8} PV`);
     get().onRoomCleared();
@@ -458,6 +461,7 @@ export const createProgressionSlice = (set, get) => ({
     const upgrade = getUpgradeById(item.upgradeId);
     if (!upgrade) return;
 
+    playSfx('upgrade_buy');
     const newUpgrades = applySynergies([...get().activeUpgrades, upgrade]);
     const newStats    = computePlayerStats(get().playerBase, newUpgrades);
 
