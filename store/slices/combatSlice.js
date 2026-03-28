@@ -8,6 +8,7 @@ import { GAME_PHASES, PLAYER_SHAPES, CELL_TYPES } from '../../constants';
 import { hapticLight, hapticMedium, hapticHeavy, hapticError } from '../../utils/haptics';
 import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
 import { hasCurseSynergy } from '../../systems/upgradeSystem';
+import { playSfx } from '../../services/audioService';
 
 function findNearest(source, enemies) {
   return enemies.reduce((nearest, e) => {
@@ -151,7 +152,10 @@ export const createCombatSlice = (set, get) => ({
     if (critCount > 0 && Math.random() < Math.min(1.0, critCount * 0.15 * curseMult)) {
       dmg *= 3 * curseMult;
       set({ lastCritAt: Date.now() });
+      playSfx('critical');
       get().addLog(`💥 CRITIQUE${curseMult > 1 ? ' ×MAUDIT' : ''} ! ${dmg} dégâts !`);
+    } else {
+      playSfx('attack');
     }
 
     if (player.statuses?.some(s => s.id === 'attackBoost')) {
@@ -242,6 +246,7 @@ export const createCombatSlice = (set, get) => ({
     const curseMult = hasCurseSynergy(activeUpgrades) ? 2 : 1;
 
     hapticMedium();
+    playSfx('enemy_death');
     get().addLog(`☠️ ${enemy.type} éliminé !`);
 
     // Supprimer l'ennemi du tableau actif → libère sa case immédiatement
@@ -397,6 +402,7 @@ export const createCombatSlice = (set, get) => ({
       return;
     }
 
+    playSfx('hit_player');
     let finalDmg = Math.max(1, amount - player.defense);
 
     // Résistance : -35% dégâts si PV > 50% (×curseMult → jusqu'à -70%)

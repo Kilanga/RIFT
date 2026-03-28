@@ -8,6 +8,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, Polygon, G, Line } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { PALETTE, ENEMY_TYPES } from '../constants';
+import { playSfx } from '../services/audioService';
 
 const BOSS_DATA = {
   [ENEMY_TYPES.BOSS_VOID]: {
@@ -35,6 +36,7 @@ export default function BossIntroOverlay({ bossType }) {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    playSfx('boss_roar');
     const id = setInterval(() => setTick(t => (t + 1) % 60), 50);
     return () => clearInterval(id);
   }, []);
