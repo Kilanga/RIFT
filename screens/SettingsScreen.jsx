@@ -6,13 +6,17 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  Switch, Modal, PanResponder,
+  Switch, Modal, PanResponder, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import i18n from '../utils/i18n';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const IS_TABLET = SCREEN_W >= 768;
+const IS_LARGE_TABLET = SCREEN_W >= 1024;
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
@@ -52,6 +56,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <View style={styles.frame}>
 
       {/* En-tête */}
       <View style={styles.header}>
@@ -159,6 +164,7 @@ export default function SettingsScreen() {
 
         <View style={{ height: 24 }} />
       </ScrollView>
+      </View>
 
       {/* ── Modal confirmation reset ─────────────────────────────────────── */}
       <Modal transparent animationType="fade" visible={showResetConfirm} onRequestClose={() => setShowResetConfirm(false)}>
@@ -326,19 +332,25 @@ function LangBtn({ label, flag, active, onPress }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: PALETTE.bg },
+  frame: {
+    flex:     1,
+    width:    '100%',
+    maxWidth: IS_LARGE_TABLET ? 980 : 900,
+    alignSelf:'center',
+  },
 
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: IS_TABLET ? 24 : 20,
     paddingTop:        12,
     paddingBottom:     8,
     borderBottomWidth: 1,
     borderBottomColor: '#1A1A2E',
   },
   backBtn: { alignSelf: 'flex-start', marginBottom: 4 },
-  backTxt: { color: PALETTE.textMuted, fontSize: 14 },
-  title:   { color: PALETTE.textPrimary, fontSize: 22, fontWeight: 'bold', letterSpacing: 4 },
+  backTxt: { color: PALETTE.textMuted, fontSize: IS_TABLET ? 15 : 14 },
+  title:   { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 24 : 22, fontWeight: 'bold', letterSpacing: 4 },
 
-  content: { paddingHorizontal: 16, paddingTop: 20, gap: 24 },
+  content: { paddingHorizontal: IS_TABLET ? 20 : 16, paddingTop: 20, gap: 24 },
 
   section: { gap: 10 },
   sectionLabel: {
@@ -418,7 +430,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#111122',
   },
   toggleTexts:       { flex: 1, gap: 2 },
-  toggleLabel:       { color: PALETTE.textPrimary, fontSize: 14 },
+  toggleLabel:       { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 15 : 14 },
   toggleLabelDanger: { color: PALETTE.upgradeRed + 'CC' },
   toggleDesc:        { color: PALETTE.textMuted, fontSize: 11 },
 
@@ -471,7 +483,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#111122',
   },
   legalBtnLast: { borderBottomWidth: 0 },
-  legalBtnTxt:  { flex: 1, color: PALETTE.textPrimary, fontSize: 14 },
+  legalBtnTxt:  { flex: 1, color: PALETTE.textPrimary, fontSize: IS_TABLET ? 15 : 14 },
   legalArrow:   { color: PALETTE.textMuted, fontSize: 18 },
 
   version: {

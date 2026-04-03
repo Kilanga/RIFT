@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G } from 'react-native-svg';
@@ -66,6 +66,10 @@ const SHAPES = [
     purchasable: true,
   },
 ];
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const IS_TABLET = SCREEN_W >= 768;
+const IS_LARGE_TABLET = SCREEN_W >= 1024;
 
 export default function ShapeSelectScreen() {
   const { t } = useTranslation();
@@ -323,7 +327,14 @@ function RunStat({ label, value, color }) {
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: PALETTE.bg },
-  container: { flex: 1, padding: 20, gap: 14 },
+  container: {
+    flex:     1,
+    padding:  IS_LARGE_TABLET ? 28 : IS_TABLET ? 24 : 20,
+    gap:      IS_TABLET ? 16 : 14,
+    width:    '100%',
+    maxWidth: 920,
+    alignSelf:'center',
+  },
 
   header: {
     flexDirection:  'row',
@@ -343,20 +354,20 @@ const styles = StyleSheet.create({
     alignItems:        'center',
   },
   back:  { color: PALETTE.textPrimary, fontSize: 14, fontWeight: 'bold' },
-  title: { color: PALETTE.textPrimary, fontSize: 13, fontWeight: 'bold', letterSpacing: 3 },
+  title: { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 15 : 13, fontWeight: 'bold', letterSpacing: 3 },
 
   shapePicker: { flexDirection: 'row', gap: 8 },
   shapeBtn: {
     flex:            1,
     alignItems:      'center',
-    paddingVertical: 10,
+    paddingVertical: IS_TABLET ? 12 : 10,
     borderWidth:     1,
     borderColor:     PALETTE.border,
     borderRadius:    10,
     backgroundColor: PALETTE.bgCard,
     gap:             4,
   },
-  shapeName:     { fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
+  shapeName:     { fontSize: IS_TABLET ? 11 : 10, fontWeight: 'bold', letterSpacing: 1 },
   shapeRunCount: { fontSize: 9 },
 
   detail: {
@@ -368,8 +379,8 @@ const styles = StyleSheet.create({
   },
   detailHeader:    { flexDirection: 'row', alignItems: 'center', gap: 14 },
   detailTitles:    { flex: 1, gap: 4 },
-  detailName:      { fontSize: 22, fontWeight: 'bold', letterSpacing: 2 },
-  detailPlaystyle: { color: PALETTE.textMuted, fontSize: 11 },
+  detailName:      { fontSize: IS_TABLET ? 25 : 22, fontWeight: 'bold', letterSpacing: 2 },
+  detailPlaystyle: { color: PALETTE.textMuted, fontSize: IS_TABLET ? 12 : 11 },
 
   passiveBox: {
     borderWidth:     1,
@@ -378,8 +389,8 @@ const styles = StyleSheet.create({
     gap:             4,
     backgroundColor: '#0A0A18',
   },
-  passiveTitle: { fontSize: 13, fontWeight: 'bold' },
-  passiveDesc:  { color: PALETTE.textMuted, fontSize: 12 },
+  passiveTitle: { fontSize: IS_TABLET ? 14 : 13, fontWeight: 'bold' },
+  passiveDesc:  { color: PALETTE.textMuted, fontSize: IS_TABLET ? 13 : 12 },
 
   statsRow:         { gap: 6 },
   statBarContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -406,7 +417,7 @@ const styles = StyleSheet.create({
   runStatsTitle: { color: PALETTE.textMuted, fontSize: 9, letterSpacing: 2, fontWeight: 'bold' },
   runStatsRow:   { flexDirection: 'row', justifyContent: 'space-between' },
   runStatItem:   { alignItems: 'center', gap: 2 },
-  runStatVal:    { color: PALETTE.textPrimary, fontSize: 16, fontWeight: 'bold' },
+  runStatVal:    { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 18 : 16, fontWeight: 'bold' },
   runStatLbl:    { color: PALETTE.textMuted, fontSize: 9, textAlign: 'center' },
   neverPlayed:   { color: PALETTE.textDim, fontSize: 11, fontStyle: 'italic', textAlign: 'center' },
 
@@ -457,6 +468,6 @@ const styles = StyleSheet.create({
     alignItems:      'center',
     gap:             4,
   },
-  btnStartTxt: { fontSize: 16, fontWeight: 'bold', letterSpacing: 3 },
-  btnStartSub: { fontSize: 11 },
+  btnStartTxt: { fontSize: IS_TABLET ? 18 : 16, fontWeight: 'bold', letterSpacing: 3 },
+  btnStartSub: { fontSize: IS_TABLET ? 12 : 11 },
 });
