@@ -47,6 +47,17 @@ export default function GameScreen() {
     ]).start();
   }, [lastCritAt]);
 
+  // ── Flash d'entrée de salle ───────────────────────────────────────────────────
+  const roomFlashAnim = useRef(new Animated.Value(0)).current;
+  const prevRoomId    = useRef(null);
+
+  useEffect(() => {
+    if (!currentRoom?.id || currentRoom.id === prevRoomId.current) return;
+    prevRoomId.current = currentRoom.id;
+    roomFlashAnim.setValue(0.65);
+    Animated.timing(roomFlashAnim, { toValue: 0, duration: 380, useNativeDriver: true }).start();
+  }, [currentRoom?.id]);
+
   const [paused, setPaused] = useState(false);
   const [showUpgrades, setShowUpgrades] = useState(false);
 
@@ -218,6 +229,12 @@ export default function GameScreen() {
             </Pressable>
           </Pressable>
         </Modal>
+
+        {/* ── Flash d'entrée de salle ─────────────────────────────────── */}
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: '#00FFCC', opacity: roomFlashAnim }]}
+        />
 
       </Animated.View>
     </SafeAreaView>

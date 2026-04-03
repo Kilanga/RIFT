@@ -13,6 +13,8 @@ export const PLAYER_SHAPES = {
   CIRCLE:   'circle',   // Arcaniste — AoE autour de lui
   HEXAGON:  'hexagon',  // Colosse   — Défense, riposte
   SPECTRE:  'spectre',  // PREMIUM   — Téléportation passive
+  SHADOW:   'shadow',   // ACHAT     — Embuscade : premier coup ×2
+  PALADIN:  'paladin',  // ACHAT     — Dévotion : soigne sur dégâts reçus
 };
 
 export const CLASS_INFO = {
@@ -20,18 +22,22 @@ export const CLASS_INFO = {
   circle:   { name: 'Arcaniste', short: 'ARC', color: '#FF66FF' },
   hexagon:  { name: 'Colosse',   short: 'COL', color: '#66AAFF' },
   spectre:  { name: 'Spectre',   short: 'SPE', color: '#BB44FF', locked: true, premium: true },
+  shadow:   { name: 'Ombre',     short: 'OMB', color: '#FF6600', locked: true, purchasable: true },
+  paladin:  { name: 'Paladin',   short: 'PAL', color: '#FFCC00', locked: true, purchasable: true },
 };
 
 export const ENEMY_INFO = {
-  chaser:     { name: 'Écumeur',           short: 'ÉCU' },
-  shooter:    { name: 'Tirailleur',        short: 'TIR' },
-  blocker:    { name: 'Titan',             short: 'TIT' },
-  boss_void:  { name: "L'Écho",           short: 'ÉCH', isBoss: true },
-  boss_pulse: { name: 'Tonnerre Incarné', short: 'TON', isBoss: true },
-  boss_rift:  { name: 'Le Dévoreur',      short: 'DÉV', isBoss: true, isFinal: true },
-  healer:    { name: 'Guérisseur',        short: 'GUÉ' },
-  explosive: { name: 'Explosif',          short: 'EXP' },
-  summoner:  { name: 'Invocateur',        short: 'INV' },
+  chaser:        { name: 'Écumeur',           short: 'ÉCU' },
+  shooter:       { name: 'Tirailleur',        short: 'TIR' },
+  blocker:       { name: 'Titan',             short: 'TIT' },
+  boss_void:     { name: "L'Écho",           short: 'ÉCH', isBoss: true },
+  boss_pulse:    { name: 'Tonnerre Incarné', short: 'TON', isBoss: true },
+  boss_rift:     { name: 'Le Dévoreur',      short: 'DÉV', isBoss: true, isFinal: true },
+  boss_guardian: { name: 'Le Gardien',       short: 'GAR', isBoss: true, isFinal: true },
+  boss_entity:   { name: "L'Entité",         short: 'ENT', isBoss: true, isFinal: true },
+  healer:        { name: 'Guérisseur',        short: 'GUÉ' },
+  explosive:     { name: 'Explosif',          short: 'EXP' },
+  summoner:      { name: 'Invocateur',        short: 'INV' },
 };
 
 // ─── Couleurs d'upgrades (synergies) ─────────────────────────────────────────
@@ -56,33 +62,42 @@ export const ROOM_TYPES = {
 
 // ─── Phases de jeu ────────────────────────────────────────────────────────────
 export const GAME_PHASES = {
-  MENU:           'menu',
-  SHAPE_SELECT:   'shapeSelect',
-  MAP:            'map',
-  COMBAT:         'combat',
-  BOSS_INTRO:     'bossIntro',
-  REST_ROOM:      'restRoom',
-  SHOP_ROOM:      'shopRoom',
-  UPGRADE_CHOICE: 'upgradeChoice',
-  EVENT_ROOM:     'eventRoom',
-  TALENT_TREE:    'talentTree',
-  PREMIUM_SHOP:   'premiumShop',
-  GAME_OVER:      'gameOver',
-  VICTORY:        'victory',
-  MULTIPLAYER:    'multiplayer',
+  MENU:               'menu',
+  PROLOGUE:           'prologue',
+  SHAPE_SELECT:       'shapeSelect',
+  MAP:                'map',
+  COMBAT:             'combat',
+  BOSS_INTRO:         'bossIntro',
+  REST_ROOM:          'restRoom',
+  SHOP_ROOM:          'shopRoom',
+  UPGRADE_CHOICE:     'upgradeChoice',
+  EVENT_ROOM:         'eventRoom',
+  TALENT_TREE:        'talentTree',
+  PREMIUM_SHOP:       'premiumShop',
+  GAME_OVER:          'gameOver',
+  VICTORY:            'victory',
+  ORIGINE_ENCOUNTER:  'origineEncounter',
+  MULTIPLAYER:        'multiplayer',
+  ACHIEVEMENTS:       'achievements',
+  LORE:               'lore',
+  SETTINGS:           'settings',
+  PRIVACY:            'privacy',
+  LEGAL:              'legal',
 };
 
 // ─── Types d'ennemis ──────────────────────────────────────────────────────────
 export const ENEMY_TYPES = {
-  CHASER:      'chaser',      // Suit le joueur, rapide
-  SHOOTER:     'shooter',     // Tire à distance
-  BLOCKER:     'blocker',     // Se déplace peu, très résistant
-  BOSS_VOID:   'boss_void',   // Mini-boss / Boss acte 1 — spirale
-  BOSS_PULSE:  'boss_pulse',  // Boss acte 2 — onde de choc
-  BOSS_RIFT:   'boss_rift',   // Boss final acte 3 — très puissant
-  HEALER:      'healer',      // Soigne les ennemis adjacents, fuit le joueur
-  EXPLOSIVE:   'explosive',   // Explose à la mort (AoE rayon 2)
-  SUMMONER:    'summoner',    // Invoque des Chasseurs tous les 3 tours
+  CHASER:         'chaser',         // Suit le joueur, rapide
+  SHOOTER:        'shooter',        // Tire à distance
+  BLOCKER:        'blocker',        // Se déplace peu, très résistant
+  BOSS_VOID:      'boss_void',      // Mini-boss / Boss acte 1 — spirale
+  BOSS_PULSE:     'boss_pulse',     // Boss acte 2 — onde de choc
+  BOSS_RIFT:      'boss_rift',      // Boss final acte 3A — Le Dévoreur
+  BOSS_GUARDIAN:  'boss_guardian',  // Boss final acte 3B — Le Gardien
+  BOSS_ENTITY:    'boss_entity',    // Boss final acte 3C — L'Entité (permanent)
+  HEALER:         'healer',         // Soigne les ennemis adjacents, fuit le joueur
+  EXPLOSIVE:      'explosive',      // Explose à la mort (AoE rayon 2)
+  SUMMONER:       'summoner',       // Invoque des Chasseurs tous les 3 tours
 };
 
 // ─── Types de cellules ────────────────────────────────────────────────────────
@@ -292,6 +307,52 @@ export const PERMANENT_UPGRADES_CATALOG = [
     statBonus: { stat: 'fragments', value: 8 },
     unlockCondition: { type: 'score', value: 600, desc: 'Score de 600' },
     hidden: true,
+  },
+
+  // ── Nouvelles classes (Ombre / Paladin) ───────────────────────────────────
+  {
+    id: 'perm_shadow_mastery', name: 'Instinct +2 ATK', icon: '🌑',
+    desc: '+2 ATK. Maîtrise de l\'Ombre.',
+    statBonus: { stat: 'attack', value: 2 },
+    unlockCondition: { type: 'shape_win', shape: 'shadow', desc: 'Gagner avec l\'Ombre' },
+    hidden: false,
+  },
+  {
+    id: 'perm_paladin_mastery', name: 'Foi +3 DEF', icon: '⚔️',
+    desc: '+3 DEF. Maîtrise du Paladin.',
+    statBonus: { stat: 'defense', value: 3 },
+    unlockCondition: { type: 'shape_win', shape: 'paladin', desc: 'Gagner avec le Paladin' },
+    hidden: false,
+  },
+
+  // ── Progression avancée ───────────────────────────────────────────────────
+  {
+    id: 'perm_frag3', name: '+10 Fragments', icon: '💰',
+    desc: 'Commence avec 10 fragments. Richesse accumulée.',
+    statBonus: { stat: 'fragments', value: 10 },
+    unlockCondition: { type: 'runs', value: 20, desc: '20 runs joués' },
+    hidden: false,
+  },
+  {
+    id: 'perm_atk3', name: '+3 Attaque', icon: '🔥',
+    desc: '+3 ATK. Vétéran des profondeurs.',
+    statBonus: { stat: 'attack', value: 3 },
+    unlockCondition: { type: 'kills', value: 200, desc: '200 ennemis tués' },
+    hidden: true,
+  },
+  {
+    id: 'perm_hp4', name: '+15 PV max', icon: '💝',
+    desc: '+15 PV max. Corps éprouvé par le Rift.',
+    statBonus: { stat: 'maxHp', value: 15 },
+    unlockCondition: { type: 'score', value: 1200, desc: 'Score de 1200' },
+    hidden: true,
+  },
+  {
+    id: 'perm_charge2', name: '+3 Charges max', icon: '⚡',
+    desc: '+3 charges max. Réserve d\'énergie étendue.',
+    statBonus: { stat: 'maxCharges', value: 3 },
+    unlockCondition: { type: 'wins', value: 5, desc: 'Gagner 5 runs' },
+    hidden: false,
   },
 
   // ── Légendaires ───────────────────────────────────────────────────────────

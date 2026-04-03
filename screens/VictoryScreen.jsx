@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
+import { CLASS_EPILOGUES } from '../utils/loreData';
 
 const ORBIT_INTERVAL = 80;
 
@@ -36,8 +37,9 @@ export default function VictoryScreen() {
   const meta           = useGameStore(s => s.meta);
   const player         = useGameStore(s => s.player);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
-  const goToMenu       = useGameStore(s => s.goToMenu);
+  const goToMenu        = useGameStore(s => s.goToMenu);
   const goToShapeSelect = useGameStore(s => s.goToShapeSelect);
+  const goToSettings    = useGameStore(s => s.goToSettings);
 
   const [angle, setAngle] = useState(0);
   useEffect(() => {
@@ -52,6 +54,9 @@ export default function VictoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <TouchableOpacity style={styles.btnGear} onPress={() => goToSettings('victory')} activeOpacity={0.7}>
+        <Text style={styles.btnGearTxt}>⚙</Text>
+      </TouchableOpacity>
       <ScrollView contentContainerStyle={styles.container} bounces={false}>
 
         {/* ── Icône victoire animée ──────────────────────────────────────── */}
@@ -102,6 +107,9 @@ export default function VictoryScreen() {
 
         {/* ── Build final ────────────────────────────────────────────────── */}
         <BuildSummary upgrades={activeUpgrades} />
+
+        {/* ── Épilogue par classe ─────────────────────────────────────────── */}
+        <ClassEpilogue shape={player.shape} />
 
         {/* ── Boutons ────────────────────────────────────────────────────── */}
         <View style={styles.buttons}>
@@ -260,6 +268,30 @@ function BuildSummary({ upgrades }) {
     </View>
   );
 }
+
+function ClassEpilogue({ shape }) {
+  const epilogue = CLASS_EPILOGUES[shape];
+  if (!epilogue) return null;
+  return (
+    <View style={[epilogueStyles.box, { borderColor: epilogue.color + '55' }]}>
+      <Text style={[epilogueStyles.title, { color: epilogue.color }]}>{epilogue.title}</Text>
+      <Text style={epilogueStyles.text}>{epilogue.text}</Text>
+    </View>
+  );
+}
+
+const epilogueStyles = StyleSheet.create({
+  box: {
+    width:           '100%',
+    backgroundColor: '#08080F',
+    borderWidth:     1,
+    borderRadius:    12,
+    padding:         16,
+    gap:             8,
+  },
+  title: { fontSize: 12, fontWeight: 'bold', letterSpacing: 3 },
+  text:  { color: PALETTE.textMuted, fontSize: 13, lineHeight: 20, fontStyle: 'italic' },
+});
 
 function upgradeHex(color) {
   return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen, curse: '#AA44CC' }[color] || '#888';
@@ -456,4 +488,15 @@ const styles = StyleSheet.create({
   btnMenuTxt: { color: PALETTE.textMuted, fontSize: 14 },
 
   footer: { color: PALETTE.textDim, fontSize: 11 },
+
+  btnGear: {
+    position:        'absolute',
+    top:             12,
+    right:           16,
+    zIndex:          10,
+    padding:         8,
+    borderRadius:    20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  btnGearTxt: { color: PALETTE.textMuted, fontSize: 16 },
 });

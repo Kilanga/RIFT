@@ -171,6 +171,137 @@ export const EVENT_CATALOG = [
       },
     ],
   },
+  {
+    id: 'rift_forge',
+    title: 'Forge Spectrale',
+    description: "Un forgeron fantôme travaille en silence sur une enclume de rift. Il t'offre ses services pour quelques fragments.",
+    choices: [
+      {
+        id: 'forge_atk',
+        label: '⚔ Forger une lame → +2 ATQ (10 fragments)',
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: -10 },
+          { type: 'stat_delta', changes: [{ stat: 'attack', delta: 2 }] },
+        ]},
+        requireFragments: 10,
+      },
+      {
+        id: 'forge_def',
+        label: '🛡 Forger une armure → +2 DEF (10 fragments)',
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: -10 },
+          { type: 'stat_delta', changes: [{ stat: 'defense', delta: 2 }] },
+        ]},
+        requireFragments: 10,
+      },
+      {
+        id: 'ignore',
+        label: '↩ Partir',
+        effect: { type: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'echo_dead',
+    title: 'Écho des Morts',
+    description: "Des voix de guerriers tombés te murmurent des secrets du Rift. Tu peux choisir d'écouter... ou de fermer les yeux.",
+    choices: [
+      {
+        id: 'listen',
+        label: '👂 Écouter (70% : +120 score / 30% : malédiction)',
+        effect: { type: 'gamble', chance: 0.7,
+          success: { type: 'score', value: 120 },
+          fail:    { type: 'stat_delta', changes: [{ stat: 'attack', delta: -2 }, { stat: 'defense', delta: -1 }] },
+        },
+      },
+      {
+        id: 'offer',
+        label: '💀 Offrir ton sang → +1 upgrade (choix libre), -8 PV',
+        effect: { type: 'composite', effects: [
+          { type: 'damage', value: 8 },
+          { type: 'upgrade_choice' },
+        ]},
+      },
+      {
+        id: 'ignore',
+        label: '↩ Ignorer',
+        effect: { type: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'trapped_chest',
+    title: 'Coffre Lumineux',
+    description: "Un coffre brille d'une lueur dorée au centre de la pièce. Trop beau pour être honnête, mais l'appel est fort.",
+    choices: [
+      {
+        id: 'open',
+        label: '🎲 Ouvrir (65% : +10 fragments / 35% : -12 PV)',
+        effect: { type: 'gamble', chance: 0.65,
+          success: { type: 'fragments', value: 10 },
+          fail:    { type: 'damage', value: 12 },
+        },
+      },
+      {
+        id: 'ignore',
+        label: '↩ Ignorer',
+        effect: { type: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'sleeping_guardian',
+    title: 'Gardien Assoupi',
+    description: "Un colosse de pierre sommeille en travers du couloir, ses bras serrant une relique ancienne.",
+    choices: [
+      {
+        id: 'sneak',
+        label: '🤫 Se faufiler silencieusement → +6 fragments',
+        effect: { type: 'fragments', value: 6 },
+      },
+      {
+        id: 'steal',
+        label: '⚡ Voler la relique → +1 upgrade (choix libre), risque -15 PV',
+        effect: { type: 'gamble', chance: 0.5,
+          success: { type: 'upgrade_choice' },
+          fail:    { type: 'composite', effects: [
+            { type: 'upgrade_choice' },
+            { type: 'damage', value: 15 },
+          ]},
+        },
+      },
+      {
+        id: 'ignore',
+        label: '↩ Rebrousser chemin',
+        effect: { type: 'none' },
+      },
+    ],
+  },
+  {
+    id: 'rift_rain',
+    title: 'Pluie de Fragments',
+    description: "Le plafond saigne. Des fragments de rift tombent en pluie fine, mais l'air devient instable et corrosif.",
+    choices: [
+      {
+        id: 'collect_all',
+        label: '💨 Tout récolter → +12 fragments, -5 PV',
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: 12 },
+          { type: 'damage', value: 5 },
+        ]},
+      },
+      {
+        id: 'collect_safe',
+        label: '🌂 Récolter prudemment → +5 fragments',
+        effect: { type: 'fragments', value: 5 },
+      },
+      {
+        id: 'ignore',
+        label: '↩ Éviter la zone',
+        effect: { type: 'none' },
+      },
+    ],
+  },
 ];
 
 /**

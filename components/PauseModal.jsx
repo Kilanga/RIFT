@@ -23,6 +23,7 @@ export default function PauseModal({ visible, onResume }) {
   const run            = useGameStore(s => s.run);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const goToMenu       = useGameStore(s => s.goToMenu);
+  const goToSettings   = useGameStore(s => s.goToSettings);
 
   const [confirmAbandon, setConfirmAbandon] = useState(false);
 
@@ -100,6 +101,10 @@ export default function PauseModal({ visible, onResume }) {
             <View style={styles.buttons}>
               <TouchableOpacity style={styles.btnResume} onPress={handleResume} activeOpacity={0.8}>
                 <Text style={styles.btnResumeTxt}>{t('pause.resume')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.btnSettings} onPress={() => goToSettings('map')} activeOpacity={0.8}>
+                <Text style={styles.btnSettingsTxt}>⚙  Paramètres</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -194,6 +199,15 @@ const styles = StyleSheet.create({
     alignItems:      'center',
   },
   btnResumeTxt: { color: '#00FF88', fontSize: 16, fontWeight: 'bold', letterSpacing: 3 },
+
+  btnSettings: {
+    borderWidth:     1,
+    borderColor:     '#333344',
+    borderRadius:    10,
+    paddingVertical: 11,
+    alignItems:      'center',
+  },
+  btnSettingsTxt: { color: PALETTE.textMuted, fontSize: 13 },
 
   btnAbandon: {
     borderWidth:     1,

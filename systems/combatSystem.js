@@ -74,9 +74,11 @@ export function processEnemyTurn(enemyId, state, skipMovement = false) {
     case 'chase':      return processChaserTurn(enemy, player, enemies, currentRoom, skipMovement);
     case 'shoot':      return processShooterTurn(enemy, player, enemies, currentRoom);
     case 'block':      return processBlockerTurn(enemy, player, enemies, currentRoom);
-    case 'boss_void':  return processBossVoidTurn(enemy, player, enemies, currentRoom);
-    case 'boss_pulse': return processBossPulseTurn(enemy, player, enemies, currentRoom);
-    case 'boss_rift':  return processBossRiftTurn(enemy, player, enemies, currentRoom);
+    case 'boss_void':     return processBossVoidTurn(enemy, player, enemies, currentRoom);
+    case 'boss_pulse':    return processBossPulseTurn(enemy, player, enemies, currentRoom);
+    case 'boss_rift':     return processBossRiftTurn(enemy, player, enemies, currentRoom);
+    case 'boss_guardian': return processBossGuardianTurn(enemy, player, enemies, currentRoom);
+    case 'boss_entity':   return processBossEntityTurn(enemy, player, enemies, currentRoom);
     case 'heal':       return processHealerTurn(enemy, player, enemies, currentRoom);
     case 'explode':    return processChaserTurn(enemy, player, enemies, currentRoom, skipMovement); // même IA que chaser
     case 'summon':     return processSummonerTurn(enemy, player, enemies, currentRoom);
@@ -115,20 +117,22 @@ function processChaserTurn(enemy, player, enemies, room, skipMovement = false) {
 function processShooterTurn(enemy, player, enemies, room) {
   const dist = manhattanDist(enemy, player);
 
+  // Dans la portée avec ligne de vue → tir
   if (dist <= SHOOTER_RANGE && hasLineOfSight(enemy, player, room)) {
     return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: enemy.attack, logs: [`${enemy.type} tire !`] };
   }
 
-  if (dist > SHOOTER_RANGE) {
-    const path = findPathGreedy(enemy, player, enemies, room);
-    if (path?.length > 0 && isCellFree(path[0].x, path[0].y, enemies, room)) {
-      return { moved: true, newX: path[0].x, newY: path[0].y, playerDamage: 0, logs: [] };
-    }
-  }
-
+  // Trop près → recule ; coincé → tire quand même (pas d'issue)
   if (dist < 2) {
     const retreat = findRetreat(enemy, player, enemies, room);
     if (retreat) return { moved: true, newX: retreat.x, newY: retreat.y, playerDamage: 0, logs: [] };
+    return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: enemy.attack, logs: [`${enemy.type} tire à bout portant !`] };
+  }
+
+  // Trop loin OU ligne de vue bloquée → s'approche pour obtenir un angle
+  const path = findPathGreedy(enemy, player, enemies, room);
+  if (path?.length > 0 && isCellFree(path[0].x, path[0].y, enemies, room)) {
+    return { moved: true, newX: path[0].x, newY: path[0].y, playerDamage: 0, logs: [] };
   }
 
   return noAction();
@@ -249,10 +253,100 @@ function processBossRiftTurn(enemy, player, enemies, room) {
   return { ...noAction(), turnCountUpdate: turn };
 }
 
+// Le Gardien — lent, très résistant, frappe fort, onde de choc tous les 4 tours
+function processBossGuardianTurn(enemy, player, enemies, room) {
+  const hpRatio = enemy.hp / enemy.maxHp;
+  const enraged = hpRatio <= 0.3;
+  const turn    = (enemy.turnCount || 0) + 1;
+  const dist    = manhattanDist(enemy, player);
+
+  // Tous les 4 tours : onde de choc — frappe à portée 3
+  if (turn % 4 === 0) {
+    const dmg = dist <= 3 ? Math.floor(enemy.attack * 0.9) : 0;
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`⛓ LE GARDIEN — Onde sacrée${dmg > 0 ? ` : ${dmg} !` : ' (hors portée)'}` ],
+      turnCountUpdate: turn,
+    };
+  }
+
+  // Contact : frappe lourde, doublée en enragé
+  if (dist === 1) {
+    const dmg = enraged ? enemy.attack * 2 : enemy.attack;
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`⛓ LE GARDIEN${enraged ? ' 💢 BRISÉ' : ''} : ${dmg} !`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  // Déplacement lent (speed 1, avance toujours)
+  const path = findPathGreedy(enemy, player, enemies, room);
+  if (path?.length > 0 && isCellFree(path[0].x, path[0].y, enemies, room)) {
+    return { moved: true, newX: path[0].x, newY: path[0].y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
+}
+
+// L'Entité — rapide, très puissante, phase aléatoire tous les 3 tours
+function processBossEntityTurn(enemy, player, enemies, room) {
+  const hpRatio  = enemy.hp / enemy.maxHp;
+  const enraged  = hpRatio <= 0.25;
+  const turn     = (enemy.turnCount || 0) + 1;
+  const dist     = manhattanDist(enemy, player);
+
+  // Tous les 3 tours : déflagration — dégâts même à portée 3, triples en enragé
+  if (turn % 3 === 0) {
+    const base = Math.floor(enemy.attack * (dist <= 2 ? 1.2 : dist <= 3 ? 0.7 : 0));
+    const dmg  = enraged ? base * 2 : base;
+    if (dmg > 0) {
+      return {
+        moved: false, newX: enemy.x, newY: enemy.y,
+        playerDamage: dmg,
+        logs: [`💀 L'ENTITÉ — Déflagration${enraged ? ' ☠' : ''} : ${dmg} !`],
+        turnCountUpdate: turn,
+      };
+    }
+  }
+
+  // Contact : attaque dévastatrice
+  if (dist === 1) {
+    const dmg = enraged ? enemy.attack * 3 : enemy.attack;
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`💀 L'ENTITÉ${enraged ? ' ☠ DÉCHAÎNÉE' : ''} : ${dmg} !`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  // Déplacement rapide (speed 2) — avance de 2 cases vers le joueur en enragé
+  const path  = findPathGreedy(enemy, player, enemies, room);
+  const steps = enraged ? Math.min(2, path?.length || 0) : 1;
+  if (path?.length > 0) {
+    const target = path[Math.min(steps - 1, path.length - 1)];
+    if (isCellFree(target.x, target.y, enemies, room)) {
+      return { moved: true, newX: target.x, newY: target.y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+    }
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
+}
+
 // ─── Nouveaux comportements ennemis ───────────────────────────────────────────
 
 function processHealerTurn(enemy, player, enemies, room) {
-  // Soigne les alliés adjacents de 2 PV, puis fuit le joueur
+  const livingAllies = enemies.filter(e => e.id !== enemy.id && e.hp > 0);
+
+  // Dernier ennemi vivant : plus de raison de fuir → charge
+  if (livingAllies.length === 0) {
+    return processChaserTurn(enemy, player, enemies, room);
+  }
+
+  // Soigne les alliés adjacents blessés
   const adjAllies = enemies.filter(e =>
     e.id !== enemy.id && e.hp > 0 && e.hp < e.maxHp &&
     Math.abs(e.x - enemy.x) + Math.abs(e.y - enemy.y) === 1
@@ -265,12 +359,26 @@ function processHealerTurn(enemy, player, enemies, room) {
     return { moved: true, newX: retreat.x, newY: retreat.y, playerDamage: 0,
              logs: healActions.length > 0 ? [`💚 Guérisseur soigne !`] : [], healActions };
   }
+
+  // Coincé sans retraite possible → attaque
+  if (manhattanDist(enemy, player) === 1) {
+    return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: enemy.attack,
+             logs: [`💚 Guérisseur acculé !`], healActions };
+  }
+
   return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: 0, logs: [], healActions };
 }
 
 function processSummonerTurn(enemy, player, enemies, room) {
   const turn = (enemy.turnCount || 0) + 1;
   const summonCount = enemy.summonCount || 0;
+  const livingAllies = enemies.filter(e => e.id !== enemy.id && e.hp > 0);
+
+  // Dernier ennemi vivant : plus d'alliés à protéger → charge
+  if (livingAllies.length === 0) {
+    const result = processChaserTurn(enemy, player, enemies, room);
+    return { ...result, turnCountUpdate: turn };
+  }
 
   // Invoque un Chasseur tous les 3 tours si moins de 2 invocations actives
   if (turn % 3 === 0 && summonCount < 2) {

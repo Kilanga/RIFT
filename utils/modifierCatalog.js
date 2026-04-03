@@ -89,6 +89,46 @@ export const MODIFIER_CATALOG = [
     scoreMult: 1.0,
     constraints: [],
   },
+  {
+    id: 'fragment_fever',
+    name: 'Fièvre des Fragments',
+    icon: '💰',
+    description: 'Commence avec +15 fragments supplémentaires, mais ATQ -2.',
+    difficulty: 'facile',
+    scoreMult: 1.1,
+    statDeltas: [{ stat: 'fragments', delta: 15 }, { stat: 'attack', delta: -2 }],
+    constraints: [],
+  },
+  {
+    id: 'titan',
+    name: 'Titan',
+    icon: '🏔',
+    description: '+6 DEF au départ, mais ATQ divisée par 2.',
+    difficulty: 'difficile',
+    scoreMult: 1.45,
+    statDeltas: [{ stat: 'defense', delta: 6 }, { stat: 'attack', mult: 0.5 }],
+    constraints: [],
+  },
+  {
+    id: 'shadow_realm',
+    name: 'Royaume des Ombres',
+    icon: '🌑',
+    description: 'PV max réduits de 40%, mais DEF +4 et ATQ +2.',
+    difficulty: 'difficile',
+    scoreMult: 1.5,
+    statDeltas: [{ stat: 'maxHp', mult: 0.6 }, { stat: 'defense', delta: 4 }, { stat: 'attack', delta: 2 }],
+    constraints: [],
+  },
+  {
+    id: 'ascetic',
+    name: 'Ascète',
+    icon: '🧘',
+    description: 'Pas de fragments au départ, mais ATQ +3 et DEF +2.',
+    difficulty: 'moyen',
+    scoreMult: 1.3,
+    statDeltas: [{ stat: 'attack', delta: 3 }, { stat: 'defense', delta: 2 }],
+    constraints: ['start_no_fragments'],
+  },
 ];
 
 /**
@@ -105,7 +145,7 @@ export function getModifierById(id) {
 }
 
 // Pool de modificateurs pour le Daily (exclu standard, pacifist, no_upgrades)
-const DAILY_MOD_POOL = ['fragile', 'double_trouble', 'cursed_run', 'speed_run', 'glass_cannon', 'berserker_mode'];
+const DAILY_MOD_POOL = ['fragile', 'double_trouble', 'cursed_run', 'speed_run', 'glass_cannon', 'berserker_mode', 'titan', 'shadow_realm', 'ascetic'];
 
 /**
  * Retourne le modificateur forcé du jour (déterministe via la date).

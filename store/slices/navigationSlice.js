@@ -8,11 +8,17 @@ import { pickPermanentUpgrades } from '../../utils/metaHelpers';
 import { getModifierById, getDailyModifier } from '../../utils/modifierCatalog';
 import { getTalentById } from '../../utils/talentCatalog';
 import { getUpgradeById, getUpgradeChoices } from '../../systems/upgradeSystem';
-import { PLAYER_SHAPES, GAME_PHASES } from '../../constants';
+import { PLAYER_SHAPES, GAME_PHASES, ENEMY_TYPES } from '../../constants';
 import { hapticError } from '../../utils/haptics';
 import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
 import { submitScore } from '../../services/leaderboardService';
 import { fetchServerPurchases } from '../../services/stripeService';
+import {
+  setMusicEnabled as setAudioMusic,
+  setSfxEnabled   as setAudioSfx,
+  setMusicVolume  as setAudioMusicVol,
+  setSfxVolume    as setAudioSfxVol,
+} from '../../services/audioService';
 
 function applyPermanentBonuses(permanentUpgrades) {
   const bonuses = {};
@@ -60,21 +66,120 @@ export const createNavigationSlice = (set, get) => ({
   playerBase:    { ...INITIAL_PLAYER }, // stats avant upgrades, pour recalcul
   run:           { ...INITIAL_RUN },
   roomMap:       [],
-  phase:         GAME_PHASES.MENU,
-  isDailySelect: false,
+  phase:               GAME_PHASES.MENU,
+  isDailySelect:       false,
+  settingsReturnPhase: GAME_PHASES.MENU,
 
   setPlayerName: (name) => set(s => ({ meta: { ...s.meta, playerName: name.trim().slice(0, 22) } })),
 
-  goToShapeSelect:       () => set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: false }),
-  goToDailyShapeSelect: () => set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: true }),
+  setPhase: (phase) => set({ phase }),
+
+  goToShapeSelect: () => {
+    const { meta } = get();
+    if (!meta.prologueShown) {
+      set({ phase: GAME_PHASES.PROLOGUE });
+    } else {
+      set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: false });
+    }
+  },
+  goToDailyShapeSelect: () => {
+    const { meta } = get();
+    if (!meta.prologueShown) {
+      set({ phase: GAME_PHASES.PROLOGUE });
+    } else {
+      set({ phase: GAME_PHASES.SHAPE_SELECT, isDailySelect: true });
+    }
+  },
   goToTalentTree:        () => set({ phase: GAME_PHASES.TALENT_TREE }),
   goToPremiumShop:       () => set({ phase: GAME_PHASES.PREMIUM_SHOP }),
   goToMultiplayer:       () => set({ phase: GAME_PHASES.MULTIPLAYER }),
+  goToAchievements:      () => set({ phase: GAME_PHASES.ACHIEVEMENTS }),
+  goToLore:              () => set({ phase: GAME_PHASES.LORE }),
+  goToPrivacy:           () => set({ phase: GAME_PHASES.PRIVACY }),
+  goToLegal:             () => set({ phase: GAME_PHASES.LEGAL }),
+  goToSettings: (returnPhase) => set({
+    phase: GAME_PHASES.SETTINGS,
+    settingsReturnPhase: returnPhase || GAME_PHASES.MENU,
+  }),
+
+  // ── Préférences ──────────────────────────────────────────────────────────
+  setMusicEnabled: (val) => {
+    setAudioMusic(val);
+    set(s => ({ meta: { ...s.meta, musicEnabled: val } }));
+  },
+  setSfxEnabled: (val) => {
+    setAudioSfx(val);
+    set(s => ({ meta: { ...s.meta, sfxEnabled: val } }));
+  },
+  setMusicVolume: (vol) => {
+    setAudioMusicVol(vol);
+    set(s => ({ meta: { ...s.meta, musicVolume: vol } }));
+  },
+  setSfxVolume: (vol) => {
+    setAudioSfxVol(vol);
+    set(s => ({ meta: { ...s.meta, sfxVolume: vol } }));
+  },
+  setLanguage: (lang) => {
+    set(s => ({ meta: { ...s.meta, preferredLanguage: lang } }));
+  },
+
+  resetProgress: () => set(s => ({
+    meta: {
+      permanentUpgrades: [],
+      bestScore:         0,
+      totalRuns:         0,
+      totalKills:        0,
+      lastRunSummary:    null,
+      achievements:      [],
+      runHistory:        [],
+      localLeaderboard:  [],
+      playerName:        s.meta.playerName,
+      talentPoints:      0,
+      unlockedTalents:   [],
+      shapeStats: {
+        triangle: { runs: 0, bestScore: 0, wins: 0 },
+        circle:   { runs: 0, bestScore: 0, wins: 0 },
+        hexagon:  { runs: 0, bestScore: 0, wins: 0 },
+        spectre:  { runs: 0, bestScore: 0, wins: 0 },
+        shadow:   { runs: 0, bestScore: 0, wins: 0 },
+        paladin:  { runs: 0, bestScore: 0, wins: 0 },
+      },
+      isPremium:         s.meta.isPremium,
+      purchasedThemes:   s.meta.purchasedThemes,
+      purchasedClasses:  s.meta.purchasedClasses,
+      hardcoreMode:      false,
+      premiumTheme:      'default',
+      gridTheme:         'default',
+      prologueShown:     false,
+      devoreurDefeated:  false,
+      gardienDefeated:   false,
+      entityDefeated:    false,
+      act3Victories:     0,
+      origineActive:     false,
+      seenEnemies:       [],
+      musicEnabled:      true,
+      sfxEnabled:        true,
+      musicVolume:       0.4,
+      sfxVolume:         0.7,
+      preferredLanguage: '',
+      playerName:        '',
+    },
+    phase: GAME_PHASES.MENU,
+  })),
 
   setPremium:          () => set(s => ({ meta: { ...s.meta, isPremium: true } })),
   toggleHardcoreMode:  () => set(s => ({ meta: { ...s.meta, hardcoreMode: !s.meta.hardcoreMode } })),
   setPremiumTheme: (theme) => set(s => ({ meta: { ...s.meta, premiumTheme: theme } })),
   setGridTheme:    (id)    => set(s => ({ meta: { ...s.meta, gridTheme: id } })),
+  addPurchasedClass: (id) => set(s => ({
+    meta: {
+      ...s.meta,
+      purchasedClasses: s.meta.purchasedClasses?.includes(id)
+        ? s.meta.purchasedClasses
+        : [...(s.meta.purchasedClasses || []), id],
+    },
+  })),
+
   addPurchasedTheme: (id) => set(s => ({
     meta: {
       ...s.meta,
@@ -95,10 +200,14 @@ export const createNavigationSlice = (set, get) => ({
     set(s => ({
       meta: {
         ...s.meta,
-        isPremium:       result.isPremium      || s.meta.isPremium,
-        purchasedThemes: Array.from(new Set([
-          ...(s.meta.purchasedThemes || []),
-          ...result.purchasedThemes,
+        isPremium:        result.isPremium       || s.meta.isPremium,
+        purchasedThemes:  Array.from(new Set([
+          ...(s.meta.purchasedThemes  || []),
+          ...(result.purchasedThemes  || []),
+        ])),
+        purchasedClasses: Array.from(new Set([
+          ...(s.meta.purchasedClasses || []),
+          ...(result.purchasedClasses || []),
         ])),
       },
     }));
@@ -203,8 +312,33 @@ export const createNavigationSlice = (set, get) => ({
     });
   },
 
+  // ── Actions narratives ──────────────────────────────────────────────────────
+
+  // Prologue terminé → marquer comme vu + aller au sélecteur de classe
+  finishPrologue: () => {
+    set(s => ({
+      phase: GAME_PHASES.SHAPE_SELECT,
+      meta:  { ...s.meta, prologueShown: true },
+    }));
+  },
+
+  // L'Origine battue → désactiver + aller à la victoire
+  finishOrigine: () => {
+    set(s => ({
+      phase: GAME_PHASES.VICTORY,
+      meta:  { ...s.meta, origineActive: false },
+    }));
+  },
+
+  // ────────────────────────────────────────────────────────────────────────────
+
   startRun: (shape = PLAYER_SHAPES.TRIANGLE, isDailyRun = false, multiOptions = null, modifierId = 'standard') => {
     const { meta } = get();
+
+    // Déterminer le boss final selon la progression narrative
+    const finalBossType = !meta.devoreurDefeated  ? ENEMY_TYPES.BOSS_RIFT
+                        : !meta.gardienDefeated   ? ENEMY_TYPES.BOSS_GUARDIAN
+                        :                           ENEMY_TYPES.BOSS_ENTITY;
     // Génération procédurale — seed fixe si multijoueur/daily, sinon aléatoire
     const { map: runMap, seed: mapSeed, actBoundaries } = buildProceduralMap(multiOptions?.seed);
 
@@ -220,11 +354,21 @@ export const createNavigationSlice = (set, get) => ({
       });
     }
 
-    // Classe Spectre : PV réduits, attaque élevée, défense nulle
+    // Stats de base par classe premium/achat
     if (shape === PLAYER_SHAPES.SPECTRE) {
-      basePlayer.maxHp  = 15;
-      basePlayer.attack = 6;
+      basePlayer.maxHp   = 15;
+      basePlayer.attack  = 6;
       basePlayer.defense = 0;
+    }
+    if (shape === PLAYER_SHAPES.SHADOW) {
+      basePlayer.maxHp   = 14;
+      basePlayer.attack  = 7;
+      basePlayer.defense = 0;
+    }
+    if (shape === PLAYER_SHAPES.PALADIN) {
+      basePlayer.maxHp   = 22;
+      basePlayer.attack  = 3;
+      basePlayer.defense = 4;
     }
 
     // Talents permanents : stat bonuses + passifs de départ
@@ -248,6 +392,11 @@ export const createNavigationSlice = (set, get) => ({
       }
     });
 
+    // Contrainte start_no_fragments
+    if (modifier.constraints?.includes('start_no_fragments')) {
+      basePlayer.fragments = 0;
+    }
+
     // Contrainte start_1hp
     if (modifier.constraints?.includes('start_1hp')) {
       basePlayer.hp = 1;
@@ -262,13 +411,14 @@ export const createNavigationSlice = (set, get) => ({
       isDailySelect:        false,
       run:                  {
         ...INITIAL_RUN,
-        startedAt:     Date.now(),
+        startedAt:      Date.now(),
         isDailyRun,
         mapSeed,
-        actBoundaries: actBoundaries || [],
-        multiCode:     multiOptions?.multiCode || null,
-        multiRole:     multiOptions?.multiRole || null,
-        modifier:      modifier,
+        actBoundaries:  actBoundaries || [],
+        multiCode:      multiOptions?.multiCode || null,
+        multiRole:      multiOptions?.multiRole || null,
+        modifier:       modifier,
+        finalBossType,
       },
       enemies:              [],
       activeUpgrades:       startingUpgrades,
@@ -294,8 +444,7 @@ export const createNavigationSlice = (set, get) => ({
     const { roomMap } = get();
     const node = roomMap.flat().find(n => n.id === nodeId);
     if (!node) return;
-
-    set(state => ({ run: { ...state.run, currentNodeId: nodeId } }));
+    set(state => ({ run: { ...state.run, currentNodeId: node.id } }));
     get().enterRoom(node);
   },
 

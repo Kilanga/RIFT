@@ -14,6 +14,10 @@
     "pro": "PRO",
     "resume": "▶  RESUME RUN",
     "resume_sub": "Layer {{layer}} · Score {{score}}",
+    "shop_title": "SHOP",
+    "shop_sub": "Themes · Classes · Premium Access",
+    "shop_title_premium": "SHOP",
+    "shop_sub_premium": "Themes · Classes · Cosmetics",
     "theme_neon": "🌌 NEON THEME (active)",
     "theme_default": "⬛ DEFAULT THEME",
     "last_run": "LAST RUN",
@@ -56,6 +60,9 @@
     "premium_locked": "🔒 Premium",
     "premium_alert_title": "Premium Class",
     "premium_alert_msg": "Unlock Premium to access Specter.",
+    "purchasable_locked": "🔒 €0.99",
+    "class_locked_title": "Class Locked",
+    "class_locked_msg": "Purchase this class in the shop to unlock it.",
     "premium_ok": "OK",
     "runs_count": "{{count}} run",
     "runs_count_plural": "{{count}} runs",
@@ -106,18 +113,32 @@
     "rarity_common": "COMMON",
     "rarity_rare": "RARE",
     "rarity_epic": "EPIC",
-    "rarity_curse": "CURSED"
+    "rarity_curse": "CURSED",
+    "rarity_legendary": "LEGENDARY"
   },
 
   "shop": {
     "title": "◆ FRAGMENT MERCHANT",
     "fragments_label": "fragments",
     "bought": "✓ Bought",
-    "leave": "Leave shop →",
+    "leave": "Leave →",
     "rarity_common": "COMMON",
     "rarity_rare": "RARE",
     "rarity_epic": "EPIC",
-    "rarity_curse": "CURSED"
+    "rarity_curse": "CURSED",
+    "rarity_legendary": "LEGENDARY",
+    "tab_shop": "◆ SHOP",
+    "tab_forge": "🔨 FORGE",
+    "forge_upgrade_title": "UPGRADE",
+    "forge_upgrade_cost": "{{cost}} ◈ per upgrade",
+    "forge_create_title": "CREATE",
+    "forge_create_cost": "{{cost}} ◈ — random upgrade",
+    "forge_stack": "{{current}} / {{max}}",
+    "forge_nothing_upgradeable": "All your upgrades are already maxed.",
+    "forge_red": "RED",
+    "forge_blue": "BLUE",
+    "forge_green": "GREEN",
+    "forge_curse": "CURSE"
   },
 
   "victory": {
@@ -247,6 +268,9 @@
     "theme_free": "Free",
     "theme_active": "✓ Active",
     "theme_use": "Use",
+    "classes_section": "EXTRA CLASSES",
+    "classes_sub": "Independent purchases · €0.99 per class",
+    "class_owned": "✓ Unlocked",
     "error_generic": "An error occurred.",
     "feature_spectre_title": "Specter Class",
     "feature_spectre_desc": "Ethereal: ignores enemy defense, immune to traps. Reduced HP, high attack.",
@@ -332,7 +356,21 @@
     "damne_name": "Damned",
     "damne_desc": "Gather 3 curses in a single run",
     "maudit_triomphant_name": "Cursed Triumphant",
-    "maudit_triomphant_desc": "Finish a run with the Cursed Pact active"
+    "maudit_triomphant_desc": "Finish a run with the Cursed Pact active",
+    "prologue_seen_name": "The First Fracture",
+    "prologue_seen_desc": "Read the Rift prologue",
+    "echo_slain_name": "Echo's Silence",
+    "echo_slain_desc": "Defeat The Echo, guardian of act I",
+    "tonnerre_slain_name": "Shattered Thunder",
+    "tonnerre_slain_desc": "Defeat Thunder Incarnate, weapon of act II",
+    "devoreur_slain_name": "Flesh of the Devourer",
+    "devoreur_slain_desc": "Defeat The Devourer for the first time",
+    "gardien_slain_name": "The Broken Gate",
+    "gardien_slain_desc": "Defeat The Guardian for the first time",
+    "entity_slain_name": "Beyond the Rift",
+    "entity_slain_desc": "Defeat The Entity for the first time",
+    "origine_witness_name": "Voice of the Origin",
+    "origine_witness_desc": "Encounter The Origin for the first time"
   },
 
   "player_name": {
@@ -392,6 +430,18 @@
       "passive_desc": "Completely ignores enemy defense. Immune to traps (lava, teleporters). Reduced HP (15 max).",
       "playstyle": "Pure damage · Fragile · Premium",
       "premium_hint": "🔓 Unlock Premium to access this class"
+    },
+    "shadow": {
+      "name": "Shadow",
+      "passive": "Ambush",
+      "passive_desc": "First attack each room ignores enemy defense and deals ×2 damage.",
+      "playstyle": "Burst · Fragile · Decisive opener"
+    },
+    "paladin": {
+      "name": "Paladin",
+      "passive": "Devotion",
+      "passive_desc": "Heals 1 HP for every 3 damage received from an enemy.",
+      "playstyle": "Sustain · Defensive · Tanky"
     }
   },
 
@@ -422,18 +472,25 @@
     "speed_run":      { "name": "Speed Run",        "desc": "Each room must be cleared in 5 turns or less, otherwise -10 HP.",                                 "difficulty": "Medium" },
     "cursed_run":     { "name": "Cursed Run",       "desc": "Start with a random curse.",                                                                      "difficulty": "Medium" },
     "double_trouble": { "name": "Double Trouble",   "desc": "Each combat room has 1 extra enemy.",                                                             "difficulty": "Medium" },
-    "fragile":        { "name": "Fragile",          "desc": "Defense is permanently set to 0.",                                                                "difficulty": "Easy" }
+    "fragile":        { "name": "Fragile",           "desc": "Defense is permanently set to 0.",                                                               "difficulty": "Easy" },
+    "fragment_fever": { "name": "Fragment Fever",   "desc": "Start with +15 extra fragments, but ATK -2.",                                                     "difficulty": "Easy" },
+    "titan":          { "name": "Titan",            "desc": "+6 DEF at start, but ATK halved.",                                                                "difficulty": "Hard" },
+    "shadow_realm":   { "name": "Shadow Realm",     "desc": "Max HP reduced by 40%, but DEF +4 and ATK +2.",                                                   "difficulty": "Hard" },
+    "ascetic":        { "name": "Ascetic",          "desc": "No fragments at start, but ATK +3 and DEF +2.",                                                   "difficulty": "Medium" }
   },
 
   "talent": {
-    "tranchant":    { "name": "Sharpened Blade", "desc": "+1 ATK at the start of each run." },
-    "precision":    { "name": "Precision",       "desc": "Each run starts with 1 free Critical stack." },
-    "vigueur":      { "name": "Vigor",           "desc": "+5 max HP at the start of each run." },
-    "armure":       { "name": "Armor",           "desc": "+1 DEF at the start of each run." },
-    "constitution": { "name": "Constitution",    "desc": "+10 max HP at the start of each run." },
-    "resilience":   { "name": "Resilience",      "desc": "Heal 2 HP after each room cleared." },
-    "collecteur":   { "name": "Collector",       "desc": "Start each run with 3 fragments." },
-    "maestro":      { "name": "Maestro",         "desc": "Start each run with 1 random upgrade." }
+    "tranchant":        { "name": "Sharpened Blade",   "desc": "+1 ATK at the start of each run." },
+    "precision":        { "name": "Precision",         "desc": "Each run starts with 1 free Critical stack." },
+    "vigueur":          { "name": "Vigor",             "desc": "+5 max HP at the start of each run." },
+    "armure":           { "name": "Armor",             "desc": "+1 DEF at the start of each run." },
+    "constitution":     { "name": "Constitution",      "desc": "+10 max HP at the start of each run." },
+    "resilience":       { "name": "Resilience",        "desc": "Heal 2 HP after each room cleared." },
+    "collecteur":       { "name": "Collector",         "desc": "Start each run with 3 fragments." },
+    "richesse":         { "name": "Wealth",            "desc": "Start each run with 8 fragments. Requires Collector." },
+    "maestro":          { "name": "Maestro",           "desc": "Start each run with 1 random upgrade." },
+    "endurance":        { "name": "Endurance",         "desc": "+8 max HP at start. Requires Vigor." },
+    "bouclier_initial": { "name": "Permanent Guard",   "desc": "Start each combat room with an active shield. Requires Armor." }
   },
 
   "event": {
@@ -480,6 +537,40 @@
       "choice_help":   "🤝 Heal him → +1 upgrade (free choice)",
       "choice_take":   "⚔ Take the relic → +6 ATK, -10 HP",
       "choice_ignore": "↩ Walk away"
+    },
+    "rift_forge": {
+      "title": "Spectral Forge",
+      "desc":  "A phantom blacksmith works silently at a rift anvil. He offers his services for a few fragments.",
+      "choice_forge_atk": "⚔ Forge a blade → +2 ATK (10 fragments)",
+      "choice_forge_def": "🛡 Forge armor → +2 DEF (10 fragments)",
+      "choice_ignore":    "↩ Leave"
+    },
+    "echo_dead": {
+      "title": "Echo of the Dead",
+      "desc":  "Voices of fallen warriors whisper rift secrets to you. You can choose to listen... or close your eyes.",
+      "choice_listen": "👂 Listen (70%: +120 score / 30%: curse)",
+      "choice_offer":  "💀 Offer your blood → +1 upgrade, -8 HP",
+      "choice_ignore": "↩ Ignore"
+    },
+    "trapped_chest": {
+      "title": "Glowing Chest",
+      "desc":  "A chest glows with golden light at the center of the room. Too good to be honest, but the call is strong.",
+      "choice_open":   "🎲 Open it (65%: +10 fragments / 35%: -12 HP)",
+      "choice_ignore": "↩ Ignore"
+    },
+    "sleeping_guardian": {
+      "title": "Sleeping Guardian",
+      "desc":  "A stone colossus slumbers across the corridor, its arms clutching an ancient relic.",
+      "choice_sneak":  "🤫 Sneak past silently → +6 fragments",
+      "choice_steal":  "⚡ Steal the relic → +1 upgrade, risk -15 HP",
+      "choice_ignore": "↩ Turn back"
+    },
+    "rift_rain": {
+      "title": "Fragment Rain",
+      "desc":  "The ceiling bleeds. Rift fragments fall in a fine rain, but the air becomes unstable and corrosive.",
+      "choice_collect_all":  "💨 Collect everything → +12 fragments, -5 HP",
+      "choice_collect_safe": "🌂 Collect carefully → +5 fragments",
+      "choice_ignore":       "↩ Avoid the area"
     }
   },
 
@@ -487,7 +578,11 @@
     "default": { "name": "Default" },
     "blood":   { "name": "Blood" },
     "ice":     { "name": "Ice" },
-    "void":    { "name": "Void" }
+    "void":    { "name": "Void" },
+    "forest":  { "name": "Forest" },
+    "lava":    { "name": "Lava" },
+    "storm":   { "name": "Storm" },
+    "neon":    { "name": "Neon" }
   },
 
   "perm_upgrade": {
@@ -509,8 +604,14 @@
     "perm_aura":     { "name": "+6 HP",            "desc": "+6 max HP. Circle mastery.",                             "unlock_desc": "Win with the Circle" },
     "perm_fortress": { "name": "+2 DEF",           "desc": "+2 DEF. Hexagon mastery.",                               "unlock_desc": "Win with the Hexagon" },
     "perm_scorer":   { "name": "+8 Fragments",     "desc": "+8 starting fragments. The merchant's secret.",          "unlock_desc": "Score of 600" },
-    "perm_master":   { "name": "+4 ATK",           "desc": "+4 ATK. Rift Master — win with all 3 classes.",          "unlock_desc": "Win with all 3 classes" },
-    "perm_transcend":{ "name": "+20 HP",           "desc": "+20 max HP. The highest progression.",                   "unlock_desc": "Win 8 runs" }
+    "perm_master":          { "name": "+4 ATK",           "desc": "+4 ATK. Rift Master — win with all 3 classes.",         "unlock_desc": "Win with all 3 classes" },
+    "perm_transcend":       { "name": "+20 HP",           "desc": "+20 max HP. The highest progression.",                  "unlock_desc": "Win 8 runs" },
+    "perm_shadow_mastery":  { "name": "Instinct +2 ATK",  "desc": "+2 ATK. Shadow mastery.",                               "unlock_desc": "Win with Shadow" },
+    "perm_paladin_mastery": { "name": "Faith +3 DEF",     "desc": "+3 DEF. Paladin mastery.",                              "unlock_desc": "Win with Paladin" },
+    "perm_frag3":           { "name": "+10 Fragments",    "desc": "Start with 10 fragments. Accumulated wealth.",          "unlock_desc": "20 runs played" },
+    "perm_atk3":            { "name": "+3 Attack",        "desc": "+3 ATK. Veteran of the depths.",                        "unlock_desc": "200 enemies killed" },
+    "perm_hp4":             { "name": "+15 max HP",       "desc": "+15 max HP. Body hardened by the Rift.",                "unlock_desc": "Score of 1200" },
+    "perm_charge2":         { "name": "+3 max Charges",   "desc": "+3 max charges. Extended energy reserve.",              "unlock_desc": "Win 5 runs" }
   },
 
   "upgrade": {
@@ -554,5 +655,61 @@
     "malediction":    { "name": "Malediction",        "desc": "☠ CURSE — Each move costs 1 HP." },
     "fardeau":        { "name": "Burden",             "desc": "☠ CURSE — Each enemy attack deals +2 bonus damage." },
     "corruption":     { "name": "Corruption",         "desc": "☠ CURSE — Lose 1 HP at the start of each enemy turn." }
+  },
+
+  "achievements_screen": {
+    "title": "ACHIEVEMENTS",
+    "unlocked_section": "UNLOCKED",
+    "locked_section": "LOCKED",
+    "rarity_common": "Common",
+    "rarity_rare": "Rare",
+    "rarity_epic": "Epic",
+    "rarity_legendary": "Legendary"
+  },
+
+  "lore": {
+    "title": "CODEX",
+    "counter": "{{unlocked}} / {{total}} entries",
+    "back": "‹ Back",
+    "filter_all": "All",
+    "filter_enemies": "Enemies",
+    "filter_bosses": "Bosses",
+    "filter_characters": "Characters",
+    "stats_title": "STATS",
+    "stat_hp": "HP",
+    "stat_attack": "ATTACK",
+    "stat_defense": "DEFENSE",
+    "stat_speed": "SPEED",
+    "locked_msg": "Encounter this entity to unlock its entry."
+  },
+
+  "settings": {
+    "title": "SETTINGS",
+    "back": "‹ Back",
+    "section_sound": "SOUND",
+    "music_label": "Music",
+    "music_desc": "Ambient soundtrack",
+    "sfx_label": "Sound effects",
+    "sfx_desc": "Attacks, pickups, bosses",
+    "section_language": "LANGUAGE",
+    "lang_fr": "Français",
+    "lang_en": "English",
+    "section_gameplay": "GAMEPLAY",
+    "hardcore_label": "Hardcore Mode",
+    "hardcore_desc": "Death resets all meta-progression",
+    "section_appearance": "APPEARANCE · PREMIUM",
+    "neon_label": "Neon Theme",
+    "neon_desc": "Deep dark background with purple accents",
+    "section_data": "DATA",
+    "reset_label": "Reset progression",
+    "reset_desc": "Erases scores, runs, achievements, talents, codex.\nKeeps premium purchases.",
+    "version": "RIFT v1.3.0",
+    "reset_modal_title": "⚠  RESET",
+    "reset_modal_body": "All your progress will be erased: scores, runs, achievements, talents, Codex entries, unlocked bosses.\n\nYour premium purchases are kept.\n\nThis action is irreversible.",
+    "reset_modal_confirm": "ERASE ALL",
+    "reset_modal_cancel": "Cancel",
+    "section_legal": "LEGAL",
+    "privacy_policy": "Privacy Policy",
+    "legal_notice": "Legal Notice"
   }
 }

@@ -28,9 +28,9 @@ const PAGES = [
     title: 'CHOISIS TA CLASSE',
     visual: <ShapesVisual />,
     lines: [
-      '🗡 Assassin — Ignore 50 % de l\'armure ennemie.\nRapide, mortel, fragile.',
-      '🔮 Arcaniste — Frappe tous les ennemis adjacents.\nContrôle de foule, AoE.',
-      '🛡 Colosse — Réduit 50 % des dégâts reçus\net renvoie 50 % ATK à l\'attaquant.',
+      '🗡 Assassin — Ignore 50 % armure. Rapide, mortel.\n🔮 Arcaniste — Frappe tous les adjacents. AoE.\n🛡 Colosse — −50 % dégâts reçus, riposte.',
+      '👻 Spectre — Se téléporte en tuant. Évasif. (Premium)\n🌑 Ombre — Double dégâts en embuscade. (0,99 €)\n✨ Paladin — Se soigne en prenant des coups. (0,99 €)',
+      "Spectre nécessite l'accès Premium.\nOmbre et Paladin sont disponibles à l'unité\ndans la Boutique.",
     ],
   },
   {
@@ -40,7 +40,7 @@ const PAGES = [
     lines: [
       'Swipe sur la grille pour te déplacer,\nou tape directement une cellule adjacente.',
       'Les flèches autour de toi indiquent les cases libres.\nUne bordure rouge signale un ennemi attaquable.',
-      'Vide la salle de tous ses ennemis\npour débloquer l\'issue et continuer.',
+      "Vide la salle de tous ses ennemis\npour débloquer l'issue et continuer.",
     ],
   },
   {
@@ -49,8 +49,8 @@ const PAGES = [
     visual: <RoomsVisual />,
     lines: [
       '⚔ COMBAT — Bats tous les ennemis.\n+ REPOS — Récupère des PV.',
-      '◆ SHOP — Achète des upgrades\ncontre des fragments (◈).',
-      '☠ MINI-BOSS · ★ BOSS · 💀 BOSS FINAL\nChaque fin d\'acte = boss de plus en plus fort.',
+      '◆ SHOP — Achète des upgrades contre des fragments.\n⚡ ÉVÉNEMENT — Choix narratif à conséquences.',
+      "☠ MINI-BOSS · ★ BOSS · 💀 BOSS FINAL\nChaque fin d'acte = boss de plus en plus fort.",
     ],
   },
   {
@@ -59,8 +59,8 @@ const PAGES = [
     visual: <ScoreVisual />,
     lines: [
       'Kills : chaque ennemi vaut des points.\nCombo : tuer plusieurs ennemis en un tour multiplie le score.',
-      '⚡ Rapidité : finir une salle en < 5 tours\ndonne jusqu\'à +50 pts de bonus.',
-      '✦ Sans dégâts : traverser une salle intacte = +25 pts.\n❤ PV restants : jusqu\'à +15 pts selon ta vie.',
+      "⚡ Rapidité : finir une salle en < 5 tours\ndonne jusqu'à +50 pts de bonus.",
+      "✦ Sans dégâts : traverser une salle intacte = +25 pts.\n♥ PV restants : jusqu'à +15 pts selon ta vie.",
     ],
   },
   {
@@ -69,8 +69,28 @@ const PAGES = [
     visual: <UpgradesVisual />,
     lines: [
       'Après chaque salle de combat, choisis\nun upgrade parmi 3 propositions.',
-      '🔴 Rouge = Offensif  🔵 Bleu = Défense/Util\n🟢 Vert = Soin/Support',
+      '🔴 Rouge = Offensif  🔵 Bleu = Défense/Util\n🟢 Vert = Soin/Support  💜 Malédiction = Risque/Récompense',
       'Accumule 3 upgrades de la même couleur\npour activer une synergie ✦ bonus !',
+    ],
+  },
+  {
+    key: 'forge',
+    title: 'LA FORGE',
+    visual: <ForgeVisual />,
+    lines: [
+      "Dans le Shop, l'onglet FORGE te donne\ndeux options supplémentaires.",
+      "⬆ Améliorer — Monte le niveau d'un upgrade\nque tu possèdes déjà. Coût : 20 fragments.",
+      "✦ Créer — Génère un upgrade aléatoire\nd'une couleur choisie. Coût : 15 fragments.",
+    ],
+  },
+  {
+    key: 'talents',
+    title: 'ARBRE DE TALENTS',
+    visual: <TalentVisual />,
+    lines: [
+      'Chaque run terminée (mort ou victoire)\nte rapporte 1 point de talent ✨.',
+      "Dépense-les dans l'Arbre de Talents\npour des bonus permanents sur tous tes runs.",
+      "+5 PV max, +1 ATQ de départ, bouclier actif...\nchaque talent s'applique dès le début du run.",
     ],
   },
   {
@@ -79,7 +99,7 @@ const PAGES = [
     visual: <MetaVisual />,
     lines: [
       'Chaque mort débloque 1 upgrade permanent\n(victoire = 2 upgrades) si la condition est remplie.',
-      'Ces bonus s\'appliquent à tous tes runs suivants.\nPlus tu joues, plus ton personnage est fort au départ.',
+      "Ces bonus s'appliquent à tous tes runs suivants.\nPlus tu joues, plus ton personnage est fort au départ.",
       'Les Daily Runs partagent le même seed entre joueurs :\nseul le skill fait la différence au leaderboard.',
     ],
   },
@@ -324,6 +344,59 @@ function MetaVisual() {
           stroke={i < 3 ? PALETTE.charge : PALETTE.border}
           strokeWidth={1} opacity={0.9} />
       ))}
+    </Svg>
+  );
+}
+
+function ForgeVisual() {
+  const tabs = [
+    { label: 'BOUTIQUE', color: PALETTE.upgradeGreen, x: 14 },
+    { label: 'FORGE',    color: PALETTE.charge,        x: 104 },
+  ];
+  return (
+    <Svg width={200} height={80} viewBox="0 0 200 80">
+      {tabs.map(c => (
+        <G key={c.label}>
+          <Rect x={c.x} y={4} width={82} height={16} rx={5}
+            fill={c.color + '22'} stroke={c.color} strokeWidth={1.5} />
+          {[0, 1].map(i => (
+            <Rect key={i} x={c.x + 4} y={26 + i * 26} width={74} height={20} rx={5}
+              fill={PALETTE.bgCard} stroke={c.color + '66'} strokeWidth={1} />
+          ))}
+          <Circle cx={c.x + 16} cy={36} r={5} fill={c.color} opacity={0.8} />
+          <Circle cx={c.x + 16} cy={62} r={5} fill={c.color} opacity={0.5} />
+        </G>
+      ))}
+    </Svg>
+  );
+}
+
+function TalentVisual() {
+  const nodes = [
+    { x: 100, y: 12, r: 7, color: PALETTE.charge,       filled: true  },
+    { x: 60,  y: 38, r: 6, color: PALETTE.triangle,     filled: true  },
+    { x: 140, y: 38, r: 6, color: PALETTE.upgradeBlue,  filled: true  },
+    { x: 40,  y: 64, r: 5, color: PALETTE.triangle,     filled: false },
+    { x: 80,  y: 64, r: 5, color: PALETTE.upgradeGreen, filled: false },
+    { x: 120, y: 64, r: 5, color: PALETTE.upgradeBlue,  filled: false },
+    { x: 160, y: 64, r: 5, color: PALETTE.circle,       filled: false },
+  ];
+  const edges = [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]];
+  return (
+    <Svg width={200} height={80} viewBox="0 0 200 80">
+      {edges.map(([a, b], i) => (
+        <Line key={i}
+          x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y}
+          stroke={PALETTE.borderLight} strokeWidth={1.2} />
+      ))}
+      {nodes.map((n, i) => (
+        <Circle key={i} cx={n.x} cy={n.y} r={n.r}
+          fill={n.filled ? n.color : PALETTE.bgDark}
+          stroke={n.color} strokeWidth={1.5}
+          opacity={n.filled ? 0.9 : 0.4} />
+      ))}
+      <Rect x={152} y={1} width={40} height={14} rx={6}
+        fill={PALETTE.charge + '33'} stroke={PALETTE.charge} strokeWidth={1} />
     </Svg>
   );
 }

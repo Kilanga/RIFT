@@ -4,7 +4,7 @@
  */
 
 import { generateRoom } from '../../utils/procGen';
-import { applySynergies, getUpgradeChoices, getUpgradeById, computePlayerStats, hasCurseSynergy } from '../../systems/upgradeSystem';
+import { ALL_UPGRADES, applySynergies, getUpgradeChoices, getUpgradeById, computePlayerStats, hasCurseSynergy } from '../../systems/upgradeSystem';
 import { pickPermanentUpgrades } from '../../utils/metaHelpers';
 import { ROOM_TYPES, GAME_PHASES, ENEMY_TYPES } from '../../constants';
 import { hapticSuccess, hapticMedium } from '../../utils/haptics';
@@ -108,7 +108,7 @@ export const createProgressionSlice = (set, get) => ({
   enterRoom: (roomNode) => {
     const { player, run } = get();
     const roomSeed = ((run.mapSeed || 0) ^ hashString(roomNode.id || '')) >>> 0;
-    const room = generateRoom(roomNode.type, run.currentLayerIndex + 1, roomSeed);
+    const room = generateRoom(roomNode.type, run.currentLayerIndex + 1, roomSeed, run.finalBossType || null);
 
     const BOSS_TYPES = [ROOM_TYPES.BOSS_MINI, ROOM_TYPES.BOSS, ROOM_TYPES.BOSS_FINAL];
     const isBossRoom = BOSS_TYPES.includes(roomNode.type);
@@ -129,19 +129,32 @@ export const createProgressionSlice = (set, get) => ({
       : null;
 
     // Fortifié : bouclier automatique au début de chaque salle
-    const hasFortifie = get().activeUpgrades.some(u => u.id === 'fortifie');
+    const hasFortifie   = get().activeUpgrades.some(u => u.id === 'fortifie');
+    // Talent Garde Permanente : bouclier de départ chaque salle de combat
+    const hasStartShield = (get().meta?.unlockedTalents || []).some(id => {
+      const t = getTalentById(id);
+      return t?.passive === 'start_shield';
+    });
     // Contrat Mortel : commence chaque salle à 60% des PV max
     const hasContratMortel = get().activeUpgrades.some(u => u.id === 'contrat_mortel');
     const cappedHp = hasContratMortel
       ? Math.min(player.hp, Math.floor(player.maxHp * 0.6))
       : player.hp;
-    const startStatuses = hasFortifie
+    const startStatuses = (hasFortifie || hasStartShield)
       ? [...(player.statuses || []).filter(s => s.id !== 'shield'), { id: 'shield', duration: 1 }]
       : (player.statuses || []);
 
     const event = roomNode.type === ROOM_TYPES.EVENT ? pickRandomEvent() : null;
 
+    // Marquer les ennemis de cette salle comme "vus" dans le Codex
+    const newTypes = (room.enemies || []).map(e => e.type).filter(Boolean);
+    const prevSeen = get().meta?.seenEnemies || [];
+    const nextSeen = newTypes.some(t => !prevSeen.includes(t))
+      ? [...new Set([...prevSeen, ...newTypes])]
+      : prevSeen;
+
     set({
+      ...(nextSeen !== prevSeen ? { meta: { ...get().meta, seenEnemies: nextSeen } } : {}),
       currentRoom:  room,
       currentEvent: event,
       enemies:      room.enemies.map((e, i) => ({
@@ -156,20 +169,13 @@ export const createProgressionSlice = (set, get) => ({
       damagePops:   [],
       dyingEnemies: [],
       killsThisTurn: 0,
-      blinkUsed:    false,
+      blinkUsed:         false,
+      shadowAmbushUsed:  false,
       player:       { ...player, x: room.playerStart.x, y: room.playerStart.y, hp: cappedHp, statuses: startStatuses },
-      run:          { ...get().run, turnsInRoom: 0, damageTakenInRoom: 0 },
+      run:          { ...get().run, turnsInRoom: 0, damageTakenInRoom: 0, murmurShownThisRoom: false },
     });
 
-    if (isBossRoom) {
-      const nodeId = roomNode.id;
-      setTimeout(() => {
-        const s = get();
-        if (s.run.currentNodeId === nodeId && s.phase === GAME_PHASES.BOSS_INTRO) {
-          set({ phase: GAME_PHASES.COMBAT });
-        }
-      }, 2600);
-    }
+    // Le dialogue de boss (BossIntroOverlay) gère lui-même la transition vers COMBAT
   },
 
   // ── Fin de salle ─────────────────────────────────────────────────────────────
@@ -227,6 +233,21 @@ export const createProgressionSlice = (set, get) => ({
         const modifier    = state.run.modifier || { scoreMult: 1.0 };
         const finalScore  = Math.round((state.run.score + 100) * modifier.scoreMult);
         const shape         = state.player.shape;
+
+        // ── Progression narrative acte 3 ────────────────────────────────────
+        const finalBossType   = state.run.finalBossType;
+        const ACT3_BOSSES     = [ENEMY_TYPES.BOSS_RIFT, ENEMY_TYPES.BOSS_GUARDIAN, ENEMY_TYPES.BOSS_ENTITY];
+        const isAct3Victory   = ACT3_BOSSES.includes(finalBossType);
+        const newAct3Victories = isAct3Victory
+          ? (state.meta.act3Victories || 0) + 1
+          : (state.meta.act3Victories || 0);
+        const newDevoreurDefeated  = state.meta.devoreurDefeated  || finalBossType === ENEMY_TYPES.BOSS_RIFT;
+        const newGardienDefeated   = state.meta.gardienDefeated   || finalBossType === ENEMY_TYPES.BOSS_GUARDIAN;
+        const newEntityDefeated    = state.meta.entityDefeated    || finalBossType === ENEMY_TYPES.BOSS_ENTITY;
+        // L'Origine : toutes les 3 victoires acte 3, si pas déjà active
+        const newOrigineActive = isAct3Victory && !state.meta.origineActive && newAct3Victories % 3 === 0
+          ? true
+          : state.meta.origineActive;
         const shapeStats    = state.meta.shapeStats || {};
         const prevShape     = shapeStats[shape] || { runs: 0, bestScore: 0, wins: 0 };
         const hpRatio       = state.player.maxHp > 0 ? state.player.hp / state.player.maxHp : 0;
@@ -257,6 +278,11 @@ export const createProgressionSlice = (set, get) => ({
           totalRuns:  state.meta.totalRuns + 1,
           talentPoints: (state.meta.talentPoints || 0) + 1,
           permanentUpgrades: [...state.meta.permanentUpgrades, ...newPermanents],
+          devoreurDefeated:  newDevoreurDefeated,
+          gardienDefeated:   newGardienDefeated,
+          entityDefeated:    newEntityDefeated,
+          act3Victories:     newAct3Victories,
+          origineActive:     newOrigineActive,
           shapeStats: {
             ...shapeStats,
             [shape]: {
@@ -292,7 +318,7 @@ export const createProgressionSlice = (set, get) => ({
         };
 
         return {
-          phase:   GAME_PHASES.VICTORY,
+          phase:   newOrigineActive ? GAME_PHASES.ORIGINE_ENCOUNTER : GAME_PHASES.VICTORY,
           roomMap: updatedMap,
           run: {
             ...state.run,
@@ -503,6 +529,93 @@ export const createProgressionSlice = (set, get) => ({
         if (a) get().addLog(`🏅 Succès : ${a.icon} ${a.name}`);
       });
     }
+  },
+
+  // ── Forge ────────────────────────────────────────────────────────────────────
+
+  forgeUpgrade: (upgradeId) => {
+    const COST = 20;
+    const { player, activeUpgrades } = get();
+    if (player.fragments < COST) {
+      get().addLog(`💸 Fragments insuffisants`);
+      return false;
+    }
+    const upgrade = getUpgradeById(upgradeId);
+    if (!upgrade) return false;
+
+    // Vérifier maxStack
+    const stackCount = activeUpgrades.filter(u => u.id === upgradeId).length;
+    if (stackCount >= upgrade.maxStack) {
+      get().addLog(`🔨 Amélioration déjà au maximum`);
+      return false;
+    }
+
+    playSfx('upgrade_buy');
+    const newUpgrades = applySynergies([...activeUpgrades, upgrade]);
+    const newStats    = computePlayerStats(get().playerBase, newUpgrades);
+
+    set(state => {
+      const hpGain = Math.max(0, newStats.maxHp - state.player.maxHp);
+      return {
+        player: {
+          ...state.player,
+          fragments: state.player.fragments - COST,
+          attack:    newStats.attack,
+          defense:   newStats.defense,
+          maxHp:     newStats.maxHp,
+          hp:        Math.min(state.player.hp + hpGain, newStats.maxHp),
+        },
+        activeUpgrades: newUpgrades,
+      };
+    });
+
+    hapticMedium();
+    get().addLog(`🔨 Forgé : ${upgrade.name} (×${stackCount + 1})`);
+    return true;
+  },
+
+  forgeCreateByColor: (color) => {
+    const COST = 15;
+    const { player, activeUpgrades } = get();
+    if (player.fragments < COST) {
+      get().addLog(`💸 Fragments insuffisants`);
+      return null;
+    }
+
+    const stackCount = {};
+    activeUpgrades.forEach(u => { stackCount[u.id] = (stackCount[u.id] || 0) + 1; });
+
+    const pool = ALL_UPGRADES.filter(
+      u => u.color === color && (stackCount[u.id] || 0) < u.maxStack
+    );
+    if (pool.length === 0) {
+      get().addLog(`🔨 Aucune amélioration disponible pour cette couleur`);
+      return null;
+    }
+
+    const upgrade = pool[Math.floor(Math.random() * pool.length)];
+    playSfx('upgrade_pick');
+    const newUpgrades = applySynergies([...activeUpgrades, upgrade]);
+    const newStats    = computePlayerStats(get().playerBase, newUpgrades);
+
+    set(state => {
+      const hpGain = Math.max(0, newStats.maxHp - state.player.maxHp);
+      return {
+        player: {
+          ...state.player,
+          fragments: state.player.fragments - COST,
+          attack:    newStats.attack,
+          defense:   newStats.defense,
+          maxHp:     newStats.maxHp,
+          hp:        Math.min(state.player.hp + hpGain, newStats.maxHp),
+        },
+        activeUpgrades: newUpgrades,
+      };
+    });
+
+    hapticMedium();
+    get().addLog(`🔥 Créé : ${upgrade.name}`);
+    return upgrade;
   },
 
   // ── Arbre de talents ─────────────────────────────────────────────────────────

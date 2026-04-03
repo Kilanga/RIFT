@@ -5,6 +5,39 @@
 
 import { supabase } from './supabase';
 
+function isNetworkFailure(error) {
+  const msg = String(error?.message || error || '').toLowerCase();
+  return msg.includes('network request failed') || msg.includes('failed to fetch');
+}
+
+const SUPABASE_URL  = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+const SUPABASE_ANON = process.env.EXPO_PUBLIC_SUPABASE_ANON?.trim();
+
+async function fetchScoresViaRest({ limit = 10, daily = false }) {
+  if (!SUPABASE_URL || !SUPABASE_ANON) return [];
+
+  const safeLimit = Math.max(1, Math.min(50, Number(limit) || 10));
+  const base = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/scores`;
+  const select = 'player_name,score,shape,kills,layers,won,created_at';
+  const dailyFilter = daily ? `&is_daily=eq.true&daily_date=eq.${todayDateStr()}` : '';
+  const url = `${base}?select=${select}${dailyFilter}&order=score.desc&limit=${safeLimit}`;
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey:        SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+      },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Date du jour au format YYYY-MM-DD */
 export function todayDateStr() {
   return new Date().toISOString().slice(0, 10);
@@ -18,7 +51,7 @@ export function todayDateStr() {
 const MAX_SCORE  = 9999;
 const MAX_KILLS  = 500;
 const MAX_LAYERS = 30;
-const VALID_SHAPES = ['triangle', 'circle', 'hexagon', 'spectre'];
+const VALID_SHAPES = ['triangle', 'circle', 'hexagon', 'spectre', 'shadow', 'paladin'];
 
 export async function submitScore({ playerName, score, shape, kills, layers, won, isDaily = false }) {
   if (!supabase) return;
@@ -69,32 +102,56 @@ export async function submitScore({ playerName, score, shape, kills, layers, won
  * Retourne [] si erreur ou offline.
  */
 export async function fetchTopScores(limit = 10) {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('scores')
-    .select('player_name, score, shape, kills, layers, won, created_at')
-    .order('score', { ascending: false })
-    .limit(limit);
+  if (!supabase) {
+    return await fetchScoresViaRest({ limit, daily: false });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('scores')
+      .select('player_name, score, shape, kills, layers, won, created_at')
+      .order('score', { ascending: false })
+      .limit(limit);
 
-  if (error) { if (error.message !== 'Network request failed') console.warn('[Supabase] fetchTopScores:', error.message); return []; }
-  return data || [];
+    if (error) {
+      if (isNetworkFailure(error)) return await fetchScoresViaRest({ limit, daily: false });
+      console.warn('[Supabase] fetchTopScores:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    if (isNetworkFailure(err)) return await fetchScoresViaRest({ limit, daily: false });
+    console.warn('[Supabase] fetchTopScores:', String(err?.message || err));
+    return [];
+  }
 }
 
 /**
  * Top N scores du jour (Daily Run).
  */
 export async function fetchDailyScores(limit = 10) {
-  if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('scores')
-    .select('player_name, score, shape, kills, layers, won, created_at')
-    .eq('is_daily', true)
-    .eq('daily_date', todayDateStr())
-    .order('score', { ascending: false })
-    .limit(limit);
+  if (!supabase) {
+    return await fetchScoresViaRest({ limit, daily: true });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('scores')
+      .select('player_name, score, shape, kills, layers, won, created_at')
+      .eq('is_daily', true)
+      .eq('daily_date', todayDateStr())
+      .order('score', { ascending: false })
+      .limit(limit);
 
-  if (error) { if (error.message !== 'Network request failed') console.warn('[Supabase] fetchDailyScores:', error.message); return []; }
-  return data || [];
+    if (error) {
+      if (isNetworkFailure(error)) return await fetchScoresViaRest({ limit, daily: true });
+      console.warn('[Supabase] fetchDailyScores:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    if (isNetworkFailure(err)) return await fetchScoresViaRest({ limit, daily: true });
+    console.warn('[Supabase] fetchDailyScores:', String(err?.message || err));
+    return [];
+  }
 }
 
 /**

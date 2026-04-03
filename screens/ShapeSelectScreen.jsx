@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PLAYER_SHAPES, PALETTE } from '../constants';
-import { Assassin, Arcaniste, Colosse, Spectre } from '../components/ClassSilhouettes';
+import { Assassin, Arcaniste, Colosse, Spectre, Ombre, Paladin } from '../components/ClassSilhouettes';
 import { pickModifierChoices, getDailyModifier } from '../utils/modifierCatalog';
 
 const SHAPES = [
@@ -47,6 +47,24 @@ const SHAPES = [
     stats:   { atk: 6, def: 0, vit: 5 },
     premium: true,
   },
+  {
+    id:         PLAYER_SHAPES.SHADOW,
+    key:        'shadow',
+    name:       'Ombre',
+    color:      '#FF6600',
+    icon:       Ombre,
+    stats:      { atk: 5, def: 0, vit: 5 },
+    purchasable: true,
+  },
+  {
+    id:         PLAYER_SHAPES.PALADIN,
+    key:        'paladin',
+    name:       'Paladin',
+    color:      '#FFCC00',
+    icon:       Paladin,
+    stats:      { atk: 2, def: 5, vit: 2 },
+    purchasable: true,
+  },
 ];
 
 export default function ShapeSelectScreen() {
@@ -72,6 +90,10 @@ export default function ShapeSelectScreen() {
       Alert.alert(t('shape_select.premium_alert_title'), t('shape_select.premium_alert_msg'), [{ text: t('shape_select.premium_ok') }]);
       return;
     }
+    if (s?.purchasable && !(meta.purchasedClasses || []).includes(shapeId)) {
+      Alert.alert(t('shape_select.class_locked_title'), t('shape_select.class_locked_msg'), [{ text: 'OK' }]);
+      return;
+    }
     setSelected(shapeId);
   };
 
@@ -92,7 +114,7 @@ export default function ShapeSelectScreen() {
         <View style={styles.shapePicker}>
           {SHAPES.map(s => {
             const sStats = meta.shapeStats?.[s.id] || { runs: 0, bestScore: 0, wins: 0 };
-            const isLocked = s.premium && !meta.isPremium;
+            const isLocked = (s.premium && !meta.isPremium) || (s.purchasable && !(meta.purchasedClasses || []).includes(s.id));
             return (
               <TouchableOpacity
                 key={s.id}
@@ -112,9 +134,14 @@ export default function ShapeSelectScreen() {
                 <Text style={[styles.shapeName, { color: selected === s.id ? s.color : PALETTE.textMuted }]}>
                   {t(`class.${s.key}.name`, { defaultValue: s.name })}
                 </Text>
-                {isLocked && (
+                {isLocked && s.premium && (
                   <Text style={[styles.shapeRunCount, { color: '#DD8833' }]}>
                     {t('shape_select.premium_locked')}
+                  </Text>
+                )}
+                {isLocked && s.purchasable && (
+                  <Text style={[styles.shapeRunCount, { color: '#FF6600' }]}>
+                    {t('shape_select.purchasable_locked')}
                   </Text>
                 )}
                 {!isLocked && sStats.runs > 0 && (

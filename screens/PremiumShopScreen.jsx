@@ -14,11 +14,17 @@ import { useStripe } from '@stripe/stripe-react-native';
 
 import useGameStore from '../store/gameStore';
 import { PALETTE } from '../constants';
-import { createPaymentIntent, createThemePaymentIntent } from '../services/stripeService';
+import { createPaymentIntent, createThemePaymentIntent, createClassPaymentIntent } from '../services/stripeService';
 import { GRID_THEMES_LIST } from '../utils/cosmeticCatalog';
 
 const PREMIUM_COLOR  = '#9966FF';
-const PRICE_PREMIUM  = '2,99 €';  // Affiché à titre indicatif — le vrai montant vient de Stripe
+const PRICE_PREMIUM  = '2,99 €';
+const PRICE_CLASS    = '0,99 €';
+
+const PURCHASABLE_CLASSES = [
+  { id: 'shadow',  nameKey: 'class.shadow.name',  passiveKey: 'class.shadow.passive',  color: '#FF6600', icon: '🌑' },
+  { id: 'paladin', nameKey: 'class.paladin.name', passiveKey: 'class.paladin.passive', color: '#FFCC00', icon: '⚔️' },
+];
 
 const FEATURES = [
   { icon: '👻', titleKey: 'premium.feature_spectre_title', descKey: 'premium.feature_spectre_desc' },
@@ -28,19 +34,22 @@ const FEATURES = [
 
 export default function PremiumShopScreen() {
   const { t } = useTranslation();
-  const goToMenu          = useGameStore(s => s.goToMenu);
-  const setPremium        = useGameStore(s => s.setPremium);
-  const isPremium         = useGameStore(s => s.meta.isPremium);
-  const gridTheme         = useGameStore(s => s.meta.gridTheme ?? 'default');
-  const purchasedThemes   = useGameStore(s => s.meta.purchasedThemes ?? []);
-  const setGridTheme      = useGameStore(s => s.setGridTheme);
-  const addPurchasedTheme = useGameStore(s => s.addPurchasedTheme);
+  const goToMenu           = useGameStore(s => s.goToMenu);
+  const setPremium         = useGameStore(s => s.setPremium);
+  const isPremium          = useGameStore(s => s.meta.isPremium);
+  const gridTheme          = useGameStore(s => s.meta.gridTheme ?? 'default');
+  const purchasedThemes    = useGameStore(s => s.meta.purchasedThemes ?? []);
+  const purchasedClasses   = useGameStore(s => s.meta.purchasedClasses ?? []);
+  const setGridTheme       = useGameStore(s => s.setGridTheme);
+  const addPurchasedTheme  = useGameStore(s => s.addPurchasedTheme);
+  const addPurchasedClass  = useGameStore(s => s.addPurchasedClass);
 
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]           = useState(false);
   const [loadingTheme, setLoadingTheme] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [loadingClass, setLoadingClass] = useState('');
+  const [errorMsg, setErrorMsg]         = useState('');
 
   const handleBuy = async () => {
     setLoading(true);
@@ -213,6 +222,58 @@ export default function PremiumShopScreen() {
             );
           })}
 
+          {/* ── Classes individuelles ──────────────────────────────────── */}
+          <Text style={[styles.sectionLabel, { marginTop: 14 }]}>{t('premium.classes_section')}</Text>
+          <Text style={styles.themeSectionSub}>{t('premium.classes_sub')}</Text>
+          {!!errorMsg && <Text style={styles.errorTxt}>{errorMsg}</Text>}
+          {PURCHASABLE_CLASSES.map(cls => {
+            const isPurchased = purchasedClasses.includes(cls.id);
+            const isBuying    = loadingClass === cls.id;
+            return (
+              <View key={cls.id} style={[styles.themeRow, isPurchased && { borderColor: cls.color, backgroundColor: cls.color + '12' }]}>
+                <Text style={[styles.classEmoji]}>{cls.icon}</Text>
+                <View style={styles.themeInfo}>
+                  <Text style={[styles.themeEmoji, { color: isPurchased ? cls.color : PALETTE.textPrimary }]}>
+                    {t(cls.nameKey)}
+                  </Text>
+                  <Text style={styles.themeFreeTag}>{t(cls.passiveKey)}</Text>
+                </View>
+                {isPurchased ? (
+                  <View style={[styles.themeUseBtn, styles.themeUseBtnActive, { borderColor: cls.color }]}>
+                    <Text style={[styles.themeUseBtnTxt, { color: cls.color }]}>{t('premium.class_owned')}</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.themeBuyBtn, { backgroundColor: cls.color }, isBuying && styles.buyBtnDisabled]}
+                    onPress={async () => {
+                      setLoadingClass(cls.id);
+                      setErrorMsg('');
+                      try {
+                        const clientSecret = await createClassPaymentIntent(cls.id);
+                        const { error: initError } = await initPaymentSheet({ paymentIntentClientSecret: clientSecret, merchantDisplayName: 'RIFT', style: 'alwaysDark' });
+                        if (initError) throw new Error(initError.message);
+                        const { error: payError } = await presentPaymentSheet();
+                        if (payError) { if (payError.code !== 'Canceled') throw new Error(payError.message); return; }
+                        addPurchasedClass(cls.id);
+                      } catch (err) {
+                        setErrorMsg(err.message || 'Une erreur est survenue.');
+                      } finally {
+                        setLoadingClass('');
+                      }
+                    }}
+                    disabled={!!loadingClass}
+                    activeOpacity={0.85}
+                  >
+                    {isBuying
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text style={styles.themeBuyBtnTxt}>{PRICE_CLASS}</Text>
+                    }
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+
           <View style={{ height: 32 }} />
         </ScrollView>
       </View>
@@ -340,6 +401,7 @@ const styles = StyleSheet.create({
     borderWidth:  1,
   },
   themeInfo:    { flex: 1, gap: 3 },
+  classEmoji:   { fontSize: 24, width: 40, textAlign: 'center' },
   themeEmoji:   { color: PALETTE.textPrimary, fontSize: 14, fontWeight: 'bold' },
   themeFreeTag: { color: PALETTE.textDim, fontSize: 10 },
 
