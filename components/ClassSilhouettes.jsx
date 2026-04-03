@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { Circle, Polygon, Rect, Line, G, Ellipse } from 'react-native-svg';
+import { Circle, Polygon, Rect, Line, G, Ellipse, Path } from 'react-native-svg';
 
 // Assassin : capuche, silhouette élancée, dague
 export function Assassin({ cx, cy, r, color }) {
@@ -86,6 +86,76 @@ export function Colosse({ cx, cy, r, color }) {
         stroke={color} strokeWidth={2.5} opacity={0.9} />
       <Line x1={cx + r*0.55} y1={cy - r*0.45} x2={cx + r*1.0} y2={cy - r*0.45}
         stroke={color} strokeWidth={2} opacity={0.7} />
+    </G>
+  );
+}
+
+// Ombre : capuche basse, deux dagues croisées, silhouette furtive
+export function Ombre({ cx, cy, r, color }) {
+  const dark = color + 'BB';
+  return (
+    <G>
+      {/* Capuche basse */}
+      <Polygon
+        points={`${cx},${cy - r*1.5} ${cx - r*0.5},${cy - r*0.6} ${cx + r*0.5},${cy - r*0.6}`}
+        fill={dark}
+      />
+      {/* Tête dans l'ombre */}
+      <Circle cx={cx} cy={cy - r*0.95} r={r*0.34} fill={color} opacity={0.7} />
+      {/* Yeux brillants */}
+      <Circle cx={cx - r*0.1} cy={cy - r*0.98} r={r*0.06} fill="#FFFFFF" opacity={0.9} />
+      <Circle cx={cx + r*0.1} cy={cy - r*0.98} r={r*0.06} fill="#FFFFFF" opacity={0.9} />
+      {/* Corps agile */}
+      <Polygon
+        points={`${cx - r*0.22},${cy - r*0.58} ${cx + r*0.22},${cy - r*0.58} ${cx + r*0.3},${cy + r*0.8} ${cx - r*0.3},${cy + r*0.8}`}
+        fill={color} opacity={0.85}
+      />
+      {/* Dague gauche */}
+      <Line x1={cx - r*0.22} y1={cy - r*0.1} x2={cx - r*0.72} y2={cy + r*0.5}
+        stroke={color} strokeWidth={1.8} opacity={0.9} />
+      <Polygon
+        points={`${cx-r*0.74},${cy+r*0.53} ${cx-r*0.62},${cy+r*0.42} ${cx-r*0.65},${cy+r*0.58}`}
+        fill={color} opacity={0.9}
+      />
+      {/* Dague droite */}
+      <Line x1={cx + r*0.22} y1={cy - r*0.1} x2={cx + r*0.72} y2={cy + r*0.5}
+        stroke={color} strokeWidth={1.8} opacity={0.9} />
+      <Polygon
+        points={`${cx+r*0.74},${cy+r*0.53} ${cx+r*0.62},${cy+r*0.42} ${cx+r*0.65},${cy+r*0.58}`}
+        fill={color} opacity={0.9}
+      />
+    </G>
+  );
+}
+
+// Paladin : armure sainte, bouclier orné, aura dorée
+export function Paladin({ cx, cy, r, color }) {
+  return (
+    <G>
+      {/* Aura sainte */}
+      <Ellipse cx={cx} cy={cy} rx={r*0.85} ry={r*1.1} fill={color} opacity={0.08} />
+      {/* Casque à panache */}
+      <Rect x={cx - r*0.38} y={cy - r*1.32} width={r*0.76} height={r*0.45} fill={color} rx={r*0.18} />
+      <Line x1={cx} y1={cy - r*1.32} x2={cx} y2={cy - r*1.62}
+        stroke={color} strokeWidth={2.5} opacity={0.7} />
+      {/* Tête */}
+      <Circle cx={cx} cy={cy - r*0.8} r={r*0.33} fill={color} />
+      {/* Corps trapu */}
+      <Rect x={cx - r*0.5} y={cy - r*0.45} width={r*1.0} height={r*1.1} fill={color} rx={r*0.07} />
+      {/* Bouclier écu (gauche) */}
+      <Polygon
+        points={`${cx - r*1.12},${cy - r*0.55} ${cx - r*0.62},${cy - r*0.55} ${cx - r*0.62},${cy + r*0.45} ${cx - r*0.87},${cy + r*0.7}`}
+        fill={color}
+      />
+      {/* Croix sur bouclier */}
+      <Line x1={cx - r*0.87} y1={cy - r*0.45} x2={cx - r*0.87} y2={cy + r*0.45}
+        stroke="#FFFFFF" strokeWidth={1.5} opacity={0.3} />
+      <Line x1={cx - r*1.08} y1={cy - r*0.05} x2={cx - r*0.66} y2={cy - r*0.05}
+        stroke="#FFFFFF" strokeWidth={1.5} opacity={0.3} />
+      {/* Marteau (droite) */}
+      <Line x1={cx + r*0.68} y1={cy + r*0.7} x2={cx + r*0.68} y2={cy - r*0.7}
+        stroke={color} strokeWidth={2.2} opacity={0.9} />
+      <Rect x={cx + r*0.5} y={cy - r*0.82} width={r*0.36} height={r*0.55} fill={color} rx={r*0.05} />
     </G>
   );
 }

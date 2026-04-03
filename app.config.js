@@ -2,10 +2,12 @@ module.exports = {
   expo: {
     name:        'RIFT',
     slug:        'rift-roguelite',
-    version:     '1.2.0',
+    version:     '1.3.0',
     orientation: 'portrait',
+    icon:        './assets/icon.png',
     backgroundColor: '#0A0A0F',
     splash: {
+      image:           './assets/splash.png',
       backgroundColor: '#0A0A0F',
       resizeMode:      'contain',
     },
@@ -15,10 +17,14 @@ module.exports = {
     },
     android: {
       adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#0A0A0F',
       },
+      blockedPermissions: [
+        'android.permission.RECORD_AUDIO',
+      ],
       package:     'com.rift.roguelite',
-      versionCode: 1,
+      versionCode: 2,
       locales:     ['fr', 'en'],
     },
     web: {

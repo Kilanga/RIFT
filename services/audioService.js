@@ -17,8 +17,6 @@ const MUSIC_FILES = {
 
 const SFX_FILES = {
   attack:       require('../assets/audio/sfx/attack.mp3'),
-  hit:          require('../assets/audio/sfx/hit.mp3'),
-  hit_player:   require('../assets/audio/sfx/hit_player.mp3'),
   enemy_death:  require('../assets/audio/sfx/enemy_death.mp3'),
   upgrade_pick: require('../assets/audio/sfx/upgrade_pick.mp3'),
   upgrade_buy:  require('../assets/audio/sfx/upgrade_buy.mp3'),
@@ -36,9 +34,12 @@ const SFX_FILES = {
 
 let _currentMusic   = null;   // Sound object de la musique en cours
 let _currentTrack   = null;   // Nom du track en cours
+let _currentSfx     = null;   // Sound object du SFX en cours
 let _musicVolume    = 0.4;
 let _sfxVolume      = 0.7;
 let _initialized    = false;
+let _musicEnabled   = true;
+let _sfxEnabled     = true;
 
 // ─── Initialisation ────────────────────────────────────────────────────────────
 
@@ -67,6 +68,9 @@ export async function playMusic(track) {
   if (_currentTrack === track) return;
 
   await stopMusic();
+  _currentTrack = track;
+
+  if (!_musicEnabled) return;
 
   const file = MUSIC_FILES[track];
   if (!file) return;
@@ -78,10 +82,24 @@ export async function playMusic(track) {
       shouldPlay:   true,
     });
     _currentMusic = sound;
-    _currentTrack = track;
   } catch (e) {
     console.warn('[Audio] playMusic failed:', e.message);
   }
+}
+
+export function setMusicEnabled(enabled) {
+  _musicEnabled = enabled;
+  if (!enabled && _currentMusic) {
+    _currentMusic.setVolumeAsync(0).catch(() => {});
+  } else if (enabled && _currentMusic) {
+    _currentMusic.setVolumeAsync(_musicVolume).catch(() => {});
+  } else if (enabled && _currentTrack) {
+    playMusic(_currentTrack);
+  }
+}
+
+export function setSfxEnabled(enabled) {
+  _sfxEnabled = enabled;
 }
 
 export async function stopMusic() {
@@ -108,24 +126,30 @@ export async function setMusicVolume(vol) {
  * @param {keyof typeof SFX_FILES} sfx
  */
 export async function playSfx(sfx) {
+  if (!_sfxEnabled) return;
   if (!_initialized) await initAudio();
   const file = SFX_FILES[sfx];
   if (!file) return;
+
+  // Coupe le SFX précédent
+  if (_currentSfx) {
+    try { await _currentSfx.stopAsync(); await _currentSfx.unloadAsync(); } catch (_) {}
+    _currentSfx = null;
+  }
 
   try {
     const { sound } = await Audio.Sound.createAsync(file, {
       volume:     _sfxVolume,
       shouldPlay: true,
     });
-    // Auto-déchargement quand terminé
+    _currentSfx = sound;
     sound.setOnPlaybackStatusUpdate(status => {
       if (status.didJustFinish) {
         sound.unloadAsync().catch(() => {});
+        if (_currentSfx === sound) _currentSfx = null;
       }
     });
-  } catch (e) {
-    // Silencieux en prod — un SFX raté ne doit pas planter l'app
-  }
+  } catch (_) {}
 }
 
 export function setSfxVolume(vol) {

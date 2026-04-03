@@ -9,6 +9,7 @@ import { hapticLight, hapticMedium, hapticHeavy, hapticError } from '../../utils
 import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
 import { hasCurseSynergy } from '../../systems/upgradeSystem';
 import { playSfx } from '../../services/audioService';
+import { RIFT_MURMURS } from '../../utils/loreData';
 
 function findNearest(source, enemies) {
   return enemies.reduce((nearest, e) => {
@@ -28,8 +29,9 @@ export const createCombatSlice = (set, get) => ({
   damagePops:     [],   // [{ id, x, y, amount, isPlayer, isCombo }]
   dyingEnemies:   [],   // [{ ...enemySnapshot, dyingAt }]
   killsThisTurn:  0,    // Pour le système de combo
-  blinkUsed:      false, // Clignotement (upgrade actif, 1 usage par salle)
-  secondWindUsed: false, // Second Souffle (upgrade actif, 1 usage par run)
+  blinkUsed:        false, // Clignotement (upgrade actif, 1 usage par salle)
+  shadowAmbushUsed: false, // Ombre — Embuscade (1er coup par salle ×2, ignore DÉF)
+  secondWindUsed:   false, // Second Souffle (upgrade actif, 1 usage par run)
   hitEnemyIds:    new Set(), // IDs ennemis touchés pour le flash visuel
   lastCritAt:     0,         // Timestamp du dernier critique (pour le screen shake)
 
@@ -120,6 +122,13 @@ export const createCombatSlice = (set, get) => ({
     // Spectre — Éthéré : ignore entièrement la défense ennemie
     if (player.shape === PLAYER_SHAPES.SPECTRE) {
       dmg = player.attack;
+    }
+
+    // Ombre — Embuscade : 1er attaque de la salle ×2 et ignore la défense
+    if (player.shape === PLAYER_SHAPES.SHADOW && !get().shadowAmbushUsed) {
+      dmg = player.attack * 2;
+      set({ shadowAmbushUsed: true });
+      get().addLog(`🌑 Embuscade ! ×2 (ignore DÉF)`);
     }
 
     if (player.shape === PLAYER_SHAPES.CIRCLE) {
@@ -402,7 +411,6 @@ export const createCombatSlice = (set, get) => ({
       return;
     }
 
-    playSfx('hit_player');
     let finalDmg = Math.max(1, amount - player.defense);
 
     // Résistance : -35% dégâts si PV > 50% (×curseMult → jusqu'à -70%)
@@ -427,6 +435,15 @@ export const createCombatSlice = (set, get) => ({
         const ripDmg = Math.floor(player.attack * 0.5);
         get().damageEnemy(sourceId, ripDmg);
         get().addLog(`🛡️ Riposte : ${ripDmg}`);
+      }
+    }
+
+    // Paladin — Dévotion : soigne 1 PV par tranche de 3 dégâts reçus (attaque ennemie)
+    if (player.shape === PLAYER_SHAPES.PALADIN && sourceId) {
+      const devotionHeal = Math.floor(finalDmg / 3);
+      if (devotionHeal > 0) {
+        get().healPlayer(devotionHeal);
+        get().addLog(`✨ Dévotion : +${devotionHeal} PV`);
       }
     }
 
@@ -542,6 +559,23 @@ export const createCombatSlice = (set, get) => ({
     }
     
     set(s => ({ isPlayerTurn: false, run: { ...s.run, turnsInRoom: (s.run.turnsInRoom || 0) + 1 } }));
+
+    // Murmures narratifs du Rift (10% de chance, une seule fois par salle)
+    if (!get().run?.murmurShownThisRoom && Math.random() < 0.10) {
+      const murmur = RIFT_MURMURS[Math.floor(Math.random() * RIFT_MURMURS.length)];
+      get().addLog(`✦ ${murmur}`);
+      set(s => ({ run: { ...s.run, murmurShownThisRoom: true } }));
+    }
+
+    // Timeout anti-blocage : après 50 tours, la salle est neutralisée
+    const turnsInRoom = get().run?.turnsInRoom || 0;
+    if (turnsInRoom >= 50 && get().enemies.filter(e => e.hp > 0).length > 0) {
+      get().addLog(`⏱ 50 tours — les ennemis se dispersent.`);
+      set({ enemies: [], isPlayerTurn: true });
+      setTimeout(() => get().onRoomCleared(), 400);
+      return;
+    }
+
     setTimeout(() => get().runEnemyTurns(), 350);
   },
 
@@ -710,7 +744,7 @@ export const createCombatSlice = (set, get) => ({
 
   addDamagePop: (x, y, amount, isPlayer = false) => {
     const id = `pop_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    set(s => ({ damagePops: [...s.damagePops.slice(-8), { id, x, y, amount, isPlayer }] }));
+    set(s => ({ damagePops: [...s.damagePops.slice(-8), { id, x, y, amount, isPlayer, createdAt: Date.now() }] }));
     setTimeout(() => {
       set(s => ({ damagePops: s.damagePops.filter(p => p.id !== id) }));
     }, 900);
@@ -720,7 +754,7 @@ export const createCombatSlice = (set, get) => ({
 
   useBlink: () => {
     const { activeUpgrades, blinkUsed, currentRoom, enemies, player, phase } = get();
-    if (phase !== 'combat') return;
+    if (phase !== GAME_PHASES.COMBAT) return;
     if (blinkUsed) return;
     if (!activeUpgrades.some(u => u.id === 'blink')) return;
     if (!currentRoom) return;
@@ -748,7 +782,7 @@ export const createCombatSlice = (set, get) => ({
 
   addComboPop: (x, y, count) => {
     const id = `combo_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    set(s => ({ damagePops: [...s.damagePops.slice(-8), { id, x, y, amount: count, isCombo: true }] }));
+    set(s => ({ damagePops: [...s.damagePops.slice(-8), { id, x, y, amount: count, isCombo: true, createdAt: Date.now() }] }));
     setTimeout(() => {
       set(s => ({ damagePops: s.damagePops.filter(p => p.id !== id) }));
     }, 1200);

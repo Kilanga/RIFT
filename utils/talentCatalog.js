@@ -77,6 +77,17 @@ export const TALENT_CATALOG = [
     passiveValue: 3,
   },
   {
+    id:           'richesse',
+    name:         'Richesse',
+    icon:         '💰',
+    cost:         2,
+    category:     'utility',
+    desc:         'Commence chaque run avec 8 fragments.',
+    requires:     'collecteur',
+    passive:      'start_fragments',
+    passiveValue: 8,
+  },
+  {
     id:       'maestro',
     name:     'Maestro',
     icon:     '✨',
@@ -84,6 +95,28 @@ export const TALENT_CATALOG = [
     category: 'utility',
     desc:     'Commence chaque run avec 1 upgrade aléatoire.',
     passive:  'start_upgrade',
+  },
+
+  // ── Survie ───────────────────────────────────────────────────────────────────
+  {
+    id:       'endurance',
+    name:     'Endurance',
+    icon:     '🩹',
+    cost:     2,
+    category: 'defense',
+    desc:     '+8 PV max au départ. Nécessite Vigueur.',
+    requires: 'vigueur',
+    statBonus: { stat: 'maxHp', value: 8 },
+  },
+  {
+    id:       'bouclier_initial',
+    name:     'Garde Permanente',
+    icon:     '🔵',
+    cost:     3,
+    category: 'defense',
+    desc:     'Commence chaque salle de combat avec un bouclier actif.',
+    requires: 'armure',
+    passive:  'start_shield',
   },
 ];
 

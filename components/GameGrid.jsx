@@ -5,7 +5,7 @@
  * - Indicateurs directionnels (flèches + bordure attaque) autour du joueur
  */
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useReducer } from 'react';
 import { View, StyleSheet, Dimensions, PanResponder } from 'react-native';
 import Svg, { Polygon, Circle, Rect, Line, G, Text as SvgText } from 'react-native-svg';
 
@@ -40,6 +40,23 @@ export default function GameGrid() {
   const purchasedThemes  = useGameStore(s => s.meta?.purchasedThemes ?? []);
   const themeAccessible  = gridThemeId === 'default' || purchasedThemes.includes(gridThemeId);
   const gridTheme        = GRID_THEMES[themeAccessible ? gridThemeId : 'default'] ?? GRID_THEMES.default;
+
+  // ── Tick d'animation (20 fps) — actif seulement quand il y a des entités animées ──
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
+  const intervalRef     = useRef(null);
+  const hasAnimating    = dyingEnemies.length > 0 || damagePops.length > 0;
+
+  useEffect(() => {
+    if (hasAnimating && !intervalRef.current) {
+      intervalRef.current = setInterval(forceUpdate, 50);
+    } else if (!hasAnimating && intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    return () => {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    };
+  }, [hasAnimating]);
 
   // Refs pour accéder aux valeurs courantes dans le PanResponder sans le recréer
   const playerRef       = useRef(player);
@@ -88,6 +105,7 @@ export default function GameGrid() {
 
   if (!currentRoom) return null;
 
+  const now = Date.now();
   const { grid, width, height } = currentRoom;
   const totalW = width  * CELL_SIZE;
   const totalH = height * CELL_SIZE;
@@ -118,10 +136,26 @@ export default function GameGrid() {
             )}
             <GridLines totalW={totalW} totalH={totalH} theme={gridTheme} />
 
-            {/* Ennemis morts (fantôme) */}
-            {dyingEnemies.map(e => (
-              <EntityToken key={`dying_${e.id}`} entity={e} opacity={0.2} />
-            ))}
+            {/* Ennemis morts — ring d'explosion (rendu sous la silhouette) */}
+            {dyingEnemies.map(e => {
+              const progress = Math.min(1, (now - e.dyingAt) / 400);
+              const cx = e.x * CELL_SIZE + CELL_SIZE / 2;
+              const cy = e.y * CELL_SIZE + CELL_SIZE / 2;
+              return (
+                <Circle key={`ring_${e.id}`} cx={cx} cy={cy}
+                  r={R * (1 + progress * 2)}
+                  fill="none" stroke={e.color || '#FF4444'} strokeWidth={1.5}
+                  opacity={(1 - progress) * 0.7} />
+              );
+            })}
+
+            {/* Ennemis morts — silhouette scale + fade */}
+            {dyingEnemies.map(e => {
+              const progress = Math.min(1, (now - e.dyingAt) / 500);
+              const opacity  = Math.max(0, 1 - progress);
+              const scale    = 1 + progress * 0.4;
+              return <EntityToken key={`dying_${e.id}`} entity={e} opacity={opacity} scale={scale} isDying />;
+            })}
 
             {/* Ennemis vivants */}
             {enemies.map(e => (
@@ -142,7 +176,7 @@ export default function GameGrid() {
             <PlayerToken player={player} />
 
             {/* Dégâts flottants */}
-            {damagePops.map(pop => <DamagePop key={pop.id} pop={pop} />)}
+            {damagePops.map(pop => <DamagePop key={pop.id} pop={pop} now={now} />)}
           </Svg>
         </View>
       </View>
@@ -313,17 +347,21 @@ function PlayerToken({ player }) {
 
 // ─── Ennemi (silhouette selon le type) ───────────────────────────────────────
 
-function EntityToken({ entity: enemy, opacity = 1 }) {
+function EntityToken({ entity: enemy, opacity = 1, scale = 1, isDying = false }) {
   const cx = enemy.x * CELL_SIZE + CELL_SIZE / 2;
   const cy = enemy.y * CELL_SIZE + CELL_SIZE / 2;
   const r  = enemy.isBoss ? R * 1.3 : R;
   const color = enemy.color || '#FF4444';
 
   const hitEnemyIds = useGameStore(s => s.hitEnemyIds);
-  const isHit = hitEnemyIds?.has(enemy.id);
+  const isHit = !isDying && hitEnemyIds?.has(enemy.id);
+
+  const transformStr = scale !== 1
+    ? `translate(${cx} ${cy}) scale(${scale}) translate(${-cx} ${-cy})`
+    : undefined;
 
   return (
-    <G opacity={opacity}>
+    <G opacity={opacity} transform={transformStr}>
       {/* Flash de dégâts */}
       {isHit && <Rect x={enemy.x * CELL_SIZE} y={enemy.y * CELL_SIZE} width={CELL_SIZE} height={CELL_SIZE} fill="#FFFFFF" opacity={0.25} />}
 
@@ -337,13 +375,13 @@ function EntityToken({ entity: enemy, opacity = 1 }) {
       {enemy.type === ENEMY_TYPES.BOSS_PULSE && <Tonnerre   cx={cx} cy={cy} r={r} color={color} />}
       {enemy.type === ENEMY_TYPES.BOSS_RIFT  && <Devoreur   cx={cx} cy={cy} r={r} color={color} />}
 
-      {opacity === 1 && (
+      {!isDying && opacity === 1 && (
         <MiniBar x={enemy.x * CELL_SIZE} y={enemy.y * CELL_SIZE + CELL_SIZE - 4}
           hp={enemy.hp} maxHp={enemy.maxHp} color="#FF4444" />
       )}
 
       {/* Icônes de statut */}
-      {opacity === 1 && enemy.statuses?.length > 0 && (
+      {!isDying && opacity === 1 && enemy.statuses?.length > 0 && (
         <StatusIcons cx={cx} cy={cy} statuses={enemy.statuses} />
       )}
     </G>
@@ -590,20 +628,26 @@ function StatusIcons({ cx, cy, statuses }) {
 
 // ─── Floating damage number ───────────────────────────────────────────────────
 
-function DamagePop({ pop }) {
+function DamagePop({ pop, now }) {
+  const lifetime = pop.isCombo ? 1200 : 900;
+  const progress = pop.createdAt ? Math.min(1, (now - pop.createdAt) / lifetime) : 0;
+  const floatY   = CELL_SIZE * 0.8 * progress;
+  const opacity  = progress > 0.45 ? Math.max(0, 1 - (progress - 0.45) / 0.55) : 1;
+
   const cx = pop.x * CELL_SIZE + CELL_SIZE / 2;
-  const cy = pop.y * CELL_SIZE + CELL_SIZE / 4;
+  const cy = pop.y * CELL_SIZE + CELL_SIZE / 4 - floatY;
+
   if (pop.isCombo) {
     return (
-      <SvgText x={cx} y={cy - CELL_SIZE*0.2} fill="#FF8800"
-        fontSize={CELL_SIZE*0.42} fontWeight="bold" textAnchor="middle" opacity={0.98}>
+      <SvgText x={cx} y={cy} fill="#FF8800"
+        fontSize={CELL_SIZE*0.42} fontWeight="bold" textAnchor="middle" opacity={opacity}>
         {`x${pop.amount} COMBO`}
       </SvgText>
     );
   }
   return (
     <SvgText x={cx} y={cy} fill={pop.isPlayer ? '#FF4444' : '#FFD700'}
-      fontSize={CELL_SIZE*0.36} fontWeight="bold" textAnchor="middle" opacity={0.95}>
+      fontSize={CELL_SIZE*0.36} fontWeight="bold" textAnchor="middle" opacity={opacity}>
       -{pop.amount}
     </SvgText>
   );

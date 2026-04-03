@@ -14,6 +14,10 @@
     "pro": "PRO",
     "resume": "▶  REPRENDRE LA RUN",
     "resume_sub": "Couche {{layer}} · Score {{score}}",
+    "shop_title": "BOUTIQUE",
+    "shop_sub": "Thèmes · Classes · Accès Premium",
+    "shop_title_premium": "BOUTIQUE",
+    "shop_sub_premium": "Thèmes · Classes · Cosmétiques",
     "theme_neon": "🌌 THÈME NÉON (actif)",
     "theme_default": "⬛ THÈME PAR DÉFAUT",
     "last_run": "DERNIÈRE RUN",
@@ -57,6 +61,9 @@
     "premium_alert_title": "Classe Premium",
     "premium_alert_msg": "Débloque Premium pour accéder à Spectre.",
     "premium_ok": "OK",
+    "purchasable_locked": "🔒 0,99 €",
+    "class_locked_title": "Classe verrouillée",
+    "class_locked_msg": "Achète cette classe dans la boutique pour y accéder.",
     "runs_count": "{{count}} run",
     "runs_count_plural": "{{count}} runs",
     "your_stats": "TES STATS AVEC {{name}}",
@@ -106,18 +113,32 @@
     "rarity_common": "COMMUN",
     "rarity_rare": "RARE",
     "rarity_epic": "ÉPIQUE",
-    "rarity_curse": "MAUDIT"
+    "rarity_curse": "MAUDIT",
+    "rarity_legendary": "LÉGENDAIRE"
   },
 
   "shop": {
     "title": "◆ MARCHANDE DE FRAGMENTS",
     "fragments_label": "fragments",
     "bought": "✓ Acheté",
-    "leave": "Quitter la boutique →",
+    "leave": "Quitter →",
     "rarity_common": "COMMUN",
     "rarity_rare": "RARE",
     "rarity_epic": "ÉPIQUE",
-    "rarity_curse": "MAUDIT"
+    "rarity_curse": "MAUDIT",
+    "rarity_legendary": "LÉGENDAIRE",
+    "tab_shop": "◆ BOUTIQUE",
+    "tab_forge": "🔨 FORGE",
+    "forge_upgrade_title": "AMÉLIORER",
+    "forge_upgrade_cost": "{{cost}} ◈ par amélioration",
+    "forge_create_title": "CRÉER",
+    "forge_create_cost": "{{cost}} ◈ — amélioration aléatoire",
+    "forge_stack": "{{current}} / {{max}}",
+    "forge_nothing_upgradeable": "Toutes tes améliorations sont au maximum.",
+    "forge_red": "ROUGE",
+    "forge_blue": "BLEU",
+    "forge_green": "VERT",
+    "forge_curse": "MALÉDICTION"
   },
 
   "victory": {
@@ -247,6 +268,9 @@
     "theme_free": "Gratuit",
     "theme_active": "✓ Actif",
     "theme_use": "Utiliser",
+    "classes_section": "CLASSES SUPPLÉMENTAIRES",
+    "classes_sub": "Achats indépendants · 0,99 € par classe",
+    "class_owned": "✓ Débloquée",
     "error_generic": "Une erreur est survenue.",
     "feature_spectre_title": "Classe Spectre",
     "feature_spectre_desc": "Éthéré : ignore la défense ennemie, immune aux pièges. PV réduits, attaque élevée.",
@@ -332,7 +356,21 @@
     "damne_name": "Damné",
     "damne_desc": "Réunir 3 malédictions dans un même run",
     "maudit_triomphant_name": "Maudit Triomphant",
-    "maudit_triomphant_desc": "Terminer un run avec le Pacte Maudit actif"
+    "maudit_triomphant_desc": "Terminer un run avec le Pacte Maudit actif",
+    "prologue_seen_name": "La Première Fissure",
+    "prologue_seen_desc": "Lire le prologue du Rift",
+    "echo_slain_name": "Silence de l'Écho",
+    "echo_slain_desc": "Vaincre L'Écho, gardien de l'acte I",
+    "tonnerre_slain_name": "Tonnerre Brisé",
+    "tonnerre_slain_desc": "Vaincre Tonnerre Incarné, arme de l'acte II",
+    "devoreur_slain_name": "Chair du Dévoreur",
+    "devoreur_slain_desc": "Vaincre Le Dévoreur pour la première fois",
+    "gardien_slain_name": "La Porte Brisée",
+    "gardien_slain_desc": "Vaincre Le Gardien pour la première fois",
+    "entity_slain_name": "Au-delà du Rift",
+    "entity_slain_desc": "Vaincre L'Entité pour la première fois",
+    "origine_witness_name": "Voix de l'Origine",
+    "origine_witness_desc": "Rencontrer L'Origine pour la première fois"
   },
 
   "player_name": {
@@ -392,6 +430,18 @@
       "passive_desc": "Ignore entièrement la défense ennemie. Immune aux pièges (lave, téléporteurs). PV réduits (15 max).",
       "playstyle": "Dégâts purs · Fragile · Premium",
       "premium_hint": "🔓 Débloque Premium pour accéder à cette classe"
+    },
+    "shadow": {
+      "name": "Ombre",
+      "passive": "Embuscade",
+      "passive_desc": "Premier coup de chaque salle : ignore la défense ennemie et inflige ×2 dégâts.",
+      "playstyle": "Burst · Fragile · Ouverture décisive"
+    },
+    "paladin": {
+      "name": "Paladin",
+      "passive": "Dévotion",
+      "passive_desc": "Soigne 1 PV pour chaque tranche de 3 dégâts reçus d'un ennemi.",
+      "playstyle": "Sustain · Défensif · Tanky"
     }
   },
 
@@ -422,18 +472,25 @@
     "speed_run":      { "name": "Contre-la-Montre",   "desc": "Chaque salle doit être terminée en 5 tours ou moins, sinon -10 PV.",                            "difficulty": "Moyen" },
     "cursed_run":     { "name": "Run Maudit",         "desc": "Commence avec une malédiction aléatoire.",                                                       "difficulty": "Moyen" },
     "double_trouble": { "name": "Double Peine",       "desc": "Chaque salle de combat a 1 ennemi supplémentaire.",                                              "difficulty": "Moyen" },
-    "fragile":        { "name": "Fragile",            "desc": "Défense permanentement à 0.",                                                                    "difficulty": "Facile" }
+    "fragile":        { "name": "Fragile",            "desc": "Défense permanentement à 0.",                                                                    "difficulty": "Facile" },
+    "fragment_fever": { "name": "Fièvre des Fragments","desc": "Commence avec +15 fragments supplémentaires, mais ATQ -2.",                                    "difficulty": "Facile" },
+    "titan":          { "name": "Titan",              "desc": "+6 DEF au départ, mais ATQ divisée par 2.",                                                       "difficulty": "Difficile" },
+    "shadow_realm":   { "name": "Royaume des Ombres", "desc": "PV max réduits de 40%, mais DEF +4 et ATQ +2.",                                                   "difficulty": "Difficile" },
+    "ascetic":        { "name": "Ascète",             "desc": "Pas de fragments au départ, mais ATQ +3 et DEF +2.",                                              "difficulty": "Moyen" }
   },
 
   "talent": {
-    "tranchant":    { "name": "Lame Acérée",  "desc": "+1 ATQ au départ de chaque run." },
-    "precision":    { "name": "Précision",    "desc": "Chaque run démarre avec 1 stack de Critique gratuit." },
-    "vigueur":      { "name": "Vigueur",      "desc": "+5 PV max au départ de chaque run." },
-    "armure":       { "name": "Armure",       "desc": "+1 DEF au départ de chaque run." },
-    "constitution": { "name": "Constitution", "desc": "+10 PV max au départ de chaque run." },
-    "resilience":   { "name": "Résilience",   "desc": "Soigne 2 PV après chaque salle terminée." },
-    "collecteur":   { "name": "Collecteur",   "desc": "Commence chaque run avec 3 fragments." },
-    "maestro":      { "name": "Maestro",      "desc": "Commence chaque run avec 1 upgrade aléatoire." }
+    "tranchant":        { "name": "Lame Acérée",    "desc": "+1 ATQ au départ de chaque run." },
+    "precision":        { "name": "Précision",      "desc": "Chaque run démarre avec 1 stack de Critique gratuit." },
+    "vigueur":          { "name": "Vigueur",        "desc": "+5 PV max au départ de chaque run." },
+    "armure":           { "name": "Armure",         "desc": "+1 DEF au départ de chaque run." },
+    "constitution":     { "name": "Constitution",   "desc": "+10 PV max au départ de chaque run." },
+    "resilience":       { "name": "Résilience",     "desc": "Soigne 2 PV après chaque salle terminée." },
+    "collecteur":       { "name": "Collecteur",     "desc": "Commence chaque run avec 3 fragments." },
+    "richesse":         { "name": "Richesse",       "desc": "Commence chaque run avec 8 fragments. Requiert Collecteur." },
+    "maestro":          { "name": "Maestro",        "desc": "Commence chaque run avec 1 upgrade aléatoire." },
+    "endurance":        { "name": "Endurance",      "desc": "+8 PV max au départ. Requiert Vigueur." },
+    "bouclier_initial": { "name": "Garde Permanente","desc": "Commence chaque salle de combat avec un bouclier actif. Requiert Armure." }
   },
 
   "event": {
@@ -480,6 +537,40 @@
       "choice_help":   "🤝 Soigner → +1 upgrade (choix libre)",
       "choice_take":   "⚔ Prendre la relique → +6 ATQ, -10 PV",
       "choice_ignore": "↩ Passer son chemin"
+    },
+    "rift_forge": {
+      "title": "Forge Spectrale",
+      "desc":  "Un forgeron fantôme travaille en silence sur une enclume de rift. Il t'offre ses services pour quelques fragments.",
+      "choice_forge_atk": "⚔ Forger une lame → +2 ATQ (10 fragments)",
+      "choice_forge_def": "🛡 Forger une armure → +2 DEF (10 fragments)",
+      "choice_ignore":    "↩ Partir"
+    },
+    "echo_dead": {
+      "title": "Écho des Morts",
+      "desc":  "Des voix de guerriers tombés te murmurent des secrets du Rift. Tu peux choisir d'écouter... ou de fermer les yeux.",
+      "choice_listen": "👂 Écouter (70% : +120 score / 30% : malédiction)",
+      "choice_offer":  "💀 Offrir ton sang → +1 upgrade, -8 PV",
+      "choice_ignore": "↩ Ignorer"
+    },
+    "trapped_chest": {
+      "title": "Coffre Lumineux",
+      "desc":  "Un coffre brille d'une lueur dorée au centre de la pièce. Trop beau pour être honnête, mais l'appel est fort.",
+      "choice_open":   "🎲 Ouvrir (65% : +10 fragments / 35% : -12 PV)",
+      "choice_ignore": "↩ Ignorer"
+    },
+    "sleeping_guardian": {
+      "title": "Gardien Assoupi",
+      "desc":  "Un colosse de pierre sommeille en travers du couloir, ses bras serrant une relique ancienne.",
+      "choice_sneak":  "🤫 Se faufiler silencieusement → +6 fragments",
+      "choice_steal":  "⚡ Voler la relique → +1 upgrade, risque -15 PV",
+      "choice_ignore": "↩ Rebrousser chemin"
+    },
+    "rift_rain": {
+      "title": "Pluie de Fragments",
+      "desc":  "Le plafond saigne. Des fragments de rift tombent en pluie fine, mais l'air devient instable et corrosif.",
+      "choice_collect_all":  "💨 Tout récolter → +12 fragments, -5 PV",
+      "choice_collect_safe": "🌂 Récolter prudemment → +5 fragments",
+      "choice_ignore":       "↩ Éviter la zone"
     }
   },
 
@@ -487,7 +578,11 @@
     "default": { "name": "Défaut" },
     "blood":   { "name": "Sang" },
     "ice":     { "name": "Glace" },
-    "void":    { "name": "Néant" }
+    "void":    { "name": "Néant" },
+    "forest":  { "name": "Forêt" },
+    "lava":    { "name": "Lave" },
+    "storm":   { "name": "Tempête" },
+    "neon":    { "name": "Néon" }
   },
 
   "perm_upgrade": {
@@ -509,8 +604,14 @@
     "perm_aura":     { "name": "+6 PV",            "desc": "+6 PV max. Maîtrise du Cercle.",                       "unlock_desc": "Gagner avec le Cercle" },
     "perm_fortress": { "name": "+2 DEF",           "desc": "+2 DEF. Maîtrise du Hexagone.",                        "unlock_desc": "Gagner avec le Hexagone" },
     "perm_scorer":   { "name": "+8 Fragments",     "desc": "+8 fragments de départ. Secret du marchand.",          "unlock_desc": "Score de 600" },
-    "perm_master":   { "name": "+4 ATK",           "desc": "+4 ATK. Maître du Rift — victoire avec les 3 formes.", "unlock_desc": "Gagner avec les 3 formes" },
-    "perm_transcend":{ "name": "+20 PV",           "desc": "+20 PV max. La plus haute progression.",               "unlock_desc": "Gagner 8 runs" }
+    "perm_master":          { "name": "+4 ATK",           "desc": "+4 ATK. Maître du Rift — victoire avec les 3 formes.", "unlock_desc": "Gagner avec les 3 formes" },
+    "perm_transcend":       { "name": "+20 PV",           "desc": "+20 PV max. La plus haute progression.",               "unlock_desc": "Gagner 8 runs" },
+    "perm_shadow_mastery":  { "name": "Instinct +2 ATK",  "desc": "+2 ATK. Maîtrise de l'Ombre.",                         "unlock_desc": "Gagner avec l'Ombre" },
+    "perm_paladin_mastery": { "name": "Foi +3 DEF",        "desc": "+3 DEF. Maîtrise du Paladin.",                          "unlock_desc": "Gagner avec le Paladin" },
+    "perm_frag3":           { "name": "+10 Fragments",    "desc": "Commence avec 10 fragments. Richesse accumulée.",       "unlock_desc": "20 runs joués" },
+    "perm_atk3":            { "name": "+3 Attaque",       "desc": "+3 ATK. Vétéran des profondeurs.",                      "unlock_desc": "200 ennemis tués" },
+    "perm_hp4":             { "name": "+15 PV max",       "desc": "+15 PV max. Corps éprouvé par le Rift.",                "unlock_desc": "Score de 1200" },
+    "perm_charge2":         { "name": "+3 Charges max",   "desc": "+3 charges max. Réserve d'énergie étendue.",            "unlock_desc": "Gagner 5 runs" }
   },
 
   "upgrade": {
@@ -554,5 +655,61 @@
     "malediction":    { "name": "Malédiction",         "desc": "☠ MALÉDICTION — Chaque déplacement coûte 1 PV." },
     "fardeau":        { "name": "Fardeau",             "desc": "☠ MALÉDICTION — Chaque attaque ennemie inflige +2 dégâts bonus." },
     "corruption":     { "name": "Corruption",          "desc": "☠ MALÉDICTION — Perd 1 PV au début de chaque tour ennemi." }
+  },
+
+  "achievements_screen": {
+    "title": "SUCCÈS",
+    "unlocked_section": "DÉBLOQUÉS",
+    "locked_section": "À DÉBLOQUER",
+    "rarity_common": "Commun",
+    "rarity_rare": "Rare",
+    "rarity_epic": "Épique",
+    "rarity_legendary": "Légendaire"
+  },
+
+  "lore": {
+    "title": "CODEX",
+    "counter": "{{unlocked}} / {{total}} entrées",
+    "back": "‹ Retour",
+    "filter_all": "Tous",
+    "filter_enemies": "Ennemis",
+    "filter_bosses": "Boss",
+    "filter_characters": "Personnages",
+    "stats_title": "STATISTIQUES",
+    "stat_hp": "PV",
+    "stat_attack": "ATTAQUE",
+    "stat_defense": "DÉFENSE",
+    "stat_speed": "VITESSE",
+    "locked_msg": "Rencontre cette entité pour déverrouiller son entrée."
+  },
+
+  "settings": {
+    "title": "PARAMÈTRES",
+    "back": "‹ Retour",
+    "section_sound": "SON",
+    "music_label": "Musique",
+    "music_desc": "Bande sonore d'ambiance",
+    "sfx_label": "Effets sonores",
+    "sfx_desc": "Attaques, pickups, boss",
+    "section_language": "LANGUE",
+    "lang_fr": "Français",
+    "lang_en": "English",
+    "section_gameplay": "GAMEPLAY",
+    "hardcore_label": "Mode Hardcore",
+    "hardcore_desc": "La mort réinitialise toute la méta-progression",
+    "section_appearance": "APPARENCE · PREMIUM",
+    "neon_label": "Thème Neon",
+    "neon_desc": "Fond sombre profond et accents violets",
+    "section_data": "DONNÉES",
+    "reset_label": "Réinitialiser la progression",
+    "reset_desc": "Efface scores, runs, succès, talents, codex.\nConserve les achats premium.",
+    "version": "RIFT v1.3.0",
+    "reset_modal_title": "⚠  RÉINITIALISATION",
+    "reset_modal_body": "Toute ta progression sera effacée : scores, runs, succès, talents, entrées du Codex, boss débloqués.\n\nTes achats premium sont conservés.\n\nCette action est irréversible.",
+    "reset_modal_confirm": "TOUT EFFACER",
+    "reset_modal_cancel": "Annuler",
+    "section_legal": "INFORMATIONS LÉGALES",
+    "privacy_policy": "Politique de confidentialité",
+    "legal_notice": "Mentions légales"
   }
 }

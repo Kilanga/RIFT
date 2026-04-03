@@ -37,12 +37,30 @@ export const INITIAL_META = {
     triangle: { runs: 0, bestScore: 0, wins: 0 },
     circle:   { runs: 0, bestScore: 0, wins: 0 },
     hexagon:  { runs: 0, bestScore: 0, wins: 0 },
+    spectre:  { runs: 0, bestScore: 0, wins: 0 },
+    shadow:   { runs: 0, bestScore: 0, wins: 0 },
+    paladin:  { runs: 0, bestScore: 0, wins: 0 },
   },
   isPremium:         false,     // Accès au contenu premium (Spectre, Hardcore, thème)
   hardcoreMode:      false,     // La mort réinitialise toute la méta-progression
   premiumTheme:      'default', // 'default' ou 'neon' (thème alternatif)
   gridTheme:         'default', // Thème cosmétique actif du plateau de jeu
   purchasedThemes:   [],        // Thèmes achetés individuellement
+  purchasedClasses:  [],        // Classes achetées individuellement
+  // ── Lore / progression narrative ──────────────────────────────────────────
+  prologueShown:     false,     // Prologue affiché une seule fois
+  devoreurDefeated:  false,     // Le Dévoreur a été vaincu → débloque Le Gardien
+  gardienDefeated:   false,     // Le Gardien a été vaincu → débloque L'Entité
+  act3Victories:     0,         // Nb total de victoires contre un boss acte 3
+  origineActive:     false,     // L'Origine est disponible (non battue)
+  entityDefeated:    false,     // L'Entité a été vaincue
+  seenEnemies:       [],        // Types d'ennemis rencontrés (pour le Codex)
+  // ── Préférences ────────────────────────────────────────────────────────────
+  musicEnabled:      true,      // Musique de fond activée
+  sfxEnabled:        true,      // Effets sonores activés
+  musicVolume:       0.4,       // Volume musique 0-1
+  sfxVolume:         0.7,       // Volume SFX 0-1
+  preferredLanguage: '',        // 'fr' | 'en' | '' (auto-detect)
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -84,6 +102,19 @@ const useGameStore = create(
             premiumTheme:     persisted.meta?.premiumTheme      ?? 'default',
             gridTheme:        persisted.meta?.gridTheme         ?? 'default',
             purchasedThemes:  persisted.meta?.purchasedThemes   || [],
+            purchasedClasses: persisted.meta?.purchasedClasses  || [],
+            prologueShown:    persisted.meta?.prologueShown     ?? false,
+            devoreurDefeated: persisted.meta?.devoreurDefeated  ?? false,
+            gardienDefeated:  persisted.meta?.gardienDefeated   ?? false,
+            act3Victories:    persisted.meta?.act3Victories     ?? 0,
+            origineActive:    persisted.meta?.origineActive     ?? false,
+            entityDefeated:   persisted.meta?.entityDefeated    ?? false,
+            seenEnemies:      persisted.meta?.seenEnemies       || [],
+            musicEnabled:      persisted.meta?.musicEnabled      ?? true,
+            sfxEnabled:        persisted.meta?.sfxEnabled        ?? true,
+            musicVolume:       persisted.meta?.musicVolume       ?? 0.4,
+            sfxVolume:         persisted.meta?.sfxVolume         ?? 0.7,
+            preferredLanguage: persisted.meta?.preferredLanguage ?? '',
           },
         }),
       }

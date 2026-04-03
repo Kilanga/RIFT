@@ -13,7 +13,6 @@ import Svg, { Circle, Line } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PALETTE, PERMANENT_UPGRADES_CATALOG, PLAYER_SHAPES, CLASS_INFO } from '../constants';
 import { Assassin, Arcaniste, Colosse, Spectre } from '../components/ClassSilhouettes';
-import { ACHIEVEMENTS_CATALOG } from '../store/achievements';
 import { fetchTopScores, fetchDailyScores } from '../services/leaderboardService';
 import PlayerNameModal from '../components/PlayerNameModal';
 import TutorialOverlay from '../components/TutorialOverlay';
@@ -32,6 +31,9 @@ export default function MenuScreen() {
   const goToPremiumShop     = useGameStore(s => s.goToPremiumShop);
   const setPremiumTheme     = useGameStore(s => s.setPremiumTheme);
   const goToMultiplayer     = useGameStore(s => s.goToMultiplayer);
+  const goToAchievements    = useGameStore(s => s.goToAchievements);
+  const goToLore            = useGameStore(s => s.goToLore);
+  const goToSettings        = useGameStore(s => s.goToSettings);
   const resumeRun           = useGameStore(s => s.resumeRun);
 
   // ── Animation orbitale ───────────────────────────────────────────────────
@@ -114,14 +116,30 @@ export default function MenuScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* ── Boutique ── */}
+          <TouchableOpacity
+            style={[styles.btnShop, meta.isPremium && styles.btnShopPremium]}
+            onPress={goToPremiumShop}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.btnShopIcon}>{meta.isPremium ? '★' : '💎'}</Text>
+            <View style={styles.btnShopCenter}>
+              <Text style={[styles.btnShopTitle, meta.isPremium && styles.btnShopTitlePremium]}>
+                {t('menu.shop_title', { defaultValue: 'BOUTIQUE' })}
+              </Text>
+              <Text style={styles.btnShopSub}>
+                {meta.isPremium
+                  ? t('menu.shop_sub_premium', { defaultValue: 'Thèmes · Classes · Cosmétiques' })
+                  : t('menu.shop_sub', { defaultValue: 'Thèmes · Classes · Accès Premium' })}
+              </Text>
+            </View>
+            <Text style={[styles.btnShopArrow, meta.isPremium && styles.btnShopArrowPremium]}>›</Text>
+          </TouchableOpacity>
+
           <View style={styles.btnBottomRow}>
             <TouchableOpacity style={[styles.btnMulti, { flex: 1 }]} onPress={goToMultiplayer} activeOpacity={0.75}>
               <Text style={styles.btnMultiTxt}>⚔</Text>
               <Text style={styles.btnMultiLabel}>MULTI</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btnPremium, meta.isPremium && styles.btnPremiumActive, { flex: 1 }]} onPress={goToPremiumShop} activeOpacity={0.75}>
-              <Text style={styles.btnPremiumTxt}>{meta.isPremium ? '★' : '💎'}</Text>
-              <Text style={styles.btnPremiumLabel}>PRO</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btnHelp, { flex: 1 }]} onPress={() => setShowTutorial(true)} activeOpacity={0.75}>
               <Text style={styles.btnHelpTxt}>?</Text>
@@ -134,22 +152,24 @@ export default function MenuScreen() {
                 </View>
               )}
             </TouchableOpacity>
+            <TouchableOpacity style={[styles.btnAchiev, { flex: 1 }]} onPress={goToAchievements} activeOpacity={0.75}>
+              <Text style={styles.btnAchievTxt}>🏅</Text>
+              {(meta.achievements?.length || 0) > 0 && (
+                <Text style={styles.btnAchievCount}>{meta.achievements.length}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btnLore, { flex: 1 }]} onPress={goToLore} activeOpacity={0.75}>
+              <Text style={styles.btnLoreTxt}>📖</Text>
+              {(meta.seenEnemies?.length || 0) > 0 && (
+                <Text style={styles.btnLoreCount}>{meta.seenEnemies.length}</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btnSettings, { flex: 1 }]} onPress={() => goToSettings('menu')} activeOpacity={0.75}>
+              <Text style={styles.btnSettingsTxt}>⚙</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-
-        {/* ── Toggle thème néon (premium) ────────────────────────────────── */}
-        {meta.isPremium && (
-          <TouchableOpacity
-            style={styles.themeToggle}
-            onPress={() => setPremiumTheme(meta.premiumTheme === 'neon' ? 'default' : 'neon')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.themeToggleTxt}>
-              {meta.premiumTheme === 'neon' ? t('menu.theme_neon') : t('menu.theme_default')}
-            </Text>
-          </TouchableOpacity>
-        )}
 
         {/* ── Progression permanente ─────────────────────────────────────── */}
         <PermanentProgress upgrades={meta.permanentUpgrades} meta={meta} />
@@ -173,11 +193,6 @@ export default function MenuScreen() {
         {/* ── Historique des runs ────────────────────────────────────────── */}
         {meta.runHistory?.length > 1 && (
           <RunHistory entries={meta.runHistory} />
-        )}
-
-        {/* ── Succès ─────────────────────────────────────────────────────── */}
-        {meta.totalRuns > 0 && (
-          <AchievementsSection unlockedIds={meta.achievements || []} />
         )}
 
         {/* ── Padding bas ────────────────────────────────────────────────── */}
@@ -419,8 +434,22 @@ function PermanentProgress({ upgrades, meta }) {
 
 // ─── Leaderboard online ───────────────────────────────────────────────────────
 
-const SHAPE_ICON_OL  = { triangle: '▲', circle: '●', hexagon: '⬡' };
-const SHAPE_COLOR_OL = { triangle: PALETTE.triangle, circle: PALETTE.circle, hexagon: PALETTE.hexagon };
+const SHAPE_ICON_OL  = {
+  triangle: '▲',
+  circle:   '●',
+  hexagon:  '⬡',
+  spectre:  '✦',
+  shadow:   '◆',
+  paladin:  '✚',
+};
+const SHAPE_COLOR_OL = {
+  triangle: PALETTE.triangle,
+  circle:   PALETTE.circle,
+  hexagon:  PALETTE.hexagon,
+  spectre:  '#BB44FF',
+  shadow:   '#FF6600',
+  paladin:  '#FFCC00',
+};
 
 function OnlineLeaderboard({ topScores, dailyScores, loading, dailyTab, onTabChange, playerName, onSetName }) {
   const { t } = useTranslation();
@@ -573,60 +602,6 @@ function RunHistory({ entries }) {
 
 // ─── Succès ───────────────────────────────────────────────────────────────────
 
-function AchievementsSection({ unlockedIds }) {
-  const { t } = useTranslation();
-  const count = unlockedIds.length;
-  const total = ACHIEVEMENTS_CATALOG.length;
-
-  return (
-    <View style={styles.achBox}>
-      <View style={styles.achHeader}>
-        <Text style={styles.achTitle}>{t('menu.achievements_title')}</Text>
-        <Text style={styles.achCount}>
-          <Text style={{ color: count > 0 ? '#88CCFF' : PALETTE.textMuted }}>{count}</Text>
-          <Text style={styles.achCountTotal}>/{total}</Text>
-        </Text>
-      </View>
-      <View style={styles.achGrid}>
-        {ACHIEVEMENTS_CATALOG.map(a => {
-          const unlocked = unlockedIds.includes(a.id);
-          return (
-            <View
-              key={a.id}
-              style={[
-                styles.achSlot,
-                unlocked
-                  ? { borderColor: '#88CCFF55', backgroundColor: '#001020' }
-                  : { borderColor: PALETTE.border, backgroundColor: PALETTE.bgDark },
-              ]}
-            >
-              <Text style={{ fontSize: 16, opacity: unlocked ? 1 : 0.15 }}>{a.icon}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.achName, { color: unlocked ? '#88CCFF' : PALETTE.textDim }]}>
-                  {unlocked ? t(`achievement.${a.id}_name`, { defaultValue: a.name }) : '???'}
-                </Text>
-                {unlocked && (
-                  <Text style={styles.achDesc}>{t(`achievement.${a.id}_desc`, { defaultValue: a.desc })}</Text>
-                )}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-      {count < total && (
-        <Text style={styles.achHint}>
-          {t('menu.achievements_remaining', { count: total - count })}
-        </Text>
-      )}
-      {count === total && (
-        <Text style={[styles.achHint, { color: '#88CCFF' }]}>
-          {t('menu.achievements_all')}
-        </Text>
-      )}
-    </View>
-  );
-}
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
@@ -706,19 +681,45 @@ const styles = StyleSheet.create({
   btnMultiTxt:   { color: PALETTE.circle, fontSize: 14 },
   btnMultiLabel: { color: PALETTE.circle + 'BB', fontSize: 7, fontWeight: 'bold', letterSpacing: 1 },
 
-  btnPremium: {
-    alignItems:      'center',
-    justifyContent:  'center',
-    backgroundColor: '#1A0A00',
-    borderWidth:     1,
-    borderColor:     '#DD8833',
-    borderRadius:    10,
-    width:           46,
-    paddingVertical: 7,
-    gap:             2,
+  btnShop: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    backgroundColor:   '#150B00',
+    borderWidth:       2,
+    borderColor:       '#FF9900',
+    borderRadius:      14,
+    paddingVertical:   14,
+    paddingHorizontal: 18,
+    gap:               12,
   },
-  btnPremiumTxt:   { color: '#FFAA44', fontSize: 14 },
-  btnPremiumLabel: { color: '#DD8833', fontSize: 7, fontWeight: 'bold', letterSpacing: 1 },
+  btnShopPremium: {
+    backgroundColor: '#1A1200',
+    borderColor:     '#FFD700',
+  },
+  btnShopIcon: {
+    fontSize:   18,
+    width:      26,
+    textAlign:  'center',
+  },
+  btnShopCenter: { flex: 1, gap: 2 },
+  btnShopTitle: {
+    color:         '#FF9900',
+    fontSize:      13,
+    fontWeight:    'bold',
+    letterSpacing: 3,
+  },
+  btnShopTitlePremium: { color: '#FFD700' },
+  btnShopSub: {
+    color:         PALETTE.textDim,
+    fontSize:      10,
+    letterSpacing: 0.3,
+  },
+  btnShopArrow: {
+    color:      '#FF9900',
+    fontSize:   22,
+    lineHeight: 24,
+  },
+  btnShopArrowPremium: { color: '#FFD700' },
 
   btnHelp: {
     alignItems:      'center',
@@ -757,10 +758,43 @@ const styles = StyleSheet.create({
   },
   talentBadgeTxt: { color: '#fff', fontSize: 9, fontWeight: 'bold' },
 
-  btnPremiumActive: {
-    borderColor:     '#FFD700',
-    backgroundColor: '#1A1400',
+  btnAchiev: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#0A0D1A',
+    borderWidth:     1,
+    borderColor:     '#4466CC',
+    borderRadius:    10,
+    width:           46,
+    paddingVertical: 7,
   },
+  btnAchievTxt:   { fontSize: 16 },
+  btnAchievCount: { color: '#88AAFF', fontSize: 9, fontWeight: 'bold', marginTop: 1 },
+
+  btnLore: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#0A0D0A',
+    borderWidth:     1,
+    borderColor:     '#446644',
+    borderRadius:    10,
+    width:           46,
+    paddingVertical: 7,
+  },
+  btnLoreTxt:   { fontSize: 16 },
+  btnLoreCount: { color: '#88AA88', fontSize: 9, fontWeight: 'bold', marginTop: 1 },
+
+  btnSettings: {
+    alignItems:      'center',
+    justifyContent:  'center',
+    backgroundColor: '#0A0A0A',
+    borderWidth:     1,
+    borderColor:     '#444444',
+    borderRadius:    10,
+    width:           46,
+    paddingVertical: 7,
+  },
+  btnSettingsTxt: { color: '#888888', fontSize: 18 },
 
   themeToggle: {
     alignSelf:       'center',

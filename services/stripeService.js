@@ -43,9 +43,14 @@ export function createThemePaymentIntent(themeId) {
   return _invokePaymentIntent(`rift-theme-${themeId}`);
 }
 
+/** Classe individuelle — 0,99 € */
+export function createClassPaymentIntent(classId) {
+  return _invokePaymentIntent(`rift-class-${classId}`);
+}
+
 /**
  * Récupère les achats confirmés par Stripe pour cet appareil.
- * Retourne { isPremium: bool, purchasedThemes: string[] }
+ * Retourne { isPremium: bool, purchasedThemes: string[], purchasedClasses: string[] }
  * ou null si offline.
  */
 export async function fetchServerPurchases() {
@@ -56,13 +61,16 @@ export async function fetchServerPurchases() {
     });
     if (error || !data?.products) return null;
 
-    const products       = data.products;
-    const isPremium      = products.includes('rift-premium');
+    const products        = data.products;
+    const isPremium       = products.includes('rift-premium');
     const purchasedThemes = products
       .filter(p => p.startsWith('rift-theme-'))
       .map(p => p.replace('rift-theme-', ''));
+    const purchasedClasses = products
+      .filter(p => p.startsWith('rift-class-'))
+      .map(p => p.replace('rift-class-', ''));
 
-    return { isPremium, purchasedThemes };
+    return { isPremium, purchasedThemes, purchasedClasses };
   } catch {
     return null; // offline — on garde l'état local
   }

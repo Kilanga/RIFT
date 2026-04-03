@@ -29,7 +29,7 @@ const ENEMY_TEMPLATES = {
   },
   [ENEMY_TYPES.HEALER]: {
     type: ENEMY_TYPES.HEALER, hp: 8, maxHp: 8,
-    attack: 1, defense: 0, speed: 1,
+    attack: 3, defense: 0, speed: 1,
     behavior: 'heal', scoreValue: 15, color: '#44FF88', statuses: [],
   },
   [ENEMY_TYPES.EXPLOSIVE]: {
@@ -39,7 +39,7 @@ const ENEMY_TEMPLATES = {
   },
   [ENEMY_TYPES.SUMMONER]: {
     type: ENEMY_TYPES.SUMMONER, hp: 15, maxHp: 15,
-    attack: 2, defense: 0, speed: 1,
+    attack: 4, defense: 0, speed: 1,
     behavior: 'summon', scoreValue: 25, color: '#CC44FF',
     statuses: [], summonCount: 0, turnCount: 0,
   },
@@ -55,11 +55,23 @@ const ENEMY_TEMPLATES = {
     attack: 5, defense: 1, speed: 1,
     behavior: 'boss_pulse', scoreValue: 150, color: '#FF6600', isBoss: true,
   },
-  // Boss final (fin acte 3) — très puissant
+  // Boss final acte 3A — Le Dévoreur
   [ENEMY_TYPES.BOSS_RIFT]: {
     type: ENEMY_TYPES.BOSS_RIFT, hp: 80, maxHp: 80,
     attack: 8, defense: 2, speed: 2,
     behavior: 'boss_rift', scoreValue: 300, color: '#FF2266', isBoss: true, isFinal: true,
+  },
+  // Boss final acte 3B — Le Gardien (plus lent, très tanky, frappe fort)
+  [ENEMY_TYPES.BOSS_GUARDIAN]: {
+    type: ENEMY_TYPES.BOSS_GUARDIAN, hp: 110, maxHp: 110,
+    attack: 10, defense: 4, speed: 1,
+    behavior: 'boss_guardian', scoreValue: 400, color: '#44CCFF', isBoss: true, isFinal: true,
+  },
+  // Boss final acte 3C — L'Entité (rapide, très puissante, permanente)
+  [ENEMY_TYPES.BOSS_ENTITY]: {
+    type: ENEMY_TYPES.BOSS_ENTITY, hp: 140, maxHp: 140,
+    attack: 12, defense: 3, speed: 2,
+    behavior: 'boss_entity', scoreValue: 500, color: '#FF0044', isBoss: true, isFinal: true,
   },
 };
 
@@ -67,8 +79,12 @@ const ENEMY_TEMPLATES = {
 
 /**
  * Génère une salle complète selon son type et l'étage courant
+ * @param {string}  type
+ * @param {number}  floor
+ * @param {number}  seed
+ * @param {string}  finalBossType — overrides le boss du BOSS_FINAL (boss_rift | boss_guardian | boss_entity)
  */
-export function generateRoom(type, floor = 1, seed = null) {
+export function generateRoom(type, floor = 1, seed = null, finalBossType = null) {
   const rng = seed === null || seed === undefined
     ? Math.random
     : mulberry32(Number(seed) >>> 0);
@@ -77,9 +93,9 @@ export function generateRoom(type, floor = 1, seed = null) {
     case ROOM_TYPES.COMBAT:     return generateCombatRoom(floor, rng);
     case ROOM_TYPES.ELITE:      return generateEliteRoom(floor, rng);
     case ROOM_TYPES.EVENT:      return generateEventRoom();
-    case ROOM_TYPES.BOSS_MINI:  return generateBossRoom(floor, 'mini');
-    case ROOM_TYPES.BOSS:       return generateBossRoom(floor, 'normal');
-    case ROOM_TYPES.BOSS_FINAL: return generateBossRoom(floor, 'final');
+    case ROOM_TYPES.BOSS_MINI:  return generateBossRoom(floor, 'mini',   null);
+    case ROOM_TYPES.BOSS:       return generateBossRoom(floor, 'normal', null);
+    case ROOM_TYPES.BOSS_FINAL: return generateBossRoom(floor, 'final',  finalBossType);
     case ROOM_TYPES.REST:       return generateRestRoom();
     case ROOM_TYPES.SHOP:       return generateShopRoom(rng);
     default:                    return generateCombatRoom(floor, rng);
@@ -114,14 +130,14 @@ function generateCombatRoom(floor, rng) {
   return room;
 }
 
-function generateBossRoom(floor, tier = 'normal') {
+function generateBossRoom(floor, tier = 'normal', finalBossOverride = null) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
 
   addSymmetricPillars(grid, width, height);
 
   const bossType = tier === 'mini'  ? ENEMY_TYPES.BOSS_VOID
-                 : tier === 'final' ? ENEMY_TYPES.BOSS_RIFT
+                 : tier === 'final' ? (finalBossOverride || ENEMY_TYPES.BOSS_RIFT)
                  : ENEMY_TYPES.BOSS_PULSE;
 
   const roomType = tier === 'mini'  ? ROOM_TYPES.BOSS_MINI

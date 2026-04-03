@@ -24,6 +24,7 @@ export default function MapScreen() {
   const getSelectableNodeIds = useGameStore(s => s.getSelectableNodeIds);
   const pauseRun             = useGameStore(s => s.pauseRun);
   const abandonRun           = useGameStore(s => s.abandonRun);
+  const goToSettings         = useGameStore(s => s.goToSettings);
 
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const [showUpgradesModal,  setShowUpgradesModal]  = useState(false);
@@ -48,6 +49,9 @@ export default function MapScreen() {
         <View style={styles.header}>
           <TouchableOpacity style={styles.btnBack} onPress={pauseRun} activeOpacity={0.7}>
             <Text style={styles.btnBackTxt}>{t('map.back_menu')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnGear} onPress={() => goToSettings('map')} activeOpacity={0.7}>
+            <Text style={styles.btnGearTxt}>⚙</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.floorLabel}>
@@ -526,6 +530,14 @@ const styles = StyleSheet.create({
     paddingVertical:   6,
   },
   btnBackTxt: { color: PALETTE.textMuted, fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+  btnGear: {
+    borderWidth:     1,
+    borderColor:     '#333333',
+    borderRadius:    8,
+    paddingHorizontal: 8,
+    paddingVertical:   6,
+  },
+  btnGearTxt: { color: '#666666', fontSize: 14 },
 
   // Action row
   actionRow: {

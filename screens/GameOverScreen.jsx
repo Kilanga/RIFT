@@ -18,8 +18,9 @@ export default function GameOverScreen() {
   const run            = useGameStore(s => s.run);
   const meta           = useGameStore(s => s.meta);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
-  const goToMenu       = useGameStore(s => s.goToMenu);
+  const goToMenu        = useGameStore(s => s.goToMenu);
   const goToShapeSelect = useGameStore(s => s.goToShapeSelect);
+  const goToSettings    = useGameStore(s => s.goToSettings);
 
   const isNewBest    = run.score > 0 && run.score >= meta.bestScore;
   const newUnlock    = meta.lastRunSummary?.newUnlock || null;
@@ -31,6 +32,9 @@ export default function GameOverScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <TouchableOpacity style={styles.btnGear} onPress={() => goToSettings('gameOver')} activeOpacity={0.7}>
+        <Text style={styles.btnGearTxt}>⚙</Text>
+      </TouchableOpacity>
       <ScrollView contentContainerStyle={styles.container} bounces={false}>
 
         {/* ── Icône mort ─────────────────────────────────────────────────── */}
@@ -58,7 +62,7 @@ export default function GameOverScreen() {
           <RunStat icon="⚔" label={t('game_over.stat_rooms')}    value={run.roomsCleared} />
           <RunStat icon="☠" label={t('game_over.stat_kills')}    value={killsThisRun} color={PALETTE.upgradeRed} />
           <RunStat icon="✨" label={t('game_over.stat_upgrades')} value={activeUpgrades.length} color={PALETTE.charge} />
-          <RunStat icon="◈" label={t('game_over.stat_floor')}    value={run.floor} />
+          <RunStat icon="◈" label={t('game_over.stat_floor')}    value={run.currentLayerIndex} />
         </View>
 
         {/* ── Progression dans le donjon ─────────────────────────────────── */}
@@ -462,4 +466,15 @@ const styles = StyleSheet.create({
   btnMenuTxt: { color: PALETTE.textMuted, fontSize: 14 },
 
   runCount: { color: PALETTE.textDim, fontSize: 11 },
+
+  btnGear: {
+    position:        'absolute',
+    top:             12,
+    right:           16,
+    zIndex:          10,
+    padding:         8,
+    borderRadius:    20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  btnGearTxt: { color: PALETTE.textMuted, fontSize: 16 },
 });
