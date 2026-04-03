@@ -13,6 +13,8 @@ import { ROOM_TYPES, PALETTE } from '../constants';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const NODE_SIZE = 48;
+const IS_TABLET = SCREEN_W >= 768;
+const IS_LARGE_TABLET = SCREEN_W >= 1024;
 
 export default function MapScreen() {
   const { t } = useTranslation();
@@ -507,7 +509,16 @@ function UpgradesModal({ visible, upgrades, onClose }) {
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: PALETTE.bg },
-  container: { flex: 1, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 10 },
+  container: {
+    flex:            1,
+    paddingHorizontal: IS_LARGE_TABLET ? 28 : IS_TABLET ? 24 : 20,
+    paddingTop:        12,
+    paddingBottom:     8,
+    gap:               IS_TABLET ? 12 : 10,
+    width:             '100%',
+    maxWidth:          IS_LARGE_TABLET ? 1120 : 980,
+    alignSelf:         'center',
+  },
 
   // Header
   header: {
@@ -516,10 +527,10 @@ const styles = StyleSheet.create({
     alignItems:     'center',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
-  floorLabel:   { color: PALETTE.textPrimary, fontSize: 16, fontWeight: 'bold', textAlign: 'center' },
-  roomCount:    { color: PALETTE.textMuted, fontSize: 11, textAlign: 'center' },
+  floorLabel:   { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 18 : 16, fontWeight: 'bold', textAlign: 'center' },
+  roomCount:    { color: PALETTE.textMuted, fontSize: IS_TABLET ? 12 : 11, textAlign: 'center' },
   scoreBox:  { alignItems: 'flex-end' },
-  scoreVal:  { color: PALETTE.charge, fontSize: 18, fontWeight: 'bold' },
+  scoreVal:  { color: PALETTE.charge, fontSize: IS_TABLET ? 20 : 18, fontWeight: 'bold' },
   scoreLbl:  { color: PALETTE.textDim, fontSize: 10, letterSpacing: 2 },
 
   btnBack: {
@@ -529,7 +540,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical:   6,
   },
-  btnBackTxt: { color: PALETTE.textMuted, fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+  btnBackTxt: { color: PALETTE.textMuted, fontSize: IS_TABLET ? 12 : 11, fontWeight: 'bold', letterSpacing: 1 },
   btnGear: {
     borderWidth:     1,
     borderColor:     '#333333',
@@ -555,7 +566,7 @@ const styles = StyleSheet.create({
     paddingVertical:   5,
     backgroundColor: PALETTE.upgradeBlue + '15',
   },
-  btnUpgradesTxt: { color: PALETTE.upgradeBlue, fontSize: 11, fontWeight: 'bold' },
+  btnUpgradesTxt: { color: PALETTE.upgradeBlue, fontSize: IS_TABLET ? 12 : 11, fontWeight: 'bold' },
 
   btnAbandon: {
     borderWidth:     1,
@@ -626,8 +637,8 @@ const styles = StyleSheet.create({
     padding:         10,
   },
   progressHeader:   { flexDirection: 'row', justifyContent: 'space-between' },
-  progressLabel:    { color: PALETTE.textPrimary, fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
-  progressFraction: { color: PALETTE.textMuted, fontSize: 10 },
+  progressLabel:    { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 11 : 10, fontWeight: 'bold', letterSpacing: 2 },
+  progressFraction: { color: PALETTE.textMuted, fontSize: IS_TABLET ? 11 : 10 },
   progressActs:     { flexDirection: 'row', gap: 6 },
   progressActGroup: { flex: 1, gap: 3 },
   progressActLabel: { fontSize: 8, fontWeight: 'bold', letterSpacing: 1, textAlign: 'center' },
@@ -657,7 +668,7 @@ const styles = StyleSheet.create({
   miniStats: { alignItems: 'center', gap: 3 },
   hpTxt:     { color: PALETTE.hp, fontSize: 12, fontWeight: 'bold' },
   hpBarBg: {
-    width: 80, height: 5,
+    width: IS_TABLET ? 96 : 80, height: 5,
     backgroundColor: '#0D1A10',
     borderRadius:    2,
     overflow:        'hidden',
@@ -671,13 +682,13 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection:  'row',
     justifyContent: 'center',
-    gap:            16,
+    gap:            IS_TABLET ? 20 : 16,
     paddingTop:     8,
     borderTopWidth: 1,
     borderTopColor: PALETTE.border,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendTxt:  { fontSize: 10 },
+  legendTxt:  { fontSize: IS_TABLET ? 11 : 10 },
 
   fragBox:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
   fragIcon:  { color: PALETTE.fragment, fontSize: 14 },

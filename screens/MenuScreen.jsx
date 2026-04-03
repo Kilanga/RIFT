@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,9 @@ import TutorialOverlay from '../components/TutorialOverlay';
 
 const TOTAL_UNLOCKS    = PERMANENT_UPGRADES_CATALOG.length;
 const ORBIT_INTERVAL   = 80; // ms → ~12 fps
+const { width: SCREEN_W } = Dimensions.get('window');
+const IS_TABLET = SCREEN_W >= 768;
+const IS_LARGE_TABLET = SCREEN_W >= 1024;
 
 
 export default function MenuScreen() {
@@ -211,6 +214,9 @@ export default function MenuScreen() {
       />
     </SafeAreaView>
   );
+      width:             '100%',
+      maxWidth:          860,
+      alignSelf:         'center',
 }
 
 // ─── Logo animé ───────────────────────────────────────────────────────────────
@@ -608,16 +614,16 @@ const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: PALETTE.bg },
   container: {
     alignItems:        'center',
-    paddingVertical:   32,
-    paddingHorizontal: 20,
-    gap:               22,
+    paddingVertical:   IS_LARGE_TABLET ? 44 : IS_TABLET ? 36 : 32,
+    paddingHorizontal: IS_LARGE_TABLET ? 28 : IS_TABLET ? 24 : 20,
+    gap:               IS_TABLET ? 26 : 22,
   },
 
   logoBox: { alignItems: 'center' },
 
   titleBox: { alignItems: 'center', gap: 6 },
-  title:    { color: PALETTE.textPrimary, fontSize: 54, fontWeight: 'bold', letterSpacing: 14 },
-  tagline:  { color: PALETTE.textDim, fontSize: 10, letterSpacing: 4 },
+  title:    { color: PALETTE.textPrimary, fontSize: IS_LARGE_TABLET ? 64 : IS_TABLET ? 58 : 54, fontWeight: 'bold', letterSpacing: IS_TABLET ? 16 : 14 },
+  tagline:  { color: PALETTE.textDim, fontSize: IS_TABLET ? 11 : 10, letterSpacing: 4 },
 
   // Boutons
   btnResume: {
@@ -631,8 +637,8 @@ const styles = StyleSheet.create({
     paddingVertical:   14,
     gap:             4,
   },
-  btnResumeTxt: { color: PALETTE.upgradeGreen, fontSize: 17, fontWeight: 'bold', letterSpacing: 3 },
-  btnResumeSub: { color: PALETTE.upgradeGreen + '99', fontSize: 11, letterSpacing: 1 },
+  btnResumeTxt: { color: PALETTE.upgradeGreen, fontSize: IS_TABLET ? 19 : 17, fontWeight: 'bold', letterSpacing: 3 },
+  btnResumeSub: { color: PALETTE.upgradeGreen + '99', fontSize: IS_TABLET ? 12 : 11, letterSpacing: 1 },
 
   buttonsCol: { width: '100%', gap: 10 },
   buttonsRow: { width: '100%', flexDirection: 'row', gap: 10 },
@@ -647,8 +653,8 @@ const styles = StyleSheet.create({
     paddingVertical:   18,
     gap:               4,
   },
-  btnPlayTxt: { color: PALETTE.triangle, fontSize: 18, fontWeight: 'bold', letterSpacing: 4 },
-  btnPlaySub: { color: PALETTE.textDim,   fontSize: 11, letterSpacing: 2 },
+  btnPlayTxt: { color: PALETTE.triangle, fontSize: IS_TABLET ? 20 : 18, fontWeight: 'bold', letterSpacing: 4 },
+  btnPlaySub: { color: PALETTE.textDim,   fontSize: IS_TABLET ? 12 : 11, letterSpacing: 2 },
 
   btnDaily: {
     alignItems:      'center',
@@ -662,8 +668,8 @@ const styles = StyleSheet.create({
     gap:             2,
   },
   btnDailyIcon: { fontSize: 16 },
-  btnDailyTxt:  { color: PALETTE.charge, fontSize: 13, fontWeight: 'bold', letterSpacing: 2 },
-  btnDailySub:  { color: PALETTE.charge + '99', fontSize: 9, letterSpacing: 3 },
+  btnDailyTxt:  { color: PALETTE.charge, fontSize: IS_TABLET ? 14 : 13, fontWeight: 'bold', letterSpacing: 2 },
+  btnDailySub:  { color: PALETTE.charge + '99', fontSize: IS_TABLET ? 10 : 9, letterSpacing: 3 },
 
   btnRightCol: { gap: 6 },
 
@@ -674,7 +680,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     PALETTE.circle,
     borderRadius:    10,
-    width:           46,
+    width:           IS_TABLET ? 56 : 46,
     paddingVertical: 7,
     gap:             2,
   },
@@ -728,7 +734,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     PALETTE.borderLight,
     borderRadius:    10,
-    width:           46,
+    width:           IS_TABLET ? 56 : 46,
     paddingVertical: 7,
   },
   btnHelpTxt: { color: PALETTE.textMuted, fontSize: 18, fontWeight: 'bold' },
@@ -740,7 +746,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     '#9966FF',
     borderRadius:    10,
-    width:           46,
+    width:           IS_TABLET ? 56 : 46,
     paddingVertical: 7,
   },
   btnTalentsTxt: { color: '#BB88FF', fontSize: 16 },
@@ -765,7 +771,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     '#4466CC',
     borderRadius:    10,
-    width:           46,
+    width:           IS_TABLET ? 56 : 46,
     paddingVertical: 7,
   },
   btnAchievTxt:   { fontSize: 16 },
@@ -778,7 +784,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     '#446644',
     borderRadius:    10,
-    width:           46,
+    width:           IS_TABLET ? 56 : 46,
     paddingVertical: 7,
   },
   btnLoreTxt:   { fontSize: 16 },
@@ -791,7 +797,7 @@ const styles = StyleSheet.create({
     borderWidth:     1,
     borderColor:     '#444444',
     borderRadius:    10,
-    width:           46,
+    width:           IS_TABLET ? 56 : 46,
     paddingVertical: 7,
   },
   btnSettingsTxt: { color: '#888888', fontSize: 18 },
@@ -832,7 +838,7 @@ const styles = StyleSheet.create({
   lastRunShapeName: { fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
   lastRunStats:     { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
   lastRunStat:      { alignItems: 'center', gap: 2 },
-  lastRunStatVal:   { color: PALETTE.textPrimary, fontSize: 20, fontWeight: 'bold' },
+  lastRunStatVal:   { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 22 : 20, fontWeight: 'bold' },
   lastRunStatLbl:   { color: PALETTE.textMuted,   fontSize: 10 },
 
   progressBarBg: {
@@ -926,8 +932,8 @@ const styles = StyleSheet.create({
   },
   olRank:  { width: 18, fontSize: 11, fontWeight: 'bold', textAlign: 'center' },
   olShape: { fontSize: 12, width: 14, textAlign: 'center' },
-  olName:  { flex: 1, color: PALETTE.textMuted, fontSize: 12 },
-  olScore: { fontSize: 14, fontWeight: 'bold' },
+  olName:  { flex: 1, color: PALETTE.textMuted, fontSize: IS_TABLET ? 13 : 12 },
+  olScore: { fontSize: IS_TABLET ? 15 : 14, fontWeight: 'bold' },
   olMeta:  { color: PALETTE.textDim, fontSize: 10, minWidth: 30, textAlign: 'right' },
 
   // Classement local

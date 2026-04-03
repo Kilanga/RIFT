@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Dimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,9 @@ import { GRID_THEMES_LIST } from '../utils/cosmeticCatalog';
 const PREMIUM_COLOR  = '#9966FF';
 const PRICE_PREMIUM  = '2,99 €';
 const PRICE_CLASS    = '0,99 €';
+const { width: SCREEN_W } = Dimensions.get('window');
+const IS_TABLET = SCREEN_W >= 768;
+const IS_LARGE_TABLET = SCREEN_W >= 1024;
 
 const PURCHASABLE_CLASSES = [
   { id: 'shadow',  nameKey: 'class.shadow.name',  passiveKey: 'class.shadow.passive',  color: '#FF6600', icon: '🌑' },
@@ -283,7 +286,14 @@ export default function PremiumShopScreen() {
 
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: PALETTE.bg },
-  container: { flex: 1, padding: 20, gap: 16 },
+  container: {
+    flex:     1,
+    padding:  IS_LARGE_TABLET ? 28 : IS_TABLET ? 24 : 20,
+    gap:      16,
+    width:    '100%',
+    maxWidth: IS_LARGE_TABLET ? 980 : 900,
+    alignSelf:'center',
+  },
 
   header: {
     flexDirection:  'row',
@@ -304,7 +314,7 @@ const styles = StyleSheet.create({
   backTxt:  { color: PALETTE.textPrimary, fontSize: 14, fontWeight: 'bold' },
   title: {
     color:       PREMIUM_COLOR,
-    fontSize:    14,
+    fontSize:    IS_TABLET ? 16 : 14,
     fontWeight:  'bold',
     letterSpacing: 4,
   },
@@ -319,8 +329,8 @@ const styles = StyleSheet.create({
     gap:             6,
   },
   alreadyIcon:  { fontSize: 36 },
-  alreadyTitle: { color: PREMIUM_COLOR, fontSize: 18, fontWeight: 'bold', letterSpacing: 2 },
-  alreadySub:   { color: PALETTE.textMuted, fontSize: 13 },
+  alreadyTitle: { color: PREMIUM_COLOR, fontSize: IS_TABLET ? 20 : 18, fontWeight: 'bold', letterSpacing: 2 },
+  alreadySub:   { color: PALETTE.textMuted, fontSize: IS_TABLET ? 14 : 13 },
 
   priceBox: {
     alignItems:      'center',
@@ -331,8 +341,8 @@ const styles = StyleSheet.create({
     padding:         20,
     gap:             4,
   },
-  priceAmount: { color: PREMIUM_COLOR, fontSize: 32, fontWeight: 'bold' },
-  priceSub:    { color: PALETTE.textMuted, fontSize: 12, textAlign: 'center' },
+  priceAmount: { color: PREMIUM_COLOR, fontSize: IS_TABLET ? 36 : 32, fontWeight: 'bold' },
+  priceSub:    { color: PALETTE.textMuted, fontSize: IS_TABLET ? 13 : 12, textAlign: 'center' },
 
   sectionLabel: {
     color:         PALETTE.textMuted,
@@ -356,8 +366,8 @@ const styles = StyleSheet.create({
   featureIcon:  { fontSize: 30, width: 38, textAlign: 'center', marginTop: 2 },
   featureInfo:  { flex: 1, gap: 4 },
   featureRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  featureTitle: { color: PALETTE.textPrimary, fontSize: 14, fontWeight: 'bold' },
-  featureDesc:  { color: PALETTE.textMuted, fontSize: 12, lineHeight: 17 },
+  featureTitle: { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 15 : 14, fontWeight: 'bold' },
+  featureDesc:  { color: PALETTE.textMuted, fontSize: IS_TABLET ? 13 : 12, lineHeight: IS_TABLET ? 18 : 17 },
   checkBadge:   { color: PREMIUM_COLOR, fontSize: 14, fontWeight: 'bold' },
 
   buySection: { gap: 10, marginTop: 6 },
@@ -371,7 +381,7 @@ const styles = StyleSheet.create({
     gap:             2,
   },
   buyBtnDisabled: { opacity: 0.5 },
-  buyBtnTxt:   { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 2 },
+  buyBtnTxt:   { color: '#fff', fontSize: IS_TABLET ? 17 : 16, fontWeight: 'bold', letterSpacing: 2 },
   buyBtnPrice: { color: '#FFFFFF99', fontSize: 13 },
 
   secureTxt:         { color: PALETTE.textDim, fontSize: 11, textAlign: 'center' },
@@ -402,7 +412,7 @@ const styles = StyleSheet.create({
   },
   themeInfo:    { flex: 1, gap: 3 },
   classEmoji:   { fontSize: 24, width: 40, textAlign: 'center' },
-  themeEmoji:   { color: PALETTE.textPrimary, fontSize: 14, fontWeight: 'bold' },
+  themeEmoji:   { color: PALETTE.textPrimary, fontSize: IS_TABLET ? 15 : 14, fontWeight: 'bold' },
   themeFreeTag: { color: PALETTE.textDim, fontSize: 10 },
 
   themeUseBtn: {
