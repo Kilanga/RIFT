@@ -16,8 +16,10 @@ export default function RestRoomOverlay() {
   const currentRoom      = useGameStore(s => s.currentRoom);
   const interactWithAltar = useGameStore(s => s.interactWithAltar);
   const leaveRoom        = useGameStore(s => s.leaveRoom);
+  const skipRestForFragments = useGameStore(s => s.skipRestForFragments);
 
   const healAmount = currentRoom?.healAmount || 8;
+  const skipReward = 5;
   const isFull     = player.hp >= player.maxHp;
   const hpAfter    = Math.min(player.maxHp, player.hp + healAmount);
 
@@ -96,6 +98,10 @@ export default function RestRoomOverlay() {
             <Text style={styles.btnSkipTxt}>{t('rest.skip_altar')}</Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity style={styles.btnSkipReward} onPress={skipRestForFragments} activeOpacity={0.8}>
+          <Text style={styles.btnSkipRewardTxt}>{t('rest.skip_for_fragments', { defaultValue: `⏭ Ignorer le soin : +${skipReward} fragments` })}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -173,4 +179,13 @@ const styles = StyleSheet.create({
     alignItems:      'center',
   },
   btnSkipTxt: { color: PALETTE.textMuted, fontSize: 13 },
+  btnSkipReward: {
+    borderWidth: 1,
+    borderColor: '#CCAA44',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#2A2210',
+  },
+  btnSkipRewardTxt: { color: '#FFD466', fontSize: 13, fontWeight: 'bold' },
 });

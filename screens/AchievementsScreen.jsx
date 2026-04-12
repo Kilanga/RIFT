@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import useGameStore from '../store/gameStore';
-import { ACHIEVEMENTS_CATALOG } from '../store/achievements';
+import { ACHIEVEMENTS_CATALOG, getWeeklyQuestProgress } from '../store/achievements';
 import { PALETTE } from '../constants';
 
 // ─── Couleurs de rareté ───────────────────────────────────────────────────────
@@ -29,6 +29,8 @@ export default function AchievementsScreen() {
   const meta        = useGameStore(s => s.meta);
   const goToMenu    = useGameStore(s => s.setPhase);
   const unlockedIds = meta.achievements || [];
+  const weeklyQuests = getWeeklyQuestProgress(meta);
+  const completedWeekly = weeklyQuests.filter(q => q.completed).length;
 
   const unlocked = ACHIEVEMENTS_CATALOG.filter(a => unlockedIds.includes(a.id));
   const locked   = ACHIEVEMENTS_CATALOG.filter(a => !unlockedIds.includes(a.id));
@@ -46,6 +48,14 @@ export default function AchievementsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+
+        <Text style={styles.sectionLabel}>{t('achievements_screen.weekly_section', { defaultValue: 'QUÊTES HEBDO' })}</Text>
+        <Text style={styles.weeklySubTitle}>
+          {t('achievements_screen.weekly_progress', { defaultValue: '{{done}} / {{total}} terminées cette semaine', done: completedWeekly, total: weeklyQuests.length })}
+        </Text>
+        {weeklyQuests.map(quest => (
+          <WeeklyQuestCard key={quest.id} quest={quest} t={t} />
+        ))}
 
         {/* Débloqués */}
         {unlocked.length > 0 && (
@@ -70,6 +80,25 @@ export default function AchievementsScreen() {
         <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function WeeklyQuestCard({ quest, t }) {
+  const ratio = Math.max(0, Math.min(1, quest.ratio || 0));
+  return (
+    <View style={[styles.weeklyCard, quest.completed && styles.weeklyCardDone]}>
+      <View style={styles.weeklyTop}>
+        <Text style={styles.weeklyIcon}>{quest.icon}</Text>
+        <View style={styles.weeklyBody}>
+          <Text style={styles.weeklyName}>{t(`achievement.${quest.id}_name`, { defaultValue: quest.name })}</Text>
+          <Text style={styles.weeklyDesc}>{t(`achievement.${quest.id}_desc`, { defaultValue: quest.desc })}</Text>
+        </View>
+        <Text style={[styles.weeklyCounter, quest.completed && styles.weeklyCounterDone]}>{quest.progress}/{quest.target}</Text>
+      </View>
+      <View style={styles.weeklyBarBg}>
+        <View style={[styles.weeklyBarFill, { width: `${ratio * 100}%` }, quest.completed && styles.weeklyBarFillDone]} />
+      </View>
+    </View>
   );
 }
 
@@ -149,6 +178,69 @@ const styles = StyleSheet.create({
     fontSize:      10,
     letterSpacing: 3,
     marginBottom:  10,
+  },
+  weeklySubTitle: {
+    color: PALETTE.textMuted,
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 10,
+  },
+  weeklyCard: {
+    backgroundColor: '#0A0F16',
+    borderWidth: 1,
+    borderColor: '#22314A',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+    gap: 8,
+  },
+  weeklyCardDone: {
+    borderColor: '#3A915D',
+    backgroundColor: '#0C1A12',
+  },
+  weeklyTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  weeklyIcon: {
+    fontSize: 18,
+    width: 22,
+    textAlign: 'center',
+  },
+  weeklyBody: {
+    flex: 1,
+    gap: 2,
+  },
+  weeklyName: {
+    color: PALETTE.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  weeklyDesc: {
+    color: PALETTE.textMuted,
+    fontSize: 11,
+  },
+  weeklyCounter: {
+    color: '#89A8D8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  weeklyCounterDone: {
+    color: '#6DDB9B',
+  },
+  weeklyBarBg: {
+    height: 6,
+    borderRadius: 4,
+    backgroundColor: '#182437',
+    overflow: 'hidden',
+  },
+  weeklyBarFill: {
+    height: 6,
+    backgroundColor: '#4D8CFF',
+  },
+  weeklyBarFillDone: {
+    backgroundColor: '#41C777',
   },
   card: {
     flexDirection:  'row',

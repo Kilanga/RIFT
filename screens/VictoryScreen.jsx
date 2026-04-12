@@ -215,7 +215,7 @@ function BuildSummary({ upgrades }) {
         {['red', 'blue', 'green', 'curse'].map(color => {
           const count  = upgrades.filter(u => u.color === color).length;
           if (color === 'curse' && count === 0) return null;
-          const active = count >= 3;
+          const active = color === 'curse' ? count >= 3 : count >= 7;
           const hex    = upgradeHex(color);
           return (
             <View key={color} style={[styles.synergyBadge, {

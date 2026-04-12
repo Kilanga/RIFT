@@ -75,6 +75,11 @@ export function processEnemyTurn(enemyId, state, skipMovement = false) {
     case 'shoot':      return processShooterTurn(enemy, player, enemies, currentRoom);
     case 'block':      return processBlockerTurn(enemy, player, enemies, currentRoom);
     case 'boss_void':     return processBossVoidTurn(enemy, player, enemies, currentRoom);
+    case 'boss_cinder':   return processBossCinderTurn(enemy, player, enemies, currentRoom);
+    case 'boss_mirror':   return processBossMirrorTurn(enemy, player, enemies, currentRoom);
+    case 'boss_weaver':   return processBossWeaverTurn(enemy, player, enemies, currentRoom);
+    case 'boss_rust':     return processBossRustTurn(enemy, player, enemies, currentRoom);
+    case 'boss_cutter':   return processBossCutterTurn(enemy, player, enemies, currentRoom);
     case 'boss_pulse':    return processBossPulseTurn(enemy, player, enemies, currentRoom);
     case 'boss_rift':     return processBossRiftTurn(enemy, player, enemies, currentRoom);
     case 'boss_guardian': return processBossGuardianTurn(enemy, player, enemies, currentRoom);
@@ -82,6 +87,7 @@ export function processEnemyTurn(enemyId, state, skipMovement = false) {
     case 'heal':       return processHealerTurn(enemy, player, enemies, currentRoom);
     case 'explode':    return processChaserTurn(enemy, player, enemies, currentRoom, skipMovement); // même IA que chaser
     case 'summon':     return processSummonerTurn(enemy, player, enemies, currentRoom);
+    case 'sentinel':   return processSentinelTurn(enemy, player, enemies, currentRoom);
     default:           return noAction();
   }
 }
@@ -160,10 +166,32 @@ function processBlockerTurn(enemy, player, enemies, room) {
 function processBossVoidTurn(enemy, player, enemies, room) {
   const enraged = enemy.hp / enemy.maxHp <= 0.5;
   const dist    = manhattanDist(enemy, player);
+  const turn    = (enemy.turnCount || 0) + 1;
+
+  // Capacité spéciale visible: toutes les 3 actions, pulse du vide à portée 2.
+  // Le boss ne reste plus inactif à distance.
+  if (turn % 3 === 0) {
+    const dmg = dist <= 2 ? Math.floor(enemy.attack * (enraged ? 1.8 : 1.2)) : 0;
+    return {
+      moved: false,
+      newX: enemy.x,
+      newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`🌀 VOID PULSE${dmg > 0 ? ` : ${dmg} !` : ' (hors portée)'}`],
+      turnCountUpdate: turn,
+    };
+  }
 
   if (dist === 1) {
     const dmg = enraged ? enemy.attack * 2 : enemy.attack;
-    return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: dmg, logs: [`VOID ${enraged ? '🔥 ENRAGÉ' : ''} : ${dmg} !`] };
+    return {
+      moved: false,
+      newX: enemy.x,
+      newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`VOID ${enraged ? '🔥 ENRAGÉ' : ''} : ${dmg} !`],
+      turnCountUpdate: turn,
+    };
   }
 
   if (enraged) {
@@ -172,17 +200,233 @@ function processBossVoidTurn(enemy, player, enemies, room) {
       const steps = Math.min(enemy.speed + 1, path.length);
       const next  = path[steps - 1];
       if (isCellFree(next.x, next.y, enemies, room)) {
-        return { moved: true, newX: next.x, newY: next.y, playerDamage: 0, logs: [] };
+        return { moved: true, newX: next.x, newY: next.y, playerDamage: 0, logs: [], turnCountUpdate: turn };
       }
     }
   } else {
     const spiral = nextSpiralStep(enemy, room);
     if (spiral && isCellFree(spiral.x, spiral.y, enemies, room)) {
-      return { moved: true, newX: spiral.x, newY: spiral.y, playerDamage: 0, logs: [], spiralStepUpdate: (enemy.spiralStep || 0) + 1 };
+      return {
+        moved: true,
+        newX: spiral.x,
+        newY: spiral.y,
+        playerDamage: 0,
+        logs: [],
+        spiralStepUpdate: (enemy.spiralStep || 0) + 1,
+        turnCountUpdate: turn,
+      };
+    }
+
+    // Fallback si spirale bloquée: poursuite directe pour éviter un boss statique.
+    const path = findPathGreedy(enemy, player, enemies, room);
+    if (path?.length > 0 && isCellFree(path[0].x, path[0].y, enemies, room)) {
+      return {
+        moved: true,
+        newX: path[0].x,
+        newY: path[0].y,
+        playerDamage: 0,
+        logs: ['VOID se recentre sur toi.'],
+        spiralStepUpdate: (enemy.spiralStep || 0) + 1,
+        turnCountUpdate: turn,
+      };
     }
   }
 
-  return noAction();
+  return {
+    ...noAction(),
+    spiralStepUpdate: (enemy.spiralStep || 0) + 1,
+    turnCountUpdate: turn,
+  };
+}
+
+function processBossCinderTurn(enemy, player, enemies, room) {
+  const hpRatio = enemy.hp / enemy.maxHp;
+  const enraged = hpRatio <= 0.5;
+  const turn = (enemy.turnCount || 0) + 1;
+  const dist = manhattanDist(enemy, player);
+
+  if (turn % 3 === 0) {
+    const dmg = dist <= 2 ? Math.max(0, Math.floor(enemy.attack * (enraged ? 1.8 : 1.3))) : 0;
+    const result = {
+      moved: false,
+      newX: enemy.x,
+      newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`🔥 CENDRE ${dmg > 0 ? `: ${dmg} !` : '(hors portée)'}`],
+      turnCountUpdate: turn,
+    };
+
+    if (enraged && (enemy.summonCount || 0) < 2) {
+      const spawn = findDistantSpawn(room, player, enemies, enemy);
+      if (spawn) {
+        result.summon = true;
+        result.summonType = 'chaser';
+        result.summonX = spawn.x;
+        result.summonY = spawn.y;
+        result.summonCountUpdate = (enemy.summonCount || 0) + 1;
+        result.logs = [`🔥 CENDRE embrase le sol !`];
+      }
+    }
+
+    return result;
+  }
+
+  if (dist === 1) {
+    const dmg = enraged ? enemy.attack + 2 : enemy.attack;
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`🔥 CENDRE : ${dmg} !`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  const path = findPathGreedy(enemy, player, enemies, room);
+  if (path?.length > 0) {
+    const steps = enraged ? Math.min(2, path.length) : 1;
+    const target = path[Math.min(steps - 1, path.length - 1)];
+    if (isCellFree(target.x, target.y, enemies, room)) {
+      return { moved: true, newX: target.x, newY: target.y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+    }
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
+}
+
+function processBossMirrorTurn(enemy, player, enemies, room) {
+  const hpRatio = enemy.hp / enemy.maxHp;
+  const enraged = hpRatio <= 0.5;
+  const turn = (enemy.turnCount || 0) + 1;
+  const dist = manhattanDist(enemy, player);
+
+  if (turn % 2 === 0) {
+    const aligned = enemy.x === player.x || enemy.y === player.y;
+    const dmg = aligned && dist <= 3 ? Math.max(0, Math.floor(enemy.attack * (enraged ? 1.8 : 1.25))) : 0;
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`🪞 MÈRE-ÉCHO ${dmg > 0 ? `: ${dmg} !` : '(résonance)'}`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  const mirrorTarget = {
+    x: Math.max(1, Math.min(room.width - 2, room.width - 1 - player.x)),
+    y: Math.max(1, Math.min(room.height - 2, room.height - 1 - player.y)),
+  };
+  const path = findPathGreedy(enemy, mirrorTarget, enemies, room);
+  if (path?.length > 0 && isCellFree(path[0].x, path[0].y, enemies, room)) {
+    return { moved: true, newX: path[0].x, newY: path[0].y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
+}
+
+function processBossWeaverTurn(enemy, player, enemies, room) {
+  const turn = (enemy.turnCount || 0) + 1;
+  const summonCount = enemy.summonCount || 0;
+  const dist = manhattanDist(enemy, player);
+
+  if (turn % 3 === 0 && summonCount < 2) {
+    const spawn = findDistantSpawn(room, player, enemies, enemy);
+    if (spawn) {
+      return {
+        moved: false, newX: enemy.x, newY: enemy.y,
+        playerDamage: 0,
+        logs: [`🕸 TISSEUR : un fil se déchire !`],
+        summon: true,
+        summonType: 'chaser',
+        summonX: spawn.x,
+        summonY: spawn.y,
+        summonCountUpdate: summonCount + 1,
+        turnCountUpdate: turn,
+      };
+    }
+  }
+
+  if (dist === 1) {
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: Math.max(0, enemy.attack),
+      logs: [`🕸 TISSEUR : ${enemy.attack} !`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  const path = findPathGreedy(enemy, player, enemies, room);
+  if (path?.length > 0 && isCellFree(path[0].x, path[0].y, enemies, room)) {
+    return { moved: true, newX: path[0].x, newY: path[0].y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
+}
+
+function processBossRustTurn(enemy, player, enemies, room) {
+  const hpRatio = enemy.hp / enemy.maxHp;
+  const enraged = hpRatio <= 0.5;
+  const turn = (enemy.turnCount || 0) + 1;
+  const dist = manhattanDist(enemy, player);
+  const hasShield = enemy.statuses?.some(s => s.id === 'shield');
+
+  if (turn % 3 === 0 || (!hasShield && enraged && turn % 2 === 0)) {
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: 0,
+      logs: [`🛡 ROUILLÉ gagne une plaque !`],
+      selfStatuses: [{ id: 'shield', duration: 2 }],
+      turnCountUpdate: turn,
+    };
+  }
+
+  if (dist === 1) {
+    const dmg = enemy.attack + (hasShield ? 2 : 0) + (enraged ? 1 : 0);
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`🛡 ROUILLÉ : ${dmg} !`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  const path = findPathGreedy(enemy, player, enemies, room);
+  if (path?.length > 0) {
+    const steps = hasShield ? 1 : Math.min(enraged ? 2 : 1, path.length);
+    const target = path[Math.min(steps - 1, path.length - 1)];
+    if (isCellFree(target.x, target.y, enemies, room)) {
+      return { moved: true, newX: target.x, newY: target.y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+    }
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
+}
+
+function processBossCutterTurn(enemy, player, enemies, room) {
+  const hpRatio = enemy.hp / enemy.maxHp;
+  const enraged = hpRatio <= 0.5;
+  const turn = (enemy.turnCount || 0) + 1;
+  const dist = manhattanDist(enemy, player);
+  const aligned = enemy.x === player.x || enemy.y === player.y;
+
+  if (aligned && hasLineOfSight(enemy, player, room) && dist <= 3) {
+    const dmg = Math.max(0, Math.floor(enemy.attack * (enraged ? 1.7 : 1.2)));
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`✂ FENDEUR : ${dmg} !`],
+      turnCountUpdate: turn,
+    };
+  }
+
+  const path = findPathGreedy(enemy, player, enemies, room);
+  if (path?.length > 0) {
+    const steps = Math.min(2, path.length);
+    const target = path[Math.min(steps - 1, path.length - 1)];
+    if (isCellFree(target.x, target.y, enemies, room)) {
+      return { moved: true, newX: target.x, newY: target.y, playerDamage: 0, logs: [], turnCountUpdate: turn };
+    }
+  }
+
+  return { ...noAction(), turnCountUpdate: turn };
 }
 
 function processBossPulseTurn(enemy, player, enemies, room) {
@@ -302,14 +546,12 @@ function processBossEntityTurn(enemy, player, enemies, room) {
   if (turn % 3 === 0) {
     const base = Math.floor(enemy.attack * (dist <= 2 ? 1.2 : dist <= 3 ? 0.7 : 0));
     const dmg  = enraged ? base * 2 : base;
-    if (dmg > 0) {
-      return {
-        moved: false, newX: enemy.x, newY: enemy.y,
-        playerDamage: dmg,
-        logs: [`💀 L'ENTITÉ — Déflagration${enraged ? ' ☠' : ''} : ${dmg} !`],
-        turnCountUpdate: turn,
-      };
-    }
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: dmg,
+      logs: [`💀 L'ENTITÉ — Déflagration${enraged ? ' ☠' : ''}${dmg > 0 ? ` : ${dmg} !` : ' (hors portée)'}`],
+      turnCountUpdate: turn,
+    };
   }
 
   // Contact : attaque dévastatrice
@@ -340,9 +582,11 @@ function processBossEntityTurn(enemy, player, enemies, room) {
 
 function processHealerTurn(enemy, player, enemies, room) {
   const livingAllies = enemies.filter(e => e.id !== enemy.id && e.hp > 0);
+  const frontlineAllies = livingAllies.filter(e => e.behavior !== 'heal' && e.behavior !== 'summon');
 
-  // Dernier ennemi vivant : plus de raison de fuir → charge
-  if (livingAllies.length === 0) {
+  // S'il ne reste que des unités fuyardes (soigneurs/invocateurs), on force l'engagement
+  // pour éviter les tours de fuite infinis en fin de salle.
+  if (frontlineAllies.length === 0) {
     return processChaserTurn(enemy, player, enemies, room);
   }
 
@@ -373,9 +617,10 @@ function processSummonerTurn(enemy, player, enemies, room) {
   const turn = (enemy.turnCount || 0) + 1;
   const summonCount = enemy.summonCount || 0;
   const livingAllies = enemies.filter(e => e.id !== enemy.id && e.hp > 0);
+  const frontlineAllies = livingAllies.filter(e => e.behavior !== 'heal' && e.behavior !== 'summon');
 
-  // Dernier ennemi vivant : plus d'alliés à protéger → charge
-  if (livingAllies.length === 0) {
+  // Même logique que le soigneur : s'il ne reste que des fuyards, l'invocateur engage.
+  if (frontlineAllies.length === 0) {
     const result = processChaserTurn(enemy, player, enemies, room);
     return { ...result, turnCountUpdate: turn };
   }
@@ -409,6 +654,118 @@ function processSummonerTurn(enemy, player, enemies, room) {
   }
   return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: 0,
            logs: [], turnCountUpdate: turn };
+}
+
+function processSentinelTurn(enemy, player, enemies, room) {
+  const turn = (enemy.turnCount || 0) + 1;
+  let chargeCounter = (enemy.chargeCounter || 0) + 1;
+  const logs = [];
+
+  // Tous les 2 tours, la Sentinelle accumule une charge : +2 ATK, +1 range
+  // Charge complètes = Math.floor(chargeCounter / 2)
+  // Peut s'accumuler jusqu'à tour 50 (max 25 charges possibles)
+  const chargesApplied = Math.floor(chargeCounter / 2);
+  let currentAtk = enemy.attack + (chargesApplied * 2);
+  let currentRange = (enemy.range || 0) + chargesApplied;
+  
+  // Log de surcharge seulement quand elle vient de charger (chargeCounter % 2 === 0)
+  if (chargeCounter % 2 === 0 && chargesApplied > 0) {
+    if (chargeCounter === 50) {
+      logs.push(`⚡ SENTINELLE À PUISSANCE MAXIMALE ! (${currentAtk} ATK, ${currentRange} range)`);
+    } else {
+      logs.push(`⚡ SURCHARGE #${chargesApplied} (${currentAtk} ATK, ${currentRange} range)`);
+    }
+  }
+
+  const dist = manhattanDist(enemy, player);
+  const aligned = enemy.x === player.x || enemy.y === player.y;
+  const hasShot = aligned && dist <= currentRange && hasLineOfSight(enemy, player, room);
+
+  // Artillerie de fin d'acte: frappe à distance si elle garde un couloir libre.
+  // Beam damage augmente avec les charges d'attaque
+  if (hasShot && currentAtk > 0) {
+    const beamDmg = currentAtk + 2;
+    logs.push(`🎯 SENTINELLE : ${beamDmg} !`);
+    return {
+      moved: false, newX: enemy.x, newY: enemy.y,
+      playerDamage: beamDmg,
+      logs,
+      turnCountUpdate: turn,
+      chargeCounterUpdate: chargeCounter,
+    };
+  }
+
+  // Sentinelle immobile — elle reste à son poste, ne se déplace jamais
+  return { moved: false, newX: enemy.x, newY: enemy.y, playerDamage: 0, logs, turnCountUpdate: turn, chargeCounterUpdate: chargeCounter };
+}
+
+function findDistantSpawn(room, player, enemies, origin) {
+  const candidates = [];
+
+  // 1) Candidats intérieurs (plus stables visuellement)
+  for (let y = 1; y < room.height - 1; y++) {
+    for (let x = 1; x < room.width - 1; x++) {
+      if (room.grid[y]?.[x] === 'wall') continue;
+      if (!isCellFree(x, y, enemies, room)) continue;
+      candidates.push({ x, y });
+    }
+  }
+
+  // 2) Fallback si salle trop serrée : on autorise aussi les bords.
+  if (candidates.length === 0) {
+    for (let y = 0; y < room.height; y++) {
+      for (let x = 0; x < room.width; x++) {
+        if (room.grid[y]?.[x] === 'wall') continue;
+        if (!isCellFree(x, y, enemies, room)) continue;
+        candidates.push({ x, y });
+      }
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  // 3) Stratégie principale : loin du joueur et du boss.
+  let best = null;
+  let bestScore = -Infinity;
+  for (const c of candidates) {
+    const distToPlayer = Math.abs(player.x - c.x) + Math.abs(player.y - c.y);
+    if (distToPlayer < 3) continue;
+
+    const distToOrigin = Math.abs(origin.x - c.x) + Math.abs(origin.y - c.y);
+    const score = distToPlayer * 10 + distToOrigin;
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  if (best) return best;
+
+  // 4) Fallback : meilleure case libre même si proche du joueur.
+  best = null;
+  bestScore = -Infinity;
+  for (const c of candidates) {
+    const distToPlayer = Math.abs(player.x - c.x) + Math.abs(player.y - c.y);
+    const distToOrigin = Math.abs(origin.x - c.x) + Math.abs(origin.y - c.y);
+    const score = distToPlayer * 10 + distToOrigin;
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  if (best) return best;
+
+  // 5) Dernier filet : adjacent au boss.
+  const dirs = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+  for (const d of dirs) {
+    const nx = origin.x + d.x;
+    const ny = origin.y + d.y;
+    if (nx < 0 || ny < 0 || nx >= room.width || ny >= room.height) continue;
+    if (room.grid[ny]?.[nx] === 'wall') continue;
+    if (!isCellFree(nx, ny, enemies, room)) continue;
+    return { x: nx, y: ny };
+  }
+
+  return null;
 }
 
 // ─── Pathfinding & utilitaires ────────────────────────────────────────────────

@@ -47,6 +47,11 @@ export const INITIAL_META = {
   gridTheme:         'default', // Thème cosmétique actif du plateau de jeu
   purchasedThemes:   [],        // Thèmes achetés individuellement
   purchasedClasses:  [],        // Classes achetées individuellement
+  threatPreviewEnabled: true,   // Affiche les zones de menace ennemie pré-tour
+  weeklyQuest: {
+    weekKey: '',
+    counters: { kills: 0, runs: 0, wins: 0 },
+  },
   // ── Lore / progression narrative ──────────────────────────────────────────
   prologueShown:     false,     // Prologue affiché une seule fois
   devoreurDefeated:  false,     // Le Dévoreur a été vaincu → débloque Le Gardien
@@ -103,6 +108,15 @@ const useGameStore = create(
             gridTheme:        persisted.meta?.gridTheme         ?? 'default',
             purchasedThemes:  persisted.meta?.purchasedThemes   || [],
             purchasedClasses: persisted.meta?.purchasedClasses  || [],
+            threatPreviewEnabled: persisted.meta?.threatPreviewEnabled ?? true,
+            weeklyQuest: {
+              weekKey: persisted.meta?.weeklyQuest?.weekKey || '',
+              counters: {
+                kills: persisted.meta?.weeklyQuest?.counters?.kills || 0,
+                runs: persisted.meta?.weeklyQuest?.counters?.runs || 0,
+                wins: persisted.meta?.weeklyQuest?.counters?.wins || 0,
+              },
+            },
             prologueShown:    persisted.meta?.prologueShown     ?? false,
             devoreurDefeated: persisted.meta?.devoreurDefeated  ?? false,
             gardienDefeated:  persisted.meta?.gardienDefeated   ?? false,

@@ -34,13 +34,15 @@ export default function EventRoomOverlay() {
       <View style={styles.choices}>
         {currentEvent.choices.map(choice => {
           const locked = choice.requireFragments && player.fragments < choice.requireFragments;
+          const tone = getChoiceTone(choice.effect);
           return (
             <TouchableOpacity
               key={choice.id}
-              style={[styles.choiceBtn, locked && styles.choiceLocked]}
+              style={[styles.choiceBtn, !locked && { borderColor: tone.border }, locked && styles.choiceLocked]}
               onPress={() => !locked && applyEventChoice(choice.id)}
               activeOpacity={locked ? 1 : 0.7}
             >
+              <Text style={[styles.choiceTone, { color: tone.text }]}>{tone.label}</Text>
               <Text style={[styles.choiceLabel, locked && styles.choiceLabelLocked]}>
                 {t(`event.${currentEvent.id}.choice_${choice.id}`, { defaultValue: choice.label })}
               </Text>
@@ -63,6 +65,35 @@ export default function EventRoomOverlay() {
       </View>
     </ScrollView>
   );
+}
+
+function getChoiceTone(effect) {
+  if (!effect) return { label: 'NEUTRE', text: '#AAB0C4', border: '#334055' };
+
+  if (effect.type === 'none') {
+    return { label: 'SAFE', text: '#9AA0B8', border: '#334055' };
+  }
+
+  if (effect.type === 'upgrade_choice') {
+    return { label: 'RÉCOMPENSE', text: '#74E2A8', border: '#2C6A4A' };
+  }
+
+  if (effect.type === 'gamble') {
+    return { label: 'RISQUE / RÉCOMPENSE', text: '#FFB86B', border: '#7A4A1F' };
+  }
+
+  if (effect.type === 'composite') {
+    const hasDamage = (effect.effects || []).some(e => e.type === 'damage');
+    const hasReward = (effect.effects || []).some(e => ['heal', 'fragments', 'score', 'stat_delta', 'upgrade_choice'].includes(e.type));
+    if (hasDamage && hasReward) return { label: 'ÉCHANGE', text: '#FFAA66', border: '#6E4422' };
+    if (hasDamage) return { label: 'RISQUÉ', text: '#FF8F8F', border: '#6A2A2A' };
+    return { label: 'GAIN', text: '#86E8B6', border: '#2F6B4D' };
+  }
+
+  if (effect.type === 'damage') return { label: 'RISQUÉ', text: '#FF8F8F', border: '#6A2A2A' };
+  if (['heal', 'fragments', 'score', 'stat_delta'].includes(effect.type)) return { label: 'GAIN', text: '#86E8B6', border: '#2F6B4D' };
+
+  return { label: 'NEUTRE', text: '#AAB0C4', border: '#334055' };
 }
 
 const styles = StyleSheet.create({
@@ -126,6 +157,12 @@ const styles = StyleSheet.create({
     color: PALETTE.textPrimary,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  choiceTone: {
+    fontSize: 10,
+    letterSpacing: 1.2,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   choiceLabelLocked: {
     color: PALETTE.textMuted,

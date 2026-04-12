@@ -10,6 +10,10 @@ import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
 import { hasCurseSynergy } from '../../systems/upgradeSystem';
 import { playSfx } from '../../services/audioService';
 import { RIFT_MURMURS } from '../../utils/loreData';
+import { getShieldBlockValue } from '../../utils/shield';
+import { getBossIntentState } from '../../utils/bossIntent';
+
+const END_COMBAT_TRANSITION_DELAY_MS = 650;
 
 function findNearest(source, enemies) {
   return enemies.reduce((nearest, e) => {
@@ -19,6 +23,12 @@ function findNearest(source, enemies) {
   });
 }
 
+// Détecte si le type d'ennemi fait des attaques à distance (pour Arrow in the Knee easter egg)
+function isRangedAttackType(enemyType) {
+  const rangedTypes = ['shooter', 'boss_pulse', 'boss_cinder', 'boss_weaver', 'boss_cutter'];
+  return rangedTypes.includes(enemyType);
+}
+
 export const createCombatSlice = (set, get) => ({
 
   // ── État ─────────────────────────────────────────────────────────────────────
@@ -26,7 +36,7 @@ export const createCombatSlice = (set, get) => ({
   enemies:        [],
   isPlayerTurn:   true,
   combatLog:      [],
-  damagePops:     [],   // [{ id, x, y, amount, isPlayer, isCombo }]
+  damagePops:     [],   // [{ id, x, y, amount, isPlayer, isCombo, color }]
   dyingEnemies:   [],   // [{ ...enemySnapshot, dyingAt }]
   killsThisTurn:  0,    // Pour le système de combo
   blinkUsed:        false, // Clignotement (upgrade actif, 1 usage par salle)
@@ -52,7 +62,10 @@ export const createCombatSlice = (set, get) => ({
     const targetEnemy = enemies.find(e => e.x === nx && e.y === ny && e.hp > 0);
     if (targetEnemy) {
       get().playerAttack(targetEnemy.id);
-      get().endPlayerTurn();
+      // Laisse le temps de voir l'impact (pop/log) avant de passer aux ennemis.
+      setTimeout(() => {
+        if (get().player.hp > 0) get().endPlayerTurn();
+      }, 220);
       return;
     }
 
@@ -96,7 +109,10 @@ export const createCombatSlice = (set, get) => ({
     }
 
     if (get().player.hp > 0) {
-      get().endPlayerTurn();
+      // Mouvement joueur: mini-tempo pour mieux lire l'action.
+      setTimeout(() => {
+        if (get().player.hp > 0) get().endPlayerTurn();
+      }, 140);
     }
   },
 
@@ -167,8 +183,10 @@ export const createCombatSlice = (set, get) => ({
       playSfx('attack');
     }
 
-    if (player.statuses?.some(s => s.id === 'attackBoost')) {
-      dmg = Math.floor(dmg * 1.5);
+    const attackBoostStatus = player.statuses?.find(s => s.id === 'attackBoost');
+    if (attackBoostStatus) {
+      const boostMult = Number(attackBoostStatus.value || 1.5);
+      dmg = Math.floor(dmg * boostMult);
       set(state => ({
         player: {
           ...state.player,
@@ -268,22 +286,28 @@ export const createCombatSlice = (set, get) => ({
       set(s => ({ dyingEnemies: s.dyingEnemies.filter(e => e.id !== dyingId) }));
     }, 500);
 
-    // EXPLOSIVE : explose à la mort, AoE rayon 2
+    // EXPLOSIVE : explose à la mort, AoE rayon 3
     if (enemy.behavior === 'explode') {
       const aoeDmg = 4;
       const { player: explP } = get();
-      if (Math.abs(explP.x - enemy.x) + Math.abs(explP.y - enemy.y) <= 2) {
+      if (Math.abs(explP.x - enemy.x) + Math.abs(explP.y - enemy.y) <= 3) {
         get().damagePlayer(aoeDmg);
         get().addLog(`💥 EXPLOSION ! -${aoeDmg} PV !`);
       }
-      const blastTargets = get().enemies.filter(e => e.hp > 0 && Math.abs(e.x - enemy.x) + Math.abs(e.y - enemy.y) <= 2);
+      const blastTargets = get().enemies.filter(e => e.hp > 0 && Math.abs(e.x - enemy.x) + Math.abs(e.y - enemy.y) <= 3);
       blastTargets.forEach(e => get().damageEnemy(e.id, aoeDmg));
       if (blastTargets.length > 0) get().addLog(`💥 Explosion frappe ${blastTargets.length} ennemi(s)`);
     }
 
     // Combo / streak
     const newKillsThisTurn = get().killsThisTurn + 1;
-    set({ killsThisTurn: newKillsThisTurn });
+    set(state => ({
+      killsThisTurn: newKillsThisTurn,
+      run: {
+        ...state.run,
+        killsThisTurn: newKillsThisTurn,
+      },
+    }));
     if (newKillsThisTurn >= 2) {
       const comboScore = newKillsThisTurn * 5;
       get().addComboPop(enemy.x, enemy.y, newKillsThisTurn);
@@ -296,6 +320,23 @@ export const createCombatSlice = (set, get) => ({
           maxComboThisRun:  Math.max(state.run.maxComboThisRun || 0, newKillsThisTurn),
         },
       }));
+
+      // Pentakill easter egg: 5 ennemis tués en 4 tours max
+      if (newKillsThisTurn === 5) {
+        const turnsInRoom = get().run?.turnsInRoom || 0;
+        if (turnsInRoom <= 4) {
+          const alreadyUnlocked = (get().meta?.easterEggTitles || []).includes('pentakill');
+          if (!alreadyUnlocked) {
+            set(s => ({
+              meta: {
+                ...s.meta,
+                easterEggTitles: [...(s.meta.easterEggTitles || []), 'pentakill'],
+              },
+            }));
+            get().addLog(`⚡ PENTAKILL! Easter egg debloque!`);
+          }
+        }
+      }
 
       // Parasitisme : soigne 3 PV par stack lors d'un combo (×curseMult)
       const parasCount = get().activeUpgrades.filter(u => u.id === 'parasitisme').length;
@@ -357,8 +398,9 @@ export const createCombatSlice = (set, get) => ({
       });
     }
 
-    if (activeUpgrades.some(u => u.id === 'leech')) {
-      get().healPlayer(curseMult);
+    const leechCount = activeUpgrades.filter(u => u.id === 'leech').length;
+    if (leechCount > 0) {
+      get().healPlayer(leechCount * curseMult);
     }
 
     // Soif de Sang : -1 PV par kill (×curseMult = malus amplifié)
@@ -367,11 +409,16 @@ export const createCombatSlice = (set, get) => ({
       get().addLog(`🩸 Soif de Sang : -${curseMult} PV`);
     }
 
-    if (activeUpgrades.some(u => u.id === 'chain_reaction')) {
+    const chainCount = activeUpgrades.filter(u => u.id === 'chain_reaction').length;
+    if (chainCount > 0) {
+      const boostMult = 1 + 0.5 * chainCount * curseMult;
       set(state => ({
         player: {
           ...state.player,
-          statuses: [...(state.player.statuses || []), { id: 'attackBoost', duration: 1 }],
+          statuses: [
+            ...(state.player.statuses || []).filter(s => s.id !== 'attackBoost'),
+            { id: 'attackBoost', duration: 1, value: boostMult },
+          ],
         },
       }));
     }
@@ -394,14 +441,20 @@ export const createCombatSlice = (set, get) => ({
 
     const remaining = get().enemies.filter(e => e.hp > 0);
     if (remaining.length === 0 && get().player.hp > 0) {
-      get().onRoomCleared();
+      // Laisse respirer la fin de combat (impact, log, animation de mort)
+      // avant la transition vers l'écran de récompense/upgrade.
+      setTimeout(() => {
+        if (get().player.hp > 0 && get().enemies.filter(e => e.hp > 0).length === 0) {
+          get().onRoomCleared();
+        }
+      }, END_COMBAT_TRANSITION_DELAY_MS);
     }
   },
 
   // ── Dégâts joueur ────────────────────────────────────────────────────────────
 
   damagePlayer: (amount, sourceId) => {
-    const { player, activeUpgrades } = get();
+    const { player, activeUpgrades, enemies } = get();
     const curseMult = hasCurseSynergy(activeUpgrades) ? 2 : 1;
 
     // Esquive : 20%×stacks de chance d'annuler (×curseMult, cap 80%)
@@ -430,9 +483,9 @@ export const createCombatSlice = (set, get) => ({
     }
 
     if (player.shape === PLAYER_SHAPES.HEXAGON) {
-      finalDmg = Math.max(1, Math.floor(finalDmg * 0.5));
+      finalDmg = Math.max(1, Math.floor(finalDmg * 0.7));
       if (sourceId) {
-        const ripDmg = Math.floor(player.attack * 0.5);
+        const ripDmg = Math.max(1, Math.floor(player.attack * 0.35));
         get().damageEnemy(sourceId, ripDmg);
         get().addLog(`🛡️ Riposte : ${ripDmg}`);
       }
@@ -447,9 +500,17 @@ export const createCombatSlice = (set, get) => ({
       }
     }
 
-    const hadShield = player.statuses?.some(s => s.id === 'shield');
+    const shieldStatus = player.statuses?.find(s => s.id === 'shield');
+    const hadShield = !!shieldStatus;
+    const shieldValue = Number(shieldStatus?.value || 0);
+    const beforeShieldDmg = finalDmg;
+    let blockedByShield = 0;
     if (hadShield) {
-      finalDmg = Math.max(1, Math.floor(finalDmg * 0.5));
+      // Compatibilité anciens saves: sans valeur explicite, fallback sur l'ancien comportement (-50%).
+      const fallbackBlocked = Math.max(1, Math.floor(beforeShieldDmg * 0.5));
+      const targetBlock = shieldValue > 0 ? shieldValue : fallbackBlocked;
+      blockedByShield = Math.min(Math.max(0, beforeShieldDmg), targetBlock);
+      finalDmg = Math.max(0, beforeShieldDmg - blockedByShield);
       set(state => ({
         player: {
           ...state.player,
@@ -458,7 +519,7 @@ export const createCombatSlice = (set, get) => ({
       }));
       // Regain : chaque stack = +2 PV quand le bouclier absorbe (×curseMult)
       const regainCount = activeUpgrades.filter(u => u.id === 'regain').length;
-      if (regainCount > 0) {
+      if (regainCount > 0 && blockedByShield > 0) {
         const regainHeal = regainCount * 2 * curseMult;
         get().healPlayer(regainHeal);
         get().addLog(`💚 Regain : +${regainHeal} PV`);
@@ -472,9 +533,23 @@ export const createCombatSlice = (set, get) => ({
       get().addLog(`🌿 Épines : ${thornsDmg}`);
     }
 
+    const sourceEnemy = sourceId ? enemies.find(e => e.id === sourceId) : null;
     get().addLog(`❤️ -${finalDmg} PV`);
-    get().addDamagePop(player.x, player.y, finalDmg, true);
-    set(s => ({ run: { ...s.run, damageTakenInRoom: (s.run.damageTakenInRoom || 0) + finalDmg } }));
+    get().addDamagePop(player.x, player.y, finalDmg, true, sourceEnemy?.color);
+    const sourceKey = sourceId
+      ? `enemy:${sourceEnemy?.type || 'unknown'}`
+      : 'self';
+    set(s => ({
+      run: {
+        ...s.run,
+        damageTakenInRoom: (s.run.damageTakenInRoom || 0) + finalDmg,
+        damageBlockedInRoom: (s.run.damageBlockedInRoom || 0) + blockedByShield,
+        damageBySource: {
+          ...(s.run.damageBySource || {}),
+          [sourceKey]: ((s.run.damageBySource || {})[sourceKey] || 0) + finalDmg,
+        },
+      },
+    }));
 
     // Haptique selon sévérité
     const newHp = player.hp - finalDmg;
@@ -507,7 +582,7 @@ export const createCombatSlice = (set, get) => ({
 
       // Shield Pulse : bouclier après coup ennemi uniquement (pas les auto-dégâts)
       if (sourceId !== undefined && activeUpgrades.some(u => u.id === 'shield_pulse') && !statuses.some(s => s.id === 'shield')) {
-        statuses.push({ id: 'shield', duration: 1 });
+        statuses.push({ id: 'shield', duration: 1, value: getShieldBlockValue(state.player) });
       }
 
       return {
@@ -517,6 +592,12 @@ export const createCombatSlice = (set, get) => ({
     });
 
     if (get().player.hp <= 0) {
+      // Track attack type for Arrow in the Knee easter egg
+      const sourceEnemy = sourceId ? get().enemies.find(e => e.id === sourceId) : null;
+      const attackType = isRangedAttackType(sourceEnemy?.type) ? 'ranged' : 'melee';
+      set(state => ({
+        run: { ...state.run, lastKillingAttackType: attackType },
+      }));
       get().onPlayerDeath();
     }
   },
@@ -569,6 +650,26 @@ export const createCombatSlice = (set, get) => ({
 
     // Timeout anti-blocage : après 50 tours, la salle est neutralisée
     const turnsInRoom = get().run?.turnsInRoom || 0;
+
+    // Anti-kite : à partir de 30 tours, les IA fuyardes passent en mode agressif.
+    if (turnsInRoom >= 30) {
+      const alive = get().enemies.filter(e => e.hp > 0);
+      const fleeingIds = alive
+        .filter(e => e.behavior === 'heal' || e.behavior === 'summon')
+        .map(e => e.id);
+
+      if (fleeingIds.length > 0) {
+        set(s => ({
+          enemies: s.enemies.map(e =>
+            fleeingIds.includes(e.id)
+              ? { ...e, behavior: 'chase' }
+              : e
+          ),
+        }));
+        get().addLog(`⏱ 30 tours — les fuyards deviennent agressifs.`);
+      }
+    }
+
     if (turnsInRoom >= 50 && get().enemies.filter(e => e.hp > 0).length > 0) {
       get().addLog(`⏱ 50 tours — les ennemis se dispersent.`);
       set({ enemies: [], isPlayerTurn: true });
@@ -621,20 +722,27 @@ export const createCombatSlice = (set, get) => ({
         return;
       }
       const current = get().enemies.find(e => e.id === aliveIds[index]);
+      let delay = 180;
       if (current && current.hp > 0) {
-        get().runOneEnemyTurn(aliveIds[index]);
+        delay = get().runOneEnemyTurn(aliveIds[index]) || 180;
       }
-      setTimeout(() => processNext(index + 1), 200);
+      setTimeout(() => processNext(index + 1), delay);
     };
 
     processNext(0);
     // Reset combo counter dès que le tour ennemi commence
-    set({ killsThisTurn: 0 });
+    set(s => ({
+      killsThisTurn: 0,
+      run: {
+        ...s.run,
+        killsThisTurn: 0,
+      },
+    }));
   },
 
   runOneEnemyTurn: (enemyId) => {
     const enemy = get().enemies.find(e => e.id === enemyId);
-    if (!enemy || enemy.hp <= 0) return;
+    if (!enemy || enemy.hp <= 0) return 120;
 
     // 1. Résoudre les statuts actifs (burn, freeze, stun)
     const { skipTurn, skipMovement, dotDamage, updatedStatuses } = resolveEnemyStatuses(enemy);
@@ -651,7 +759,7 @@ export const createCombatSlice = (set, get) => ({
       if (newHp <= 0) {
         const dead = get().enemies.find(e => e.id === enemyId);
         if (dead) get().onEnemyKilled(dead);
-        return;
+        return 260;
       }
     } else {
       set(s => ({
@@ -664,12 +772,28 @@ export const createCombatSlice = (set, get) => ({
     // 3. Étourdi → passe son tour
     if (skipTurn) {
       get().addLog(`💫 ${enemy.type} est étourdi !`);
-      return;
+      return 260;
+    }
+
+    if (enemy.isBoss) {
+      const intent = getBossIntentState(enemy);
+      if (intent) {
+        get().addLog(`⚠ ${intent.name} prépare ${intent.label} (${intent.effect})`);
+      }
+    }
+    else if (enemy.behavior === 'shoot') {
+      get().addLog(`⚠ ${enemy.type} vise`);
+    } else if (enemy.behavior === 'heal') {
+      get().addLog(`⚠ ${enemy.type} se replie`);
+    } else if (enemy.behavior === 'summon') {
+      get().addLog(`⚠ ${enemy.type} invoque`);
+    } else if (enemy.behavior === 'block') {
+      get().addLog(`⚠ ${enemy.type} avance`);
     }
 
     // 4. Traiter l'action (skipMovement=true si gelé)
     const result = processEnemyTurn(enemyId, get(), skipMovement);
-    if (!result) return;
+    if (!result) return 140;
 
     if (result.moved) {
       set(s => ({
@@ -683,6 +807,14 @@ export const createCombatSlice = (set, get) => ({
       set(s => ({
         enemies: s.enemies.map(e =>
           e.id === enemyId ? { ...e, turnCount: result.turnCountUpdate } : e
+        ),
+      }));
+    }
+
+    if (result.chargeCounterUpdate !== undefined) {
+      set(s => ({
+        enemies: s.enemies.map(e =>
+          e.id === enemyId ? { ...e, chargeCounter: result.chargeCounterUpdate } : e
         ),
       }));
     }
@@ -705,16 +837,54 @@ export const createCombatSlice = (set, get) => ({
       }));
     }
 
-    // Invocateur : spawn un nouveau Chasseur
+    if (result.selfStatuses?.length > 0) {
+      set(s => ({
+        enemies: s.enemies.map(e =>
+          e.id === enemyId ? { ...e, statuses: result.selfStatuses.reduce((acc, status) => mergeEnemyStatus(acc, status), e.statuses || []) } : e
+        ),
+      }));
+    }
+
+    // Invocateur : spawn une nouvelle unité
     if (result.summon) {
-      const newChaser = {
-        id: `summoned_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        type: 'chaser', behavior: 'chase',
-        x: result.summonX, y: result.summonY,
-        hp: 5, maxHp: 5, attack: 3, defense: 0, speed: 1,
-        scoreValue: 5, statuses: [],
+      const summonType = result.summonType || 'chaser';
+      const { run } = get();
+      const actBounds = run.actBoundaries || [];
+      const currentAct = run.currentLayerIndex < (actBounds[0] ?? Infinity)
+        ? 1
+        : run.currentLayerIndex < (actBounds[1] ?? Infinity)
+          ? 2
+          : 3;
+      const rawSummonStageMultiplier = currentAct >= 3 ? 1.6 : currentAct === 2 ? 1.25 : 1;
+      const summonStageMultiplier = rawSummonStageMultiplier * 0.85;
+
+      // Acte 3: limite les invocations répétées des invocateurs non-boss.
+      const sourceEnemy = get().enemies.find(e => e.id === enemyId);
+      if (currentAct >= 3 && sourceEnemy?.behavior === 'summon' && (sourceEnemy.summonCount || 0) >= 1) {
+        return 220;
+      }
+
+      const summonTemplates = {
+        chaser:   { type: 'chaser',   behavior: 'chase',  hp: 5, maxHp: 5, attack: 3, defense: 0, speed: 1, scoreValue: 5 },
+        shooter:  { type: 'shooter',  behavior: 'shoot',  hp: 4, maxHp: 4, attack: 2, defense: 0, speed: 1, scoreValue: 5, range: 3 },
+        blocker:  { type: 'blocker',  behavior: 'block',  hp: 6, maxHp: 6, attack: 2, defense: 1, speed: 1, scoreValue: 6 },
+        explosive:{ type: 'explosive', behavior: 'explode', hp: 4, maxHp: 4, attack: 1, defense: 0, speed: 2, scoreValue: 6 },
       };
-      set(s => ({ enemies: [...s.enemies, newChaser] }));
+      const summonTemplateBase = summonTemplates[summonType] || summonTemplates.chaser;
+      const summonTemplate = {
+        ...summonTemplateBase,
+        hp: Math.max(1, Math.round(summonTemplateBase.hp * summonStageMultiplier)),
+        maxHp: Math.max(1, Math.round(summonTemplateBase.maxHp * summonStageMultiplier)),
+        attack: Math.max(1, Math.round(summonTemplateBase.attack * summonStageMultiplier)),
+        defense: Math.max(0, Math.round((summonTemplateBase.defense || 0) * summonStageMultiplier)),
+      };
+      const summonedEnemy = {
+        id: `summoned_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        ...summonTemplate,
+        x: result.summonX, y: result.summonY,
+        statuses: [],
+      };
+      set(s => ({ enemies: [...s.enemies, summonedEnemy] }));
       set(s => ({
         enemies: s.enemies.map(e =>
           e.id === enemyId ? { ...e, summonCount: result.summonCountUpdate } : e
@@ -729,6 +899,13 @@ export const createCombatSlice = (set, get) => ({
     if (result.logs) {
       result.logs.forEach(l => get().addLog(l));
     }
+
+    // Cadence lisible: déplacement, compétences et attaques sont plus espacés.
+    let stepDelay = 180;
+    if (result.moved) stepDelay = 280;
+    if (result.healActions?.length > 0 || result.summon || (result.logs?.length || 0) > 0) stepDelay = Math.max(stepDelay, 380);
+    if (result.playerDamage > 0) stepDelay = Math.max(stepDelay, 460);
+    return stepDelay;
   },
 
   // ── Utilitaires ──────────────────────────────────────────────────────────────
@@ -742,9 +919,9 @@ export const createCombatSlice = (set, get) => ({
     }));
   },
 
-  addDamagePop: (x, y, amount, isPlayer = false) => {
+  addDamagePop: (x, y, amount, isPlayer = false, color = null) => {
     const id = `pop_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    set(s => ({ damagePops: [...s.damagePops.slice(-8), { id, x, y, amount, isPlayer, createdAt: Date.now() }] }));
+    set(s => ({ damagePops: [...s.damagePops.slice(-8), { id, x, y, amount, isPlayer, color, createdAt: Date.now() }] }));
     setTimeout(() => {
       set(s => ({ damagePops: s.damagePops.filter(p => p.id !== id) }));
     }, 900);

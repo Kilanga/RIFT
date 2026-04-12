@@ -10,7 +10,7 @@ import { View, StyleSheet, Dimensions, PanResponder } from 'react-native';
 import Svg, { Polygon, Circle, Rect, Line, G, Text as SvgText } from 'react-native-svg';
 
 import useGameStore from '../store/gameStore';
-import { PLAYER_SHAPES, GRID_SIZE, CELL_TYPES, ENEMY_TYPES, PALETTE } from '../constants';
+import { PLAYER_SHAPES, GRID_SIZE, CELL_TYPES, ENEMY_TYPES, ACT1_BOSS_TYPES, PALETTE } from '../constants';
 import { Assassin, Arcaniste, Colosse, Spectre } from './ClassSilhouettes';
 import { GRID_THEMES } from '../utils/cosmeticCatalog';
 
@@ -36,6 +36,7 @@ export default function GameGrid() {
   const damagePops   = useGameStore(s => s.damagePops);
   const isPlayerTurn = useGameStore(s => s.isPlayerTurn);
   const movePlayer   = useGameStore(s => s.movePlayer);
+  const threatPreviewEnabled = useGameStore(s => s.meta?.threatPreviewEnabled ?? true);
   const gridThemeId      = useGameStore(s => s.meta?.gridTheme ?? 'default');
   const purchasedThemes  = useGameStore(s => s.meta?.purchasedThemes ?? []);
   const themeAccessible  = gridThemeId === 'default' || purchasedThemes.includes(gridThemeId);
@@ -109,6 +110,9 @@ export default function GameGrid() {
   const { grid, width, height } = currentRoom;
   const totalW = width  * CELL_SIZE;
   const totalH = height * CELL_SIZE;
+  const threatTiles = threatPreviewEnabled && isPlayerTurn
+    ? getThreatTiles(enemies, currentRoom)
+    : [];
 
   return (
     <View style={styles.container}>
@@ -134,6 +138,20 @@ export default function GameGrid() {
                 <CellShape key={`${ry}_${rx}`} cell={cell} rx={rx} ry={ry} theme={gridTheme} />
               ))
             )}
+
+            {threatTiles.map(tile => (
+              <Rect
+                key={`threat_${tile.x}_${tile.y}`}
+                x={tile.x * CELL_SIZE + 1}
+                y={tile.y * CELL_SIZE + 1}
+                width={CELL_SIZE - 2}
+                height={CELL_SIZE - 2}
+                fill="rgba(255, 70, 70, 0.17)"
+                stroke="rgba(255, 110, 110, 0.55)"
+                strokeWidth={1}
+                rx={2}
+              />
+            ))}
             <GridLines totalW={totalW} totalH={totalH} theme={gridTheme} />
 
             {/* Ennemis morts — ring d'explosion (rendu sous la silhouette) */}
@@ -352,6 +370,9 @@ function EntityToken({ entity: enemy, opacity = 1, scale = 1, isDying = false })
   const cy = enemy.y * CELL_SIZE + CELL_SIZE / 2;
   const r  = enemy.isBoss ? R * 1.3 : R;
   const color = enemy.color || '#FF4444';
+  const telegraph = bossTelegraph(enemy);
+  const isBossTelegraphImminent = !isDying && !!telegraph && telegraph.countdown <= 1;
+  const isBossTelegraphNow = isBossTelegraphImminent && telegraph.countdown === 0;
 
   const hitEnemyIds = useGameStore(s => s.hitEnemyIds);
   const isHit = !isDying && hitEnemyIds?.has(enemy.id);
@@ -362,6 +383,29 @@ function EntityToken({ entity: enemy, opacity = 1, scale = 1, isDying = false })
 
   return (
     <G opacity={opacity} transform={transformStr}>
+      {isBossTelegraphImminent && (
+        <>
+          <Circle
+            cx={cx}
+            cy={cy}
+            r={r * (isBossTelegraphNow ? 1.95 : 1.65)}
+            fill="none"
+            stroke={isBossTelegraphNow ? telegraph.nowColor : telegraph.warnColor}
+            strokeWidth={isBossTelegraphNow ? 2.4 : 1.6}
+            opacity={isBossTelegraphNow ? 0.7 : 0.45}
+          />
+          <Circle
+            cx={cx}
+            cy={cy}
+            r={r * 1.35}
+            fill="none"
+            stroke={isBossTelegraphNow ? telegraph.nowSoft : telegraph.warnSoft}
+            strokeWidth={1.2}
+            opacity={isBossTelegraphNow ? 0.55 : 0.35}
+          />
+        </>
+      )}
+
       {/* Flash de dégâts */}
       {isHit && <Rect x={enemy.x * CELL_SIZE} y={enemy.y * CELL_SIZE} width={CELL_SIZE} height={CELL_SIZE} fill="#FFFFFF" opacity={0.25} />}
 
@@ -371,7 +415,9 @@ function EntityToken({ entity: enemy, opacity = 1, scale = 1, isDying = false })
       {enemy.type === ENEMY_TYPES.HEALER     && <Guerisseur cx={cx} cy={cy} r={r} color={color} />}
       {enemy.type === ENEMY_TYPES.EXPLOSIVE  && <Explosif   cx={cx} cy={cy} r={r} color={color} />}
       {enemy.type === ENEMY_TYPES.SUMMONER   && <Invocateur cx={cx} cy={cy} r={r} color={color} />}
+      {enemy.type === ENEMY_TYPES.SENTINEL   && <Sentinelle cx={cx} cy={cy} r={r} color={color} />}
       {enemy.type === ENEMY_TYPES.BOSS_VOID  && <Echo       cx={cx} cy={cy} r={r} color={color} />}
+      {ACT1_BOSS_TYPES.includes(enemy.type) && enemy.type !== ENEMY_TYPES.BOSS_VOID && <Act1BossGlyph cx={cx} cy={cy} r={r} color={color} bossType={enemy.type} />}
       {enemy.type === ENEMY_TYPES.BOSS_PULSE && <Tonnerre   cx={cx} cy={cy} r={r} color={color} />}
       {enemy.type === ENEMY_TYPES.BOSS_RIFT  && <Devoreur   cx={cx} cy={cy} r={r} color={color} />}
 
@@ -384,8 +430,189 @@ function EntityToken({ entity: enemy, opacity = 1, scale = 1, isDying = false })
       {!isDying && opacity === 1 && enemy.statuses?.length > 0 && (
         <StatusIcons cx={cx} cy={cy} statuses={enemy.statuses} />
       )}
+
+      {isBossTelegraphImminent && (
+        <SvgText
+          x={cx}
+          y={cy - r * 1.75}
+          fill={isBossTelegraphNow ? telegraph.nowSoft : telegraph.warnSoft}
+          fontSize={CELL_SIZE * 0.16}
+          textAnchor="middle"
+          fontWeight="bold"
+        >
+          {isBossTelegraphNow ? `${telegraph.label}!` : `${telegraph.label} ${telegraph.countdown}`}
+        </SvgText>
+      )}
     </G>
   );
+}
+
+function bossTelegraph(enemy) {
+  const turn = enemy.turnCount || 0;
+
+  if (enemy.type === ENEMY_TYPES.BOSS_VOID) {
+    return {
+      label: 'PULSE',
+      countdown: (3 - ((turn + 1) % 3)) % 3,
+      warnColor: '#BB66FF',
+      warnSoft: '#CC99FF',
+      nowColor: '#FF66FF',
+      nowSoft: '#FFAAFF',
+    };
+  }
+
+  if (ACT1_BOSS_TYPES.includes(enemy.type) && enemy.type !== ENEMY_TYPES.BOSS_VOID) {
+    const telegraphs = {
+      [ENEMY_TYPES.BOSS_CINDER]: {
+        label: 'CENDRE',
+        countdown: (3 - ((turn + 1) % 3)) % 3,
+        warnColor: '#FF8A4A',
+        warnSoft: '#FFB38A',
+        nowColor: '#FF5C22',
+        nowSoft: '#FF9C66',
+      },
+      [ENEMY_TYPES.BOSS_MIRROR]: {
+        label: 'MIROIR',
+        countdown: (2 - ((turn + 1) % 2)) % 2,
+        warnColor: '#FF86C0',
+        warnSoft: '#FFB0D6',
+        nowColor: '#FF4D99',
+        nowSoft: '#FF94C4',
+      },
+      [ENEMY_TYPES.BOSS_WEAVER]: {
+        label: 'FILS',
+        countdown: (3 - ((turn + 1) % 3)) % 3,
+        warnColor: '#C99BFF',
+        warnSoft: '#E0C7FF',
+        nowColor: '#A86BFF',
+        nowSoft: '#D2AEFF',
+      },
+      [ENEMY_TYPES.BOSS_RUST]: {
+        label: 'ROUILLE',
+        countdown: (3 - ((turn + 1) % 3)) % 3,
+        warnColor: '#C9B89B',
+        warnSoft: '#E3D7C7',
+        nowColor: '#A89271',
+        nowSoft: '#D3C1A6',
+      },
+      [ENEMY_TYPES.BOSS_CUTTER]: {
+        label: 'FENTE',
+        countdown: (2 - ((turn + 1) % 2)) % 2,
+        warnColor: '#7DDFFF',
+        warnSoft: '#B8F0FF',
+        nowColor: '#33C5FF',
+        nowSoft: '#8BE6FF',
+      },
+    };
+    return telegraphs[enemy.type] || null;
+  }
+
+  if (enemy.type === ENEMY_TYPES.BOSS_PULSE) {
+    return {
+      label: 'ONDE',
+      countdown: (2 - ((turn + 1) % 2)) % 2,
+      warnColor: '#FFAA44',
+      warnSoft: '#FFD18A',
+      nowColor: '#FF7722',
+      nowSoft: '#FFB066',
+    };
+  }
+
+  if (enemy.type === ENEMY_TYPES.BOSS_RIFT) {
+    return {
+      label: 'RIFT',
+      countdown: (3 - ((turn + 1) % 3)) % 3,
+      warnColor: '#FF6688',
+      warnSoft: '#FF9AAF',
+      nowColor: '#FF335C',
+      nowSoft: '#FF7F98',
+    };
+  }
+
+  if (enemy.type === ENEMY_TYPES.BOSS_GUARDIAN) {
+    return {
+      label: 'ONDE',
+      countdown: (4 - ((turn + 1) % 4)) % 4,
+      warnColor: '#66CCFF',
+      warnSoft: '#A4E2FF',
+      nowColor: '#2FB8FF',
+      nowSoft: '#7AD6FF',
+    };
+  }
+
+  if (enemy.type === ENEMY_TYPES.BOSS_ENTITY) {
+    return {
+      label: 'BLAST',
+      countdown: (3 - ((turn + 1) % 3)) % 3,
+      warnColor: '#FF4477',
+      warnSoft: '#FF8AAA',
+      nowColor: '#FF1144',
+      nowSoft: '#FF668A',
+    };
+  }
+
+  return null;
+}
+
+function getThreatTiles(enemies, room) {
+  if (!room) return [];
+
+  const threat = new Set();
+  const inBounds = (x, y) => x >= 0 && y >= 0 && x < room.width && y < room.height;
+  const isBlocked = (x, y) => room.grid?.[y]?.[x] === CELL_TYPES.WALL;
+  const mark = (x, y) => {
+    if (!inBounds(x, y)) return;
+    if (isBlocked(x, y)) return;
+    threat.add(`${x},${y}`);
+  };
+
+  const liveEnemies = (enemies || []).filter(e => e.hp > 0);
+  for (const enemy of liveEnemies) {
+    const dirs = [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }];
+    const behavior = enemy.behavior;
+
+    if (behavior === 'shoot' || behavior === 'sentinel') {
+      const sentinelCharges = behavior === 'sentinel'
+        ? Math.floor((enemy.chargeCounter || 0) / 2)
+        : 0;
+      const baseRange = behavior === 'sentinel'
+        ? ((enemy.range || 0) + sentinelCharges)
+        : (enemy.range ?? 3);
+      const range = Math.max(0, baseRange);
+      if (range <= 0) continue;
+      for (const { dx, dy } of dirs) {
+        for (let step = 1; step <= range; step += 1) {
+          const tx = enemy.x + dx * step;
+          const ty = enemy.y + dy * step;
+          if (!inBounds(tx, ty)) break;
+          if (isBlocked(tx, ty)) break;
+          mark(tx, ty);
+        }
+      }
+      continue;
+    }
+
+    // Menace de contact (melee / dash court) : 4 cases adjacentes.
+    for (const { dx, dy } of dirs) {
+      mark(enemy.x + dx, enemy.y + dy);
+    }
+
+    // Pulse type : menace plus large autour du boss.
+    if (enemy.type === ENEMY_TYPES.BOSS_PULSE) {
+      for (let oy = -2; oy <= 2; oy += 1) {
+        for (let ox = -2; ox <= 2; ox += 1) {
+          if (Math.abs(ox) + Math.abs(oy) <= 2) {
+            mark(enemy.x + ox, enemy.y + oy);
+          }
+        }
+      }
+    }
+  }
+
+  return [...threat].map(k => {
+    const [x, y] = k.split(',').map(Number);
+    return { x, y };
+  });
 }
 
 // ─── Silhouettes joueurs ──────────────────────────────────────────────────────
@@ -604,6 +831,21 @@ function Invocateur({ cx, cy, r, color }) {
   );
 }
 
+// Sentinelle : sentinelle longue portée avec couloir de tir
+function Sentinelle({ cx, cy, r, color }) {
+  return (
+    <G>
+      <Circle cx={cx} cy={cy - r*0.8} r={r*0.3} fill={color} />
+      <Rect x={cx - r*0.22} y={cy - r*0.45} width={r*0.44} height={r*1.45} fill={color} rx={r*0.05} />
+      <Line x1={cx} y1={cy - r*0.9} x2={cx} y2={cy + r*0.95} stroke={PALETTE.bg} strokeWidth={1.2} opacity={0.25} />
+      <Line x1={cx - r*0.65} y1={cy - r*0.1} x2={cx + r*0.65} y2={cy - r*0.1} stroke={color} strokeWidth={2.2} opacity={0.9} />
+      <Line x1={cx - r*0.45} y1={cy - r*0.45} x2={cx - r*0.75} y2={cy - r*0.9} stroke={color} strokeWidth={1.4} opacity={0.8} />
+      <Line x1={cx + r*0.45} y1={cy - r*0.45} x2={cx + r*0.75} y2={cy - r*0.9} stroke={color} strokeWidth={1.4} opacity={0.8} />
+      <Circle cx={cx} cy={cy - r*1.05} r={r*0.12} fill="#FFFFFF" opacity={0.9} />
+    </G>
+  );
+}
+
 // ─── Icônes de statut ─────────────────────────────────────────────────────────
 
 function StatusIcons({ cx, cy, statuses }) {
@@ -646,11 +888,69 @@ function DamagePop({ pop, now }) {
     );
   }
   return (
-    <SvgText x={cx} y={cy} fill={pop.isPlayer ? '#FF4444' : '#FFD700'}
+    <SvgText x={cx} y={cy} fill={pop.color || (pop.isPlayer ? '#FF4444' : '#FFD700')}
+      stroke={pop.isPlayer ? 'rgba(0,0,0,0.55)' : 'transparent'} strokeWidth={pop.isPlayer ? 1.8 : 0}
+      paintOrder="stroke"
       fontSize={CELL_SIZE*0.36} fontWeight="bold" textAnchor="middle" opacity={opacity}>
       -{pop.amount}
     </SvgText>
   );
+}
+
+function Act1BossGlyph({ cx, cy, r, color, bossType }) {
+  if (bossType === ENEMY_TYPES.BOSS_CINDER) {
+    return (
+      <G>
+        <Circle cx={cx} cy={cy} r={r * 0.95} fill="none" stroke={color} strokeWidth={1.5} opacity={0.8} />
+        <Polygon points={geoTri(cx, cy - r * 0.18, r * 0.55)} fill={color} opacity={0.85} />
+        <Polygon points={geoTri(cx - r * 0.45, cy + r * 0.2, r * 0.28)} fill={color} opacity={0.5} />
+        <Polygon points={geoTri(cx + r * 0.45, cy + r * 0.2, r * 0.28)} fill={color} opacity={0.5} />
+      </G>
+    );
+  }
+
+  if (bossType === ENEMY_TYPES.BOSS_MIRROR) {
+    return (
+      <G>
+        <Circle cx={cx - r * 0.22} cy={cy} r={r * 0.48} fill={color} opacity={0.22} />
+        <Circle cx={cx + r * 0.22} cy={cy} r={r * 0.48} fill="none" stroke={color} strokeWidth={1.5} opacity={0.85} />
+        <Line x1={cx - r * 0.55} y1={cy - r * 0.55} x2={cx + r * 0.55} y2={cy + r * 0.55} stroke={color} strokeWidth={1.8} opacity={0.7} />
+      </G>
+    );
+  }
+
+  if (bossType === ENEMY_TYPES.BOSS_WEAVER) {
+    return (
+      <G>
+        <Circle cx={cx} cy={cy} r={r * 0.96} fill="none" stroke={color} strokeWidth={1.2} opacity={0.45} />
+        <Line x1={cx - r * 0.8} y1={cy - r * 0.55} x2={cx + r * 0.8} y2={cy + r * 0.55} stroke={color} strokeWidth={1.5} opacity={0.85} />
+        <Line x1={cx + r * 0.8} y1={cy - r * 0.55} x2={cx - r * 0.8} y2={cy + r * 0.55} stroke={color} strokeWidth={1.5} opacity={0.85} />
+        <Line x1={cx} y1={cy - r * 0.9} x2={cx} y2={cy + r * 0.9} stroke={color} strokeWidth={1.2} opacity={0.45} />
+      </G>
+    );
+  }
+
+  if (bossType === ENEMY_TYPES.BOSS_RUST) {
+    return (
+      <G>
+        <Polygon points={`${cx},${cy - r * 0.95} ${cx + r * 0.7},${cy - r * 0.15} ${cx + r * 0.45},${cy + r * 0.9} ${cx - r * 0.45},${cy + r * 0.9} ${cx - r * 0.7},${cy - r * 0.15}`} fill={color} opacity={0.55} />
+        <Line x1={cx - r * 0.35} y1={cy - r * 0.2} x2={cx + r * 0.35} y2={cy + r * 0.35} stroke="#FFFFFF" strokeWidth={1.3} opacity={0.22} />
+        <Line x1={cx + r * 0.35} y1={cy - r * 0.2} x2={cx - r * 0.25} y2={cy + r * 0.35} stroke="#FFFFFF" strokeWidth={1.3} opacity={0.22} />
+      </G>
+    );
+  }
+
+  if (bossType === ENEMY_TYPES.BOSS_CUTTER) {
+    return (
+      <G>
+        <Line x1={cx - r * 0.8} y1={cy + r * 0.35} x2={cx + r * 0.8} y2={cy - r * 0.35} stroke={color} strokeWidth={2.2} opacity={0.95} />
+        <Line x1={cx - r * 0.6} y1={cy + r * 0.05} x2={cx + r * 0.45} y2={cy - r * 0.6} stroke={color} strokeWidth={1.2} opacity={0.6} />
+        <Line x1={cx - r * 0.45} y1={cy + r * 0.6} x2={cx + r * 0.6} y2={cy - r * 0.05} stroke={color} strokeWidth={1.2} opacity={0.6} />
+      </G>
+    );
+  }
+
+  return <Circle cx={cx} cy={cy} r={r * 0.9} fill={color} opacity={0.9} />;
 }
 
 // ─── Utilitaires SVG ──────────────────────────────────────────────────────────

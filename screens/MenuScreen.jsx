@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Line } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
-import { PALETTE, PERMANENT_UPGRADES_CATALOG, PLAYER_SHAPES, CLASS_INFO } from '../constants';
+import { PALETTE, PERMANENT_UPGRADES_CATALOG, PLAYER_SHAPES, CLASS_INFO, PREMIUM_SHOP_ENABLED } from '../constants';
 import { Assassin, Arcaniste, Colosse, Spectre } from '../components/ClassSilhouettes';
 import { fetchTopScores, fetchDailyScores } from '../services/leaderboardService';
 import PlayerNameModal from '../components/PlayerNameModal';
@@ -53,6 +53,7 @@ export default function MenuScreen() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [dailyTab, setDailyTab]           = useState(false);
   const [showTutorial, setShowTutorial]   = useState(false);
+  const [tutorialMode, setTutorialMode]   = useState('full');
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +68,10 @@ export default function MenuScreen() {
 
   // Afficher le tuto automatiquement à la toute première visite
   useEffect(() => {
-    if (meta.totalRuns === 0) setShowTutorial(true);
+    if (meta.totalRuns === 0) {
+      setTutorialMode('quick');
+      setShowTutorial(true);
+    }
   }, []);
 
   const handleDailyRun = () => {
@@ -120,31 +124,52 @@ export default function MenuScreen() {
           </View>
 
           {/* ── Boutique ── */}
-          <TouchableOpacity
-            style={[styles.btnShop, meta.isPremium && styles.btnShopPremium]}
-            onPress={goToPremiumShop}
-            activeOpacity={0.75}
-          >
-            <Text style={styles.btnShopIcon}>{meta.isPremium ? '★' : '💎'}</Text>
-            <View style={styles.btnShopCenter}>
-              <Text style={[styles.btnShopTitle, meta.isPremium && styles.btnShopTitlePremium]}>
-                {t('menu.shop_title', { defaultValue: 'BOUTIQUE' })}
-              </Text>
-              <Text style={styles.btnShopSub}>
-                {meta.isPremium
-                  ? t('menu.shop_sub_premium', { defaultValue: 'Thèmes · Classes · Cosmétiques' })
-                  : t('menu.shop_sub', { defaultValue: 'Thèmes · Classes · Accès Premium' })}
-              </Text>
+          {PREMIUM_SHOP_ENABLED ? (
+            <TouchableOpacity
+              style={[styles.btnShop, meta.isPremium && styles.btnShopPremium]}
+              onPress={goToPremiumShop}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.btnShopIcon}>{meta.isPremium ? '★' : '💎'}</Text>
+              <View style={styles.btnShopCenter}>
+                <Text style={[styles.btnShopTitle, meta.isPremium && styles.btnShopTitlePremium]}>
+                  {t('menu.shop_title', { defaultValue: 'BOUTIQUE' })}
+                </Text>
+                <Text style={styles.btnShopSub}>
+                  {meta.isPremium
+                    ? t('menu.shop_sub_premium', { defaultValue: 'Thèmes · Classes · Cosmétiques' })
+                    : t('menu.shop_sub', { defaultValue: 'Thèmes · Classes · Accès Premium' })}
+                </Text>
+              </View>
+              <Text style={[styles.btnShopArrow, meta.isPremium && styles.btnShopArrowPremium]}>›</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.btnShop, styles.btnShopDisabled]}>
+              <View style={styles.betaBadge}>
+                <Text style={styles.betaBadgeTxt}>BETA</Text>
+              </View>
+              <Text style={styles.btnShopIcon}>🚧</Text>
+              <View style={styles.btnShopCenter}>
+                <Text style={styles.btnShopTitle}>BOUTIQUE</Text>
+                <Text style={styles.btnShopSub}>Premium désactivé pour la bêta</Text>
+              </View>
+              <Text style={styles.btnShopArrow}>•</Text>
             </View>
-            <Text style={[styles.btnShopArrow, meta.isPremium && styles.btnShopArrowPremium]}>›</Text>
-          </TouchableOpacity>
+          )}
 
           <View style={styles.btnBottomRow}>
             <TouchableOpacity style={[styles.btnMulti, { flex: 1 }]} onPress={goToMultiplayer} activeOpacity={0.75}>
               <Text style={styles.btnMultiTxt}>⚔</Text>
               <Text style={styles.btnMultiLabel}>MULTI</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.btnHelp, { flex: 1 }]} onPress={() => setShowTutorial(true)} activeOpacity={0.75}>
+            <TouchableOpacity
+              style={[styles.btnHelp, { flex: 1 }]}
+              onPress={() => {
+                setTutorialMode('full');
+                setShowTutorial(true);
+              }}
+              activeOpacity={0.75}
+            >
               <Text style={styles.btnHelpTxt}>?</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btnTalents, { flex: 1 }]} onPress={goToTalentTree} activeOpacity={0.75}>
@@ -210,13 +235,11 @@ export default function MenuScreen() {
 
       <TutorialOverlay
         visible={showTutorial}
+        mode={tutorialMode}
         onClose={() => setShowTutorial(false)}
       />
     </SafeAreaView>
   );
-      width:             '100%',
-      maxWidth:          860,
-      alignSelf:         'center',
 }
 
 // ─── Logo animé ───────────────────────────────────────────────────────────────
@@ -613,6 +636,9 @@ function RunHistory({ entries }) {
 const styles = StyleSheet.create({
   safe:      { flex: 1, backgroundColor: PALETTE.bg },
   container: {
+    width:             '100%',
+    maxWidth:          860,
+    alignSelf:         'center',
     alignItems:        'center',
     paddingVertical:   IS_LARGE_TABLET ? 44 : IS_TABLET ? 36 : 32,
     paddingHorizontal: IS_LARGE_TABLET ? 28 : IS_TABLET ? 24 : 20,
@@ -697,10 +723,32 @@ const styles = StyleSheet.create({
     paddingVertical:   14,
     paddingHorizontal: 18,
     gap:               12,
+    position:          'relative',
   },
   btnShopPremium: {
     backgroundColor: '#1A1200',
     borderColor:     '#FFD700',
+  },
+  btnShopDisabled: {
+    opacity: 0.7,
+    borderColor: '#886644',
+  },
+  betaBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 10,
+    backgroundColor: '#FFAA00',
+    borderWidth: 1,
+    borderColor: '#FFD580',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  betaBadgeTxt: {
+    color: '#2A1600',
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
   btnShopIcon: {
     fontSize:   18,

@@ -14,6 +14,8 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 import useGameStore from './store/gameStore';
 import { GAME_PHASES, PALETTE } from './constants';
 import { initAudio, playMusic, setMusicEnabled, setSfxEnabled, setMusicVolume, setSfxVolume } from './services/audioService';
+import { flushAnalyticsQueue } from './services/analyticsService';
+import { initCrashReporter } from './services/crashReporter';
 import i18n from './utils/i18n';
 
 import MenuScreen               from './screens/MenuScreen';
@@ -77,7 +79,15 @@ export default function App() {
   // Initialisation audio + vérification des achats au démarrage
   useEffect(() => {
     initAudio();
+    initCrashReporter();
     syncPurchases();
+    flushAnalyticsQueue();
+
+    const flushId = setInterval(() => {
+      flushAnalyticsQueue();
+    }, 45000);
+
+    return () => clearInterval(flushId);
   }, []);
 
   // Synchroniser les préférences audio persistées avec le service

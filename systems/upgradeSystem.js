@@ -43,7 +43,7 @@ export const ALL_UPGRADES = [
   // ── Bleu (utilitaire / défensif) ──────────────────────────────────────────
   {
     id: 'shield_pulse', name: 'Impulsion Bouclier', color: UPGRADE_COLORS.BLUE, rarity: 'common', maxStack: 1,
-    description: 'Après avoir subi des dégâts → bouclier pendant 1 tour.',
+    description: 'Après avoir subi des dégâts → bouclier sur le prochain coup.',
     effect: { type: 'passive', trigger: 'onDamaged', action: 'applyStatus', status: 'shield', duration: 1 },
     tags: ['défense', 'survie'],
   },
@@ -88,7 +88,7 @@ export const ALL_UPGRADES = [
   // ── Vert (soin / support) ─────────────────────────────────────────────────
   {
     id: 'regen', name: 'Régénération', color: UPGRADE_COLORS.GREEN, rarity: 'common', maxStack: 3,
-    description: '+1 PV par salle complétée.',
+    description: '+1 PV par salle complétée par stack.',
     effect: { type: 'passive', trigger: 'onRoomCleared', action: 'heal', value: 1 },
     tags: ['soin', 'survie'],
   },
@@ -100,7 +100,7 @@ export const ALL_UPGRADES = [
   },
   {
     id: 'leech', name: 'Vol de vie', color: UPGRADE_COLORS.GREEN, rarity: 'rare', maxStack: 2,
-    description: '+1 PV par ennemi tué.',
+    description: '+1 PV par ennemi tué par stack.',
     effect: { type: 'passive', trigger: 'onKill', action: 'heal', value: 1 },
     tags: ['soin', 'kill'],
   },
@@ -152,7 +152,7 @@ export const ALL_UPGRADES = [
   // ── Bleu utilitaire supplémentaire ────────────────────────────────────────
   {
     id: 'fortifie', name: 'Fortifié', color: UPGRADE_COLORS.BLUE, rarity: 'epic', maxStack: 1,
-    description: 'Début de chaque salle : bouclier actif automatiquement.',
+    description: 'Début de chaque salle : bouclier appliqué automatiquement.',
     effect: { type: 'passive', trigger: 'onRoomEnter', action: 'applyStatus', status: 'shield' },
     tags: ['défense', 'bouclier'],
   },
@@ -278,34 +278,67 @@ const UPGRADE_MAP = ALL_UPGRADES.reduce((acc, u) => { acc[u.id] = u; return acc;
 export function getUpgradeChoices(activeUpgrades, count = 3) {
   const stackCount = {};
   activeUpgrades.forEach(u => { stackCount[u.id] = (stackCount[u.id] || 0) + 1; });
+  const colorCount = countByColor(activeUpgrades);
+  const dominantColor = Object.entries(colorCount)
+    .sort((a, b) => b[1] - a[1])
+    .find(([, value]) => value > 0)?.[0] || null;
 
   const available = ALL_UPGRADES.filter(u => (stackCount[u.id] || 0) < u.maxStack);
   if (available.length <= count) return [...available];
 
   const weighted = available.flatMap(u => {
-    if (u.rarity === 'common') return [u, u, u];
-    if (u.rarity === 'rare')   return [u, u];
-    return [u]; // epic + curse = weight 1
+    const rarityWeight = u.rarity === 'common' ? 3
+               : u.rarity === 'rare'   ? 2
+               : u.rarity === 'epic'   ? 1.2
+               : u.rarity === 'curse'  ? 3
+               : 1;
+    const affinityStacks = dominantColor && u.color === dominantColor ? Math.max(0, colorCount[dominantColor] || 0) : 0;
+    const affinityWeight = dominantColor && u.color === dominantColor
+      ? 1 + Math.min(0.5, affinityStacks * 0.12)
+      : 1;
+    const copies = Math.max(1, Math.round(rarityWeight * affinityWeight));
+    return Array.from({ length: copies }, () => u);
   });
 
   const selected    = [];
   const usedIds     = new Set();
-  let   cursePicked = false;
+  let   cursePicked = 0;
   let   attempts    = 0;
 
   while (selected.length < count && attempts < 200) {
     attempts++;
     const candidate = weighted[Math.floor(Math.random() * weighted.length)];
-    // Au plus 1 malédiction par sélection
-    if (candidate.rarity === 'curse' && cursePicked) continue;
+    // Au plus 2 malédictions par sélection
+    if (candidate.rarity === 'curse' && cursePicked >= 2) continue;
     if (!usedIds.has(candidate.id)) {
       usedIds.add(candidate.id);
       selected.push(candidate);
-      if (candidate.rarity === 'curse') cursePicked = true;
+      if (candidate.rarity === 'curse') cursePicked += 1;
     }
   }
 
   return selected;
+}
+
+/**
+ * Retourne la couleur actuellement la plus avancée pour guider les choix.
+ * Si rien n'est assez clair, renvoie null pour rester neutre.
+ */
+export function getBuildRecommendation(activeUpgrades) {
+  const colorCount = countByColor(activeUpgrades);
+  const entries = Object.entries(colorCount)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (entries.length === 0) return null;
+
+  const [color, count] = entries[0];
+  const secondCount = entries[1]?.[1] || 0;
+
+  // Pas de recommandation si la direction n'est pas assez nette.
+  if (count < 2 || count - secondCount < 1) return null;
+
+  return { color, count, secondCount };
 }
 
 /**
@@ -331,6 +364,7 @@ export function computePlayerStats(basePlayer, activeUpgrades) {
 
   // Synnergie malédiction : ×2 à tous les effets si 3 upgrades maudites
   const curseMult = hasCurseSynergy(activeUpgrades) ? 2 : 1;
+  const colorCount = countByColor(activeUpgrades);
 
   activeUpgrades.forEach(u => {
     if (u.effect.type === 'stat') {
@@ -342,10 +376,20 @@ export function computePlayerStats(basePlayer, activeUpgrades) {
     }
   });
 
-  // Résonance : ×2 sur attaque et défense si 3 upgrades même couleur
+  // Synergies couleur (7/7): bonus passifs globaux.
+  if (colorCount[UPGRADE_COLORS.RED] >= 7) {
+    stats.attack += 2 * curseMult;
+  }
+  if (colorCount[UPGRADE_COLORS.BLUE] >= 7) {
+    stats.defense += 2 * curseMult;
+  }
+  if (colorCount[UPGRADE_COLORS.GREEN] >= 7) {
+    stats.maxHp += 6 * curseMult;
+  }
+
+  // Résonance : ×2 sur attaque et défense si 7 upgrades même couleur
   if (activeUpgrades.some(u => u.id === 'resonance')) {
-    const colorCount = countByColor(activeUpgrades);
-    const hasTriple  = Object.values(colorCount).some(c => c >= 3);
+    const hasTriple  = Object.values(colorCount).some(c => c >= 7);
     if (hasTriple) {
       stats.attack  *= 2;
       stats.defense *= 2;
@@ -373,7 +417,7 @@ export function hasCurseSynergy(upgrades)      { return upgrades.filter(u => u.c
 export function getSynergySummary(activeUpgrades) {
   const colorCount = countByColor(activeUpgrades);
   return Object.entries(colorCount).map(([color, count]) => ({
-    color, count, active: count >= 3,
+    color, count, active: color === UPGRADE_COLORS.CURSE ? count >= 3 : count >= 7,
   }));
 }
 

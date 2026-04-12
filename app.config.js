@@ -24,8 +24,7 @@ module.exports = {
         'android.permission.RECORD_AUDIO',
       ],
       package:     'com.rift.roguelite',
-      versionCode: 2,
-      locales:     ['fr', 'en'],
+      versionCode: 11,
     },
     web: {
       bundler: 'metro',
@@ -38,6 +37,7 @@ module.exports = {
       },
     },
     plugins: [
+      'expo-localization',
       [
         '@stripe/stripe-react-native',
         {
