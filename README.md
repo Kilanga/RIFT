@@ -1,5 +1,11 @@
 # RIFT
 
+## Build et secrets
+
+Les fichiers `.env` locaux ne sont pas pris en compte par Git, mais Expo les lit au moment du build AAB si tu les as présents sur la machine. Tout ce qui est préfixé `EXPO_PUBLIC_` est destiné à être public dans l'app, donc il ne faut jamais y mettre de secret backend.
+
+Le projet fournit un template de configuration dans [.env.example](.env.example). Les secrets réels doivent rester côté serveur, par exemple dans les Secrets Supabase pour les Edge Functions.
+
 ## Supabase hardening
 
 Une migration SQL de durcissement est incluse ici:

@@ -6,13 +6,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Modal, Pressable,
+  Modal, Pressable, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, Rect, G } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
 import { PALETTE, UPGRADE_COLORS } from '../constants';
+import { getBuildRecommendation } from '../systems/upgradeSystem';
 
 const RARITY_COLORS = {
   common: PALETTE.textMuted,
@@ -29,8 +30,17 @@ export default function UpgradeModal() {
   const selectUpgrade  = useGameStore(s => s.selectUpgrade);
   const activeUpgrades = useGameStore(s => s.activeUpgrades);
   const run            = useGameStore(s => s.run);
+  const buildRecommendation = getBuildRecommendation(activeUpgrades);
+  const countByColor = {
+    red: activeUpgrades.filter(u => u.color === 'red').length,
+    blue: activeUpgrades.filter(u => u.color === 'blue').length,
+    green: activeUpgrades.filter(u => u.color === 'green').length,
+    curse: activeUpgrades.filter(u => u.color === 'curse').length,
+  };
 
   const [selected, setSelected] = useState(null);
+  const [showBuildSheet, setShowBuildSheet] = useState(false);
+  const [selectedBuild, setSelectedBuild] = useState(null);
 
   const visible = phase === 'upgradeChoice';
   if (!visible || upgradeChoices.length === 0) return null;
@@ -52,20 +62,40 @@ export default function UpgradeModal() {
               <Text style={styles.subtitle}>
                 {t('upgrade_modal.subtitle', { num: activeUpgrades.length + 1, room: run.roomsCleared })}
               </Text>
+              {buildRecommendation && (
+                <View style={styles.buildHint}>
+                  <Text style={[styles.buildHintTxt, { color: upgradeHex(buildRecommendation.color) }]}>
+                    {t('upgrade_modal.build_hint', {
+                      color: colorLabel(buildRecommendation.color, t),
+                    })}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* ── Barre de synergies ──────────────────────────────────── */}
             <SynergyBar upgrades={activeUpgrades} choices={upgradeChoices} />
+            <SynergyLegend />
+            {activeUpgrades.length > 0 && (
+              <TouchableOpacity style={styles.buildBtn} onPress={() => setShowBuildSheet(true)} activeOpacity={0.75}>
+                <Text style={styles.buildBtnTxt}>
+                  ◎ {t('victory.build_final')} · R {countByColor.red} · B {countByColor.blue} · V {countByColor.green}
+                  {countByColor.curse > 0 ? ` · ☠ ${countByColor.curse}` : ''}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* ── Cartes compactes ────────────────────────────────────── */}
             <View style={styles.cards}>
               {upgradeChoices.map(upgrade => {
                 const wouldSynergy = wouldActivateSynergy(upgrade, activeUpgrades);
+                const isRecommended = buildRecommendation?.color === upgrade.color && upgrade.color !== UPGRADE_COLORS.CURSE;
                 return (
                   <CompactCard
                     key={upgrade.id}
                     upgrade={upgrade}
                     wouldSynergy={wouldSynergy}
+                    isRecommended={isRecommended}
                     isSelected={selected === upgrade.id}
                     onPress={() => handleSelect(upgrade.id)}
                   />
@@ -74,6 +104,17 @@ export default function UpgradeModal() {
             </View>
 
             <Text style={styles.hint}>{t('upgrade_modal.hint')}</Text>
+
+            <BuildSnapshotSheet
+              visible={showBuildSheet}
+              upgrades={activeUpgrades}
+              selected={selectedBuild}
+              onSelect={setSelectedBuild}
+              onClose={() => {
+                setShowBuildSheet(false);
+                setSelectedBuild(null);
+              }}
+            />
 
           </View>
         </SafeAreaView>
@@ -84,7 +125,7 @@ export default function UpgradeModal() {
 
 // ─── Carte compacte ───────────────────────────────────────────────────────────
 
-function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
+function CompactCard({ upgrade, wouldSynergy, isRecommended, isSelected, onPress }) {
   const { t } = useTranslation();
   const color       = upgradeHex(upgrade.color);
   const rarityColor = RARITY_COLORS[upgrade.rarity] || RARITY_COLORS.common;
@@ -101,8 +142,9 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { borderColor: wouldSynergy ? color : isEpic ? color + 'AA' : PALETTE.border },
+        { borderColor: wouldSynergy ? color : isRecommended ? color + '88' : isEpic ? color + 'AA' : PALETTE.border },
         wouldSynergy && { backgroundColor: color + '12' },
+        isRecommended && !wouldSynergy && { backgroundColor: color + '08' },
         (pressed || isSelected) && { opacity: 0.7, transform: [{ scale: 0.97 }] },
       ]}
     >
@@ -121,6 +163,9 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
               {t(`upgrade.${upgrade.id}.name`, { defaultValue: upgrade.name })}
             </Text>
             <View style={styles.cardTags}>
+              {isRecommended && (
+                <Text style={[styles.cardRecommend, { color }]}>● {t('upgrade_modal.recommended')}</Text>
+              )}
               <Text style={[styles.cardRarity, { color: rarityColor }]}>
                 {rarityLabels[upgrade.rarity] || t('upgrade_modal.rarity_common')}
               </Text>
@@ -130,11 +175,14 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
           <Text style={[styles.cardDesc, { color: color + 'CC' }]} numberOfLines={2}>
             {t(`upgrade.${upgrade.id}.desc`, { defaultValue: upgrade.description })}
           </Text>
-          {wouldSynergy && (
-            <Text style={[styles.cardSynText, { color }]}>
-              {t('upgrade_modal.synergy_trigger', { color: colorLabel(upgrade.color, t) })}
-            </Text>
-          )}
+                  {wouldSynergy && (
+                    <Text style={[styles.cardSynText, { color }]}>
+                      {t('upgrade_modal.synergy_trigger_with_effect', {
+                        color: colorLabel(upgrade.color, t),
+                        effect: synergyEffectLabel(upgrade.color, t),
+                      })}
+                    </Text>
+                  )}
         </View>
 
         {/* Badge synergie */}
@@ -149,6 +197,7 @@ function CompactCard({ upgrade, wouldSynergy, isSelected, onPress }) {
 // ─── Barre de synergies ───────────────────────────────────────────────────────
 
 function SynergyBar({ upgrades, choices }) {
+  const { width } = useWindowDimensions();
   const allColors = [UPGRADE_COLORS.RED, UPGRADE_COLORS.BLUE, UPGRADE_COLORS.GREEN, UPGRADE_COLORS.CURSE];
   const curseInChoices = choices.some(c => c.color === UPGRADE_COLORS.CURSE);
   const curseInActive  = upgrades.some(u => u.color === UPGRADE_COLORS.CURSE);
@@ -163,8 +212,10 @@ function SynergyBar({ upgrades, choices }) {
     <View style={styles.synergyBar}>
       {Object.entries(counts).map(([color, count]) => {
         const hex    = upgradeHex(color);
-        const active = count >= 3;
-        const almost = count === 2 && choices.some(c => c.color === color);
+        const target = color === UPGRADE_COLORS.CURSE ? 3 : 7;
+        const dense = target > 4 && width < 390;
+        const active = count >= target;
+        const almost = count === (target - 1) && choices.some(c => c.color === color);
         return (
           <View
             key={color}
@@ -174,21 +225,116 @@ function SynergyBar({ upgrades, choices }) {
               almost && { backgroundColor: hex + '10', borderColor: hex + '55', borderWidth: 1, borderRadius: 8 },
             ]}
           >
-            <View style={styles.synDots}>
-              {[0,1,2].map(i => (
+            <View style={[styles.synDots, dense && styles.synDotsDense]}>
+              {Array.from({ length: target }, (_, i) => (
                 <View key={i} style={[
                   styles.synDot,
+                  dense && styles.synDotDense,
                   { backgroundColor: i < count ? hex : 'transparent', borderColor: hex, opacity: i < count ? 1 : 0.3 },
                 ]} />
               ))}
             </View>
             <Text style={[styles.synCount, { color: active ? hex : almost ? hex : PALETTE.textMuted }]}>
-              {count}/3{active ? (color === UPGRADE_COLORS.CURSE ? ' ☠' : ' ✦') : almost ? ' →' : ''}
+              {count}/{target}{active ? (color === UPGRADE_COLORS.CURSE ? ' ☠' : ' ✦') : almost ? ' →' : ''}
             </Text>
           </View>
         );
       })}
     </View>
+  );
+}
+
+function SynergyLegend() {
+  const { t } = useTranslation();
+  return (
+    <Text style={styles.synergyLegend}>
+      {t('upgrade_modal.synergy_legend')}
+    </Text>
+  );
+}
+
+function BuildSnapshotSheet({ visible, upgrades, selected, onSelect, onClose }) {
+  const { t } = useTranslation();
+
+  return (
+    <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
+      <Pressable style={styles.sheetOverlay} onPress={onClose}>
+        <Pressable style={styles.sheetBox} onPress={e => e.stopPropagation()}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>{t('victory.build_final')}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.sheetClose} activeOpacity={0.7}>
+              <Text style={styles.sheetCloseTxt}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.sheetSynergiesRow}>
+            {['red', 'blue', 'green', 'curse'].map(color => {
+              const count = upgrades.filter(u => u.color === color).length;
+              if (color === 'curse' && count === 0) return null;
+              const active = color === UPGRADE_COLORS.CURSE ? count >= 3 : count >= 7;
+              const hex = upgradeHex(color);
+              return (
+                <View
+                  key={color}
+                  style={[
+                    styles.sheetSynergyBadge,
+                    {
+                      borderColor: active ? hex : PALETTE.border,
+                      backgroundColor: active ? hex + '18' : PALETTE.bgDark,
+                    },
+                  ]}
+                >
+                  <View style={[styles.sheetSynDot, { backgroundColor: hex, opacity: active ? 1 : 0.3 }]} />
+                  <Text style={[styles.sheetSynCount, { color: active ? hex : PALETTE.textMuted }]}>{count}/{color === UPGRADE_COLORS.CURSE ? 3 : 7}</Text>
+                  {active && <Text style={[styles.sheetSynActive, { color: hex }]}>{color === 'curse' ? '☠' : '✦'}</Text>}
+                </View>
+              );
+            })}
+          </View>
+
+          {upgrades.filter(u => u.color === 'curse').length >= 3 && (
+            <View style={styles.sheetCurseBanner}>
+              <Text style={styles.sheetCurseBannerTxt}>{t('game.curse_synergy')}</Text>
+            </View>
+          )}
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.sheetUpgradesList}>
+            {upgrades.map((u, i) => {
+              const hex = upgradeHex(u.color);
+              const isSelected = selected?.id === u.id && selected?._idx === i;
+              return (
+                <TouchableOpacity
+                  key={`${u.id}_${i}`}
+                  activeOpacity={0.7}
+                  onPress={() => onSelect(isSelected ? null : { ...u, _idx: i })}
+                  style={[
+                    styles.sheetUpgradeChip,
+                    {
+                      borderColor: hex + (isSelected ? 'FF' : '88'),
+                      backgroundColor: isSelected ? hex + '22' : 'transparent',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.sheetChipTxt, { color: hex }]}>{t(`upgrade.${u.id}.name`, { defaultValue: u.name })}</Text>
+                  {u.synergyActive && <Text style={[styles.sheetChipSyn, { color: hex }]}>✦</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {selected && (
+            <View style={[styles.sheetChipDesc, { borderColor: upgradeHex(selected.color) + '66' }]}>
+              <Text style={[styles.sheetChipDescName, { color: upgradeHex(selected.color) }]}>
+                {t(`upgrade.${selected.id}.name`, { defaultValue: selected.name })}
+              </Text>
+              <Text style={styles.sheetChipDescTxt}>
+                {t(`upgrade.${selected.id}.desc`, { defaultValue: selected.description || '—' })}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -215,7 +361,9 @@ function UpgradeIcon({ id, color }) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function wouldActivateSynergy(upgrade, activeUpgrades) {
-  return activeUpgrades.filter(u => u.color === upgrade.color).length === 2;
+  const count = activeUpgrades.filter(u => u.color === upgrade.color).length;
+  const target = upgrade.color === UPGRADE_COLORS.CURSE ? 3 : 7;
+  return count === (target - 1);
 }
 
 function upgradeHex(color) {
@@ -232,6 +380,23 @@ function colorLabel(color, t) {
     }[color] || color;
   }
   return { red: 'OFFENSIF', blue: 'UTILITAIRE', green: 'SOUTIEN', curse: 'MAUDIT' }[color] || color;
+}
+
+function synergyEffectLabel(color, t) {
+  if (t) {
+    return {
+      red:   t('upgrade_modal.synergy_effect_red'),
+      blue:  t('upgrade_modal.synergy_effect_blue'),
+      green: t('upgrade_modal.synergy_effect_green'),
+      curse: t('upgrade_modal.synergy_effect_curse'),
+    }[color] || t('upgrade_modal.synergy_effect_generic');
+  }
+  return {
+    red:   'active les effets de synergie des upgrades rouges ✦',
+    blue:  'active les effets de synergie des upgrades bleus ✦',
+    green: 'active les effets de synergie des upgrades verts ✦',
+    curse: 'x2 tous les effets des upgrades maudits',
+  }[color] || 'active les effets de synergie ✦';
 }
 
 const hexPts = (cx, cy, r) =>
@@ -268,12 +433,26 @@ const styles = StyleSheet.create({
   header:      { alignItems: 'center', gap: 3 },
   rewardLabel: { color: PALETTE.charge, fontSize: 14, fontWeight: 'bold', letterSpacing: 4 },
   subtitle:    { color: PALETTE.textMuted, fontSize: 11 },
+  buildHint: { alignItems: 'center' },
+  buildHintTxt: { fontSize: 10, fontWeight: 'bold', letterSpacing: 1 },
+  buildBtn: {
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: PALETTE.borderLight,
+    backgroundColor: PALETTE.bgDark,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  buildBtnTxt: { color: PALETTE.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
 
   // Synergy bar
   synergyBar: { flexDirection: 'row', justifyContent: 'center', gap: 10 },
   synItem:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 4 },
   synDots:    { flexDirection: 'row', gap: 3 },
   synDot:     { width: 8, height: 8, borderRadius: 4, borderWidth: 1 },
+  synDotsDense: { gap: 2 },
+  synDotDense:  { width: 6, height: 6, borderRadius: 3 },
   synCount:   { fontSize: 11, fontWeight: 'bold' },
 
   // Cards
@@ -302,11 +481,92 @@ const styles = StyleSheet.create({
   cardTopRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardName:    { fontSize: 14, fontWeight: 'bold', flex: 1 },
   cardTags:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  cardRecommend: { fontSize: 9, fontWeight: 'bold', letterSpacing: 1 },
   cardRarity:  { fontSize: 9, fontWeight: 'bold', letterSpacing: 1 },
   colorDot:    { width: 6, height: 6, borderRadius: 3 },
   cardDesc:    { fontSize: 11, lineHeight: 16 },
   cardSynText: { fontSize: 10, fontWeight: 'bold', marginTop: 2 },
   synBadge:    { fontSize: 16, fontWeight: 'bold', paddingLeft: 6 },
 
+  synergyLegend: { color: PALETTE.textDim, fontSize: 10, textAlign: 'center', marginTop: 2 },
+
   hint: { color: PALETTE.textDim, fontSize: 10, textAlign: 'center', letterSpacing: 1 },
+
+  // Build sheet (in-upgrade screen)
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheetBox: {
+    backgroundColor: PALETTE.bgCard,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    borderTopWidth: 1,
+    borderColor: PALETTE.borderLight,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 14,
+    maxHeight: '68%',
+    gap: 10,
+  },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sheetTitle: { color: PALETTE.textPrimary, fontSize: 12, fontWeight: 'bold', letterSpacing: 2 },
+  sheetClose: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    backgroundColor: PALETTE.bgDark,
+  },
+  sheetCloseTxt: { color: PALETTE.textMuted, fontWeight: 'bold' },
+  sheetSynergiesRow: { flexDirection: 'row', gap: 8 },
+  sheetSynergyBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 5,
+  },
+  sheetSynDot: { width: 7, height: 7, borderRadius: 3.5 },
+  sheetSynCount: { fontSize: 11, fontWeight: '700' },
+  sheetSynActive: { fontSize: 11, fontWeight: '900' },
+  sheetCurseBanner: {
+    borderWidth: 1,
+    borderColor: '#AA44CC88',
+    backgroundColor: '#160B1F',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  sheetCurseBannerTxt: { color: '#D08BFF', fontSize: 10, textAlign: 'center' },
+  sheetUpgradesList: { gap: 7, paddingBottom: 4 },
+  sheetUpgradeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: PALETTE.bgDark,
+  },
+  sheetChipTxt: { fontSize: 12, fontWeight: '700', flexShrink: 1 },
+  sheetChipSyn: { fontSize: 12, fontWeight: '900', marginLeft: 8 },
+  sheetChipDesc: {
+    borderWidth: 1,
+    borderRadius: 8,
+    backgroundColor: '#0A0A15',
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    gap: 3,
+  },
+  sheetChipDescName: { fontSize: 12, fontWeight: 'bold' },
+  sheetChipDescTxt: { color: PALETTE.textMuted, fontSize: 11, lineHeight: 16 },
 });

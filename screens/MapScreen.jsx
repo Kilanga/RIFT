@@ -3,18 +3,59 @@
  * Carte du run : arbre de salles, barre de progression, score, aperçu couche suivante
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Modal, Pressable } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Polygon, Circle, Rect, Line, G, Text as SvgText } from 'react-native-svg';
 import useGameStore from '../store/gameStore';
-import { ROOM_TYPES, PALETTE } from '../constants';
+import { ROOM_TYPES, PALETTE, ENEMY_INFO, ENEMY_TYPES, ACT1_BOSS_TYPES, RUST_BOSS_UNLOCK_THRESHOLD } from '../constants';
+import { generateRoom } from '../utils/procGen';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const NODE_SIZE = 48;
 const IS_TABLET = SCREEN_W >= 768;
 const IS_LARGE_TABLET = SCREEN_W >= 1024;
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getActLocalLayerIndex(node, run) {
+  const bounds = run.actBoundaries || [];
+  if (node.act === 1) return node.layer;
+  if (node.act === 2) return node.layer - (bounds[0] || 0);
+  return node.layer - (bounds[1] || 0);
+}
+
+function getPreviewEnemyBalanceProfile(node, run) {
+  const localLayerIndex = getActLocalLayerIndex(node, run);
+  let categoryMultipliers;
+
+  if (node.act === 1) {
+    categoryMultipliers = { mob: 1, elite: 1, boss: 1 };
+  } else if (node.act === 2) {
+    categoryMultipliers = localLayerIndex <= 0
+      ? { mob: 1.12, elite: 1.15, boss: 1.12 }
+      : { mob: 1.2, elite: 1.25, boss: 1.2 };
+  } else {
+    categoryMultipliers = localLayerIndex <= 0
+      ? { mob: 1.35, elite: 1.45, boss: 1.4 }
+      : { mob: 1.45, elite: 1.55, boss: 1.5 };
+  }
+
+  const adaptiveScale = clamp(run.enemyAdaptiveScale || 1, 0.9, 1.12);
+  return {
+    categoryMultipliers: {
+      mob: clamp(categoryMultipliers.mob * adaptiveScale, 0.9, 1.8),
+      elite: clamp(categoryMultipliers.elite * adaptiveScale, 0.9, 1.9),
+      boss: clamp(categoryMultipliers.boss * adaptiveScale, 0.9, 1.8),
+    },
+    attackWeight: 0.7,
+    defenseWeight: 0.5,
+    defenseCaps: { mob: 3, elite: 4, boss: 6 },
+  };
+}
 
 export default function MapScreen() {
   const { t } = useTranslation();
@@ -22,6 +63,7 @@ export default function MapScreen() {
   const run                  = useGameStore(s => s.run);
   const player               = useGameStore(s => s.player);
   const activeUpgrades       = useGameStore(s => s.activeUpgrades);
+  const permanentUpgrades    = useGameStore(s => s.meta?.permanentUpgrades || []);
   const selectNode           = useGameStore(s => s.selectNode);
   const getSelectableNodeIds = useGameStore(s => s.getSelectableNodeIds);
   const pauseRun             = useGameStore(s => s.pauseRun);
@@ -41,7 +83,44 @@ export default function MapScreen() {
   const nextLayerNodes = selectableIds.length > 0
     ? roomMap.find(layer => layer.some(n => selectableIds.includes(n.id))) || []
     : [];
+  const nextLayerIndex = selectableIds.length > 0
+    ? roomMap.findIndex(layer => layer.some(n => selectableIds.includes(n.id)))
+    : -1;
   const nextTypes = [...new Set(nextLayerNodes.map(n => n.type))];
+
+  const nextCombatIntelByNodeId = useMemo(() => {
+    if (nextLayerIndex < 0) return {};
+
+    const combatTypes = [
+      ROOM_TYPES.COMBAT,
+      ROOM_TYPES.ELITE,
+      ROOM_TYPES.BOSS_MINI,
+      ROOM_TYPES.BOSS,
+      ROOM_TYPES.BOSS_FINAL,
+    ];
+
+    const act1BossPool = permanentUpgrades.length >= RUST_BOSS_UNLOCK_THRESHOLD
+      ? ACT1_BOSS_TYPES
+      : ACT1_BOSS_TYPES.filter(t => t !== ENEMY_TYPES.BOSS_RUST);
+
+    return nextLayerNodes
+      .filter(node => combatTypes.includes(node.type))
+      .reduce((acc, node) => {
+        const roomSeed = ((run.mapSeed || 0) ^ hashString(node.id || '')) >>> 0;
+        const enemyBalanceProfile = getPreviewEnemyBalanceProfile(node, run);
+        const room = generateRoom(
+          node.type,
+          nextLayerIndex + 1,
+          roomSeed,
+          run.finalBossType || null,
+          act1BossPool,
+          enemyBalanceProfile
+        );
+        const dotColors = (room.enemies || []).map(enemy => enemyColor(enemy?.type));
+        acc[node.id] = { dotColors };
+        return acc;
+      }, {});
+  }, [nextLayerIndex, nextLayerNodes, run.finalBossType, run.mapSeed, run.enemyAdaptiveScale, run.actBoundaries, permanentUpgrades.length]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -122,13 +201,13 @@ export default function MapScreen() {
           </View>
         )}
 
-
         {/* ── Carte SVG ───────────────────────────────────────────────── */}
         <ScrollView style={styles.mapScroll} showsVerticalScrollIndicator={false}>
           <MapTree
             roomMap={roomMap}
             selectableIds={selectableIds}
             currentNodeId={run.currentNodeId}
+            combatIntelByNodeId={nextCombatIntelByNodeId}
             onSelect={selectNode}
           />
         </ScrollView>
@@ -188,7 +267,7 @@ function RunProgress({ layerIndex, total, roomMap, run }) {
           const actLabel = actIdx === 0 ? t('map.act_i') : actIdx === 1 ? t('map.act_ii') : t('map.act_iii');
           return (
             <View key={actIdx} style={styles.progressActGroup}>
-              <Text style={[styles.progressActLabel, { color: actColor + (currentAct === actIdx+1 ? 'FF' : '55') }]}>
+              <Text style={[styles.progressActLabel, { color: actColor + (currentAct === actIdx+1 ? 'FF' : '55') }]}> 
                 {actLabel}
               </Text>
               <View style={styles.progressSegments}>
@@ -226,7 +305,7 @@ function RunProgress({ layerIndex, total, roomMap, run }) {
 
 // ─── Arbre de salles SVG ──────────────────────────────────────────────────────
 
-function MapTree({ roomMap, selectableIds, currentNodeId, onSelect }) {
+function MapTree({ roomMap, selectableIds, currentNodeId, combatIntelByNodeId, onSelect }) {
   const { t } = useTranslation();
   const LAYER_H = 92;
   const svgW    = SCREEN_W - 40;
@@ -278,6 +357,7 @@ function MapTree({ roomMap, selectableIds, currentNodeId, onSelect }) {
                 isSelectable={selectableIds.includes(node.id)}
                 isCleared={node.cleared}
                 isCurrent={node.id === currentNodeId}
+                combatIntel={combatIntelByNodeId?.[node.id] || null}
                 tFn={t}
               />
             );
@@ -317,10 +397,17 @@ function MapTree({ roomMap, selectableIds, currentNodeId, onSelect }) {
 
 // ─── Nœud de carte (visuel SVG uniquement, sans onPress) ──────────────────────
 
-function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent, tFn }) {
+function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent, combatIntel, tFn }) {
   const color   = roomColor(node.type);
   const r       = NODE_SIZE / 2 - 2;
   const opacity = isCleared ? 0.35 : isSelectable ? 1 : 0.25;
+  const showEnemyDots = isSelectable && !isCleared && !!combatIntel && [
+    ROOM_TYPES.COMBAT,
+    ROOM_TYPES.ELITE,
+    ROOM_TYPES.BOSS_MINI,
+    ROOM_TYPES.BOSS,
+    ROOM_TYPES.BOSS_FINAL,
+  ].includes(node.type);
 
   return (
     <G opacity={opacity}>
@@ -333,6 +420,7 @@ function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent, tFn }) {
       <Circle cx={cx} cy={cy} r={r} fill={PALETTE.bgCard} />
       <Circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={isSelectable ? 2.5 : 1} />
       <RoomIcon type={node.type} cx={cx} cy={cy} color={color} r={r * 0.52} isCleared={isCleared} />
+      {showEnemyDots && enemyDots(node.id, cx, cy, combatIntel?.dotColors || [])}
       {isSelectable && (
         <Circle cx={cx} cy={cy} r={r + 3} fill="none" stroke={color} strokeWidth={1} opacity={0.6} />
       )}
@@ -343,6 +431,35 @@ function MapNodeSvg({ node, cx, cy, isSelectable, isCleared, isCurrent, tFn }) {
         fill={isSelectable ? color : PALETTE.textDim} fontSize={9}>
         {roomLabel(node.type, tFn)}
       </SvgText>
+    </G>
+  );
+}
+
+function enemyDots(nodeId, cx, cy, dotColors) {
+  const dots = (dotColors || []).slice(0, 10);
+  if (dots.length === 0) return null;
+
+  const radius = 16;
+  const startDeg = -160;
+  const endDeg = -20;
+  const span = endDeg - startDeg;
+
+  return (
+    <G>
+      {dots.map((dotColor, i) => {
+        const t = dots.length === 1 ? 0.5 : i / (dots.length - 1);
+        const deg = startDeg + span * t;
+        const rad = (deg * Math.PI) / 180;
+        return (
+          <Circle
+            key={`enemy_dot_${nodeId}_${i}`}
+            cx={cx + Math.cos(rad) * radius}
+            cy={cy + Math.sin(rad) * radius}
+            r={2.1}
+            fill={dotColor}
+          />
+        );
+      })}
     </G>
   );
 }
@@ -370,7 +487,7 @@ function PlayerMiniStats({ player }) {
   const lowHp     = ratio < 0.35;
   return (
     <View style={styles.miniStats}>
-      <Text style={[styles.hpTxt, lowHp && { color: PALETTE.upgradeRed }]}>
+      <Text style={[styles.hpTxt, lowHp && { color: PALETTE.upgradeRed }]}> 
         ❤ {player.hp}/{player.maxHp}
       </Text>
       <View style={styles.hpBarBg}>
@@ -443,19 +560,77 @@ function roomLabel(type, t) {
   }[type] || '?';
 }
 
+function dangerMeta(enemies) {
+  const score = enemies.reduce((sum, enemy) => {
+    const attack  = enemy?.attack || 0;
+    const hp      = enemy?.maxHp || enemy?.hp || 0;
+    const defense = enemy?.defense || 0;
+    const boss    = enemy?.isBoss ? 12 : 0;
+    return sum + attack * 2 + hp * 0.3 + defense * 1.5 + boss;
+  }, 0);
+
+  let level = 1;
+  if (score >= 14) level = 2;
+  if (score >= 24) level = 3;
+  if (score >= 34) level = 4;
+
+  const scale = {
+    1: { text: '#FFB3B3', border: '#FF9E9E', bg: '#2A1212' },
+    2: { text: '#FF8A8A', border: '#FF6E6E', bg: '#331212' },
+    3: { text: '#FF5C5C', border: '#FF4444', bg: '#3D1111' },
+    4: { text: '#FF2C2C', border: '#FF1A1A', bg: '#470D0D' },
+  };
+
+  return { score: Math.round(score), level, ...scale[level] };
+}
+
+function enemyShort(type) {
+  return ENEMY_INFO[type]?.short || String(type || '?').slice(0, 3).toUpperCase();
+}
+
+function enemyColor(type) {
+  return {
+    chaser: PALETTE.chaser,
+    shooter: PALETTE.shooter,
+    blocker: PALETTE.blocker,
+    healer: PALETTE.healer,
+    explosive: PALETTE.explosive,
+    summoner: PALETTE.summoner,
+    sentinel: PALETTE.sentinel,
+    boss_void: PALETTE.roomBoss,
+    boss_cinder: '#FF7A2F',
+    boss_mirror: '#FF66AA',
+    boss_weaver: '#C48AFF',
+    boss_rust: '#B7A588',
+    boss_cutter: '#66D6FF',
+    boss_pulse: '#FF6600',
+    boss_rift: '#FF2266',
+    boss_guardian: '#44CCFF',
+    boss_entity: '#FF0044',
+  }[type] || PALETTE.textMuted;
+}
+
+function hashString(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 function upgradeHex(color) {
   return { red: PALETTE.upgradeRed, blue: PALETTE.upgradeBlue, green: PALETTE.upgradeGreen }[color] || '#888';
 }
 
-const triPts     = (cx, cy, r) => `${cx},${cy-r} ${cx-r*0.866},${cy+r*0.5} ${cx+r*0.866},${cy+r*0.5}`;
+const triPts = (cx, cy, r) => `${cx},${cy-r} ${cx-r*0.866},${cy+r*0.5} ${cx+r*0.866},${cy+r*0.5}`;
 const diamondPts = (cx, cy, r) => `${cx},${cy-r} ${cx+r},${cy} ${cx},${cy+r} ${cx-r},${cy}`;
-const starPts    = (cx, cy, ro, ri, n) =>
+const starPts = (cx, cy, ro, ri, n) =>
   Array.from({ length: n * 2 }, (_, i) => {
     const a = (Math.PI / n) * i - Math.PI / 2;
-    const r = i % 2 === 0 ? ro : ri;
-    return `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+    const rr = i % 2 === 0 ? ro : ri;
+    return `${cx + rr * Math.cos(a)},${cy + rr * Math.sin(a)}`;
   }).join(' ');
-
 // ─── Modal upgrades ───────────────────────────────────────────────────────────
 
 function UpgradesModal({ visible, upgrades, onClose }) {
@@ -663,6 +838,50 @@ const styles = StyleSheet.create({
     paddingVertical:   3,
   },
   nextBadgeTxt: { fontSize: 11, fontWeight: 'bold' },
+
+  enemyPreviewBox: {
+    gap: 6,
+    backgroundColor: PALETTE.bgCard,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    borderRadius: 10,
+    padding: 10,
+  },
+  enemyPreviewTitle: { color: PALETTE.textPrimary, fontSize: 11, fontWeight: 'bold', letterSpacing: 1 },
+  enemyPreviewHint: { color: PALETTE.textMuted, fontSize: 10 },
+  enemyPreviewRow: { gap: 8, paddingTop: 2, paddingRight: 2 },
+  enemyCard: {
+    minWidth: 170,
+    borderWidth: 1,
+    borderColor: PALETTE.borderLight,
+    borderRadius: 8,
+    backgroundColor: '#0B0B14',
+    padding: 8,
+    gap: 5,
+  },
+  enemyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+  enemyCardType: { fontSize: 11, fontWeight: 'bold', flexShrink: 1 },
+  enemyCardNode: { color: PALETTE.textDim, fontSize: 9 },
+  enemyCardCount: { color: PALETTE.textMuted, fontSize: 10 },
+  enemyThreatScore: { color: PALETTE.textDim, fontSize: 9, letterSpacing: 1 },
+  enemyDangerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  enemyThreatDots: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  enemyThreatDot: { width: 7, height: 7, borderRadius: 4 },
+  enemyDangerCaption: { fontSize: 9, fontWeight: '700', letterSpacing: 0.8 },
+  enemyChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  enemyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    backgroundColor: '#0F0F1B',
+  },
+  enemyDot: { width: 7, height: 7, borderRadius: 4 },
+  enemyChipTxt: { color: PALETTE.textPrimary, fontSize: 10, fontWeight: '600' },
 
   // HP
   miniStats: { alignItems: 'center', gap: 3 },

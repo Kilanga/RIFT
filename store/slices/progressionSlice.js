@@ -5,14 +5,30 @@
 
 import { generateRoom } from '../../utils/procGen';
 import { ALL_UPGRADES, applySynergies, getUpgradeChoices, getUpgradeById, computePlayerStats, hasCurseSynergy } from '../../systems/upgradeSystem';
-import { pickPermanentUpgrades } from '../../utils/metaHelpers';
-import { ROOM_TYPES, GAME_PHASES, ENEMY_TYPES } from '../../constants';
+import { pickPermanentUpgrades, isUnlockConditionMet } from '../../utils/metaHelpers';
+import { ROOM_TYPES, GAME_PHASES, ENEMY_TYPES, PERMANENT_UPGRADES_CATALOG, ACT1_BOSS_TYPES, RUST_BOSS_UNLOCK_THRESHOLD } from '../../constants';
 import { hapticSuccess, hapticMedium } from '../../utils/haptics';
 import { playSfx } from '../../services/audioService';
-import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
+import { checkNewAchievements, ACHIEVEMENTS_CATALOG, withUpdatedWeeklyQuest } from '../achievements';
 import { submitScore } from '../../services/leaderboardService';
 import { pickRandomEvent } from '../../utils/eventCatalog';
 import { TALENT_CATALOG, getTalentById } from '../../utils/talentCatalog';
+import { trackAnalyticsEvent } from '../../services/analyticsService';
+import { getShieldBlockValue } from '../../utils/shield';
+
+function getSynergyActiveColors(upgrades) {
+  const counts = upgrades.reduce((acc, u) => {
+    acc[u.color] = (acc[u.color] || 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts)
+    .filter(([, count]) => count >= 7)
+    .map(([color]) => color);
+}
+
+function getUnlockablePermanentCount(meta) {
+  return PERMANENT_UPGRADES_CATALOG.filter(u => isUnlockConditionMet(u, meta)).length;
+}
 
 function hashString(str) {
   let h = 2166136261;
@@ -21,6 +37,54 @@ function hashString(str) {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+const REST_SKIP_FRAGMENT_REWARD = 5;
+
+function getActLocalLayerIndex(node, run) {
+  const bounds = run.actBoundaries || [];
+  if (node.act === 1) return node.layer;
+  if (node.act === 2) return node.layer - (bounds[0] || 0);
+  return node.layer - (bounds[1] || 0);
+}
+
+function getBaseActMultipliers(act, localLayerIndex) {
+  if (act === 1) {
+    return { mob: 1, elite: 1, boss: 1 };
+  }
+
+  if (act === 2) {
+    if (localLayerIndex <= 0) return { mob: 1.12, elite: 1.15, boss: 1.12 };
+    return { mob: 1.2, elite: 1.25, boss: 1.2 };
+  }
+
+  if (localLayerIndex <= 0) return { mob: 1.35, elite: 1.45, boss: 1.4 };
+  return { mob: 1.45, elite: 1.55, boss: 1.5 };
+}
+
+function buildEnemyBalanceProfile(roomNode, run) {
+  const localLayerIndex = getActLocalLayerIndex(roomNode, run);
+  const base = getBaseActMultipliers(roomNode.act, localLayerIndex);
+  const adaptiveScale = clamp(run.enemyAdaptiveScale || 1, 0.9, 1.12);
+
+  return {
+    categoryMultipliers: {
+      mob: clamp(base.mob * adaptiveScale, 0.9, 1.8),
+      elite: clamp(base.elite * adaptiveScale, 0.9, 1.9),
+      boss: clamp(base.boss * adaptiveScale, 0.9, 1.8),
+    },
+    attackWeight: 0.7,
+    defenseWeight: 0.5,
+    defenseCaps: {
+      mob: 3,
+      elite: 4,
+      boss: 6,
+    },
+  };
 }
 
 function applyEventEffect(effect, get, set) {
@@ -107,8 +171,24 @@ export const createProgressionSlice = (set, get) => ({
 
   enterRoom: (roomNode) => {
     const { player, run } = get();
+    const metaSnapshot = get().meta;
     const roomSeed = ((run.mapSeed || 0) ^ hashString(roomNode.id || '')) >>> 0;
-    const room = generateRoom(roomNode.type, run.currentLayerIndex + 1, roomSeed, run.finalBossType || null);
+    const permanentCount = (metaSnapshot.permanentUpgrades || []).length;
+    const unlockablePermanentUpgrades = PERMANENT_UPGRADES_CATALOG.filter(u => isUnlockConditionMet(u, metaSnapshot));
+    const unlockablePermanentCount = unlockablePermanentUpgrades.length;
+    const missingPermanentUpgrades = Math.max(0, unlockablePermanentCount - permanentCount);
+    const act1BossPool = permanentCount >= RUST_BOSS_UNLOCK_THRESHOLD
+      ? ACT1_BOSS_TYPES
+      : ACT1_BOSS_TYPES.filter(t => t !== ENEMY_TYPES.BOSS_RUST);
+    const enemyBalanceProfile = buildEnemyBalanceProfile(roomNode, run);
+    const room = generateRoom(
+      roomNode.type,
+      run.currentLayerIndex + 1,
+      roomSeed,
+      run.finalBossType || null,
+      act1BossPool,
+      enemyBalanceProfile
+    );
 
     const BOSS_TYPES = [ROOM_TYPES.BOSS_MINI, ROOM_TYPES.BOSS, ROOM_TYPES.BOSS_FINAL];
     const isBossRoom = BOSS_TYPES.includes(roomNode.type);
@@ -128,6 +208,33 @@ export const createProgressionSlice = (set, get) => ({
       ? (room.enemies?.[0]?.type || ENEMY_TYPES.BOSS_VOID)
       : null;
 
+    const isCombatRoom = [
+      ROOM_TYPES.COMBAT,
+      ROOM_TYPES.ELITE,
+      ROOM_TYPES.BOSS_MINI,
+      ROOM_TYPES.BOSS,
+      ROOM_TYPES.BOSS_FINAL,
+    ].includes(roomNode.type);
+
+    let rustPressure = 0;
+    if (bossType === ENEMY_TYPES.BOSS_RUST && room.enemies?.length > 0) {
+      rustPressure = unlockablePermanentCount > 0 ? missingPermanentUpgrades / unlockablePermanentCount : 0;
+      room.enemies = room.enemies.map((enemy, index) => {
+        if (index !== 0) return enemy;
+        const shieldValue = Math.min(6, 2 + Math.floor(missingPermanentUpgrades / 5));
+        return {
+          ...enemy,
+          hp: Math.round(enemy.hp * (1 + rustPressure * 0.7)),
+          maxHp: Math.round(enemy.maxHp * (1 + rustPressure * 0.7)),
+          attack: enemy.attack + Math.floor(missingPermanentUpgrades / 4),
+          defense: enemy.defense + Math.floor(missingPermanentUpgrades / 6),
+          statuses: missingPermanentUpgrades > 0
+            ? [...(enemy.statuses || []), { id: 'shield', duration: 1, value: shieldValue }]
+            : (enemy.statuses || []),
+        };
+      });
+    }
+
     // Fortifié : bouclier automatique au début de chaque salle
     const hasFortifie   = get().activeUpgrades.some(u => u.id === 'fortifie');
     // Talent Garde Permanente : bouclier de départ chaque salle de combat
@@ -140,24 +247,64 @@ export const createProgressionSlice = (set, get) => ({
     const cappedHp = hasContratMortel
       ? Math.min(player.hp, Math.floor(player.maxHp * 0.6))
       : player.hp;
+    const shieldValue = getShieldBlockValue(player);
     const startStatuses = (hasFortifie || hasStartShield)
-      ? [...(player.statuses || []).filter(s => s.id !== 'shield'), { id: 'shield', duration: 1 }]
+      ? [...(player.statuses || []).filter(s => s.id !== 'shield'), { id: 'shield', duration: 1, value: shieldValue }]
       : (player.statuses || []);
 
     const event = roomNode.type === ROOM_TYPES.EVENT ? pickRandomEvent() : null;
 
+    // Leroy Jenkins : premier combat de la run 21 apres 20 morts avant boss => chaos.
+    let roomEnemies = [...(room.enemies || [])];
+    let leroyChaosTriggered = false;
+    if (isCombatRoom && run.isLeroyJenkinsRun && !run.leroyChaosConsumed && roomEnemies.length > 0) {
+      const template = roomEnemies[0];
+      const occupied = new Set(roomEnemies.map(e => `${e.x},${e.y}`));
+      occupied.add(`${room.playerStart.x},${room.playerStart.y}`);
+
+      for (let y = 0; y < room.height; y += 1) {
+        for (let x = 0; x < room.width; x += 1) {
+          if (room.grid[y]?.[x] === 'wall') continue;
+          if (occupied.has(`${x},${y}`)) continue;
+          roomEnemies.push({
+            ...template,
+            x,
+            y,
+            type: template.type || ENEMY_TYPES.CHASER,
+            behavior: template.behavior || 'chase',
+            isBoss: false,
+            hp: Math.max(1, Math.floor((template.maxHp || template.hp || 4) * 0.6)),
+            maxHp: Math.max(1, Math.floor((template.maxHp || template.hp || 4) * 0.6)),
+            attack: Math.max(1, Math.floor((template.attack || 2) * 0.8)),
+            defense: Math.max(0, template.defense || 0),
+            scoreValue: Math.max(3, Math.floor((template.scoreValue || 10) * 0.5)),
+          });
+          occupied.add(`${x},${y}`);
+        }
+      }
+      leroyChaosTriggered = true;
+    }
+
     // Marquer les ennemis de cette salle comme "vus" dans le Codex
-    const newTypes = (room.enemies || []).map(e => e.type).filter(Boolean);
+    const newTypes = roomEnemies.map(e => e.type).filter(Boolean);
     const prevSeen = get().meta?.seenEnemies || [];
     const nextSeen = newTypes.some(t => !prevSeen.includes(t))
       ? [...new Set([...prevSeen, ...newTypes])]
       : prevSeen;
 
+    const currentMeta = get().meta;
+    const nextMeta = {
+      ...currentMeta,
+      totalCombats: (currentMeta.totalCombats || 0) + (isCombatRoom ? 1 : 0),
+      deathsBeforeBossStreak: isBossRoom ? 0 : (currentMeta.deathsBeforeBossStreak || 0),
+      ...(nextSeen !== prevSeen ? { seenEnemies: nextSeen } : {}),
+    };
+
     set({
-      ...(nextSeen !== prevSeen ? { meta: { ...get().meta, seenEnemies: nextSeen } } : {}),
+      meta: nextMeta,
       currentRoom:  room,
       currentEvent: event,
-      enemies:      room.enemies.map((e, i) => ({
+      enemies:      roomEnemies.map((e, i) => ({
         ...e,
         id:        `enemy_${i}_${Date.now()}`,
         turnCount: 0,
@@ -172,8 +319,76 @@ export const createProgressionSlice = (set, get) => ({
       blinkUsed:         false,
       shadowAmbushUsed:  false,
       player:       { ...player, x: room.playerStart.x, y: room.playerStart.y, hp: cappedHp, statuses: startStatuses },
-      run:          { ...get().run, turnsInRoom: 0, damageTakenInRoom: 0, murmurShownThisRoom: false },
+      run:          {
+        ...get().run,
+        turnsInRoom: 0,
+        damageTakenInRoom: 0,
+        damageBlockedInRoom: 0,
+        murmurShownThisRoom: false,
+        lastBossType: bossType || get().run.lastBossType || null,
+        leroyChaosConsumed: get().run.leroyChaosConsumed || leroyChaosTriggered,
+      },
     });
+
+    if (leroyChaosTriggered) {
+      get().addLog('🏃 LEROY JENKINS ! Le Rift se dechaine...');
+    }
+
+    trackAnalyticsEvent('room_enter', {
+      runId: run.runId,
+      roomId: roomNode.id,
+      roomType: roomNode.type,
+      roomIndex: run.roomsCleared + 1,
+      layer: run.currentLayerIndex + 1,
+      act: roomNode.act,
+      hp: get().player.hp,
+      maxHp: get().player.maxHp,
+      atk: get().player.attack,
+      def: get().player.defense,
+      upgradesCount: get().activeUpgrades.length,
+      enemiesCount: roomEnemies.length || 0,
+      isBossRoom,
+      bossType: bossType || null,
+      enemyBalance: enemyBalanceProfile.categoryMultipliers,
+      enemyAdaptiveScale: run.enemyAdaptiveScale || 1,
+      permanentCount,
+      unlockablePermanentCount,
+      rustPressure: bossType === ENEMY_TYPES.BOSS_RUST ? Number(rustPressure.toFixed(4)) : null,
+    });
+
+    const tips = get().run?.tipsShown || {};
+    if (roomNode.type === ROOM_TYPES.COMBAT && !tips.combat) {
+      get().addLog('💡 Astuce: élimine les ennemis proches en priorité pour limiter les dégâts subis.');
+      set(s => ({ run: { ...s.run, tipsShown: { ...(s.run.tipsShown || {}), combat: true } } }));
+    }
+    if ((roomNode.type === ROOM_TYPES.COMBAT || roomNode.type === ROOM_TYPES.ELITE || isBossRoom) && hasFortifie) {
+      get().addLog('🛡 Fortifié : bouclier actif en début de salle.');
+    }
+    if (roomNode.type === ROOM_TYPES.SHOP && !tips.shop) {
+      get().addLog('💡 Astuce: achète pour compléter une couleur et viser une synergie 7/7.');
+      set(s => ({ run: { ...s.run, tipsShown: { ...(s.run.tipsShown || {}), shop: true } } }));
+    }
+    if (roomNode.type === ROOM_TYPES.EVENT && !tips.event) {
+      get().addLog('💡 Astuce: les événements peuvent accélérer ta progression, mais certains sont risqués.');
+      set(s => ({ run: { ...s.run, tipsShown: { ...(s.run.tipsShown || {}), event: true } } }));
+    }
+
+    // Onboarding progressif : tutoriel complet étalé sur les 3 premières salles du premier run.
+    const roomIndex = (run.roomsCleared || 0) + 1;
+    if ((metaSnapshot.totalRuns || 0) === 0) {
+      if (roomIndex === 1 && !tips.onboarding_1) {
+        get().addLog('🧭 Étape 1/3 : explore prudemment et termine la salle en limitant les coups reçus.');
+        set(s => ({ run: { ...s.run, tipsShown: { ...(s.run.tipsShown || {}), onboarding_1: true } } }));
+      }
+      if (roomIndex === 2 && !tips.onboarding_2) {
+        get().addLog('🧩 Étape 2/3 : pense synergies, fragments et positionnement avant chaque action.');
+        set(s => ({ run: { ...s.run, tipsShown: { ...(s.run.tipsShown || {}), onboarding_2: true } } }));
+      }
+      if (roomIndex === 3 && !tips.onboarding_3) {
+        get().addLog('🏁 Étape 3/3 : prépare le boss de fin d\'acte (PV, upgrades clés, plan de sortie).');
+        set(s => ({ run: { ...s.run, tipsShown: { ...(s.run.tipsShown || {}), onboarding_3: true } } }));
+      }
+    }
 
     // Le dialogue de boss (BossIntroOverlay) gère lui-même la transition vers COMBAT
   },
@@ -185,6 +400,21 @@ export const createProgressionSlice = (set, get) => ({
     const newLayerIndex = run.currentLayerIndex + 1;
 
     hapticSuccess();
+
+    trackAnalyticsEvent('room_end', {
+      runId: run.runId,
+      roomId: run.currentNodeId,
+      roomIndex: run.roomsCleared + 1,
+      layer: run.currentLayerIndex + 1,
+      turnsInRoom: run.turnsInRoom || 0,
+      damageTakenInRoom: run.damageTakenInRoom || 0,
+      damageBlockedInRoom: run.damageBlockedInRoom || 0,
+      hpEnd: player.hp,
+      maxHp: player.maxHp,
+      score: run.score,
+      kills: run.killsThisRun || 0,
+      bossType: run.lastBossType || null,
+    });
 
     // ── Bonus de performance de salle ──────────────────────────────────────────
     const turnsUsed    = run.turnsInRoom    || 0;
@@ -204,9 +434,28 @@ export const createProgressionSlice = (set, get) => ({
       get().addLog(`🏆 Bonus salle : ${parts.join(' · ')}`);
     }
 
-    if (activeUpgrades.some(u => u.id === 'regen')) {
+    // Director adaptatif léger: ajuste la prochaine salle selon la pression récente.
+    const roomDamageRatio = player.maxHp > 0 ? damageTaken / player.maxHp : 0;
+    const recentDamageRatios = [...(run.recentDamageRatios || []), roomDamageRatio].slice(-2);
+    const avgRecentDamage = recentDamageRatios.reduce((sum, ratio) => sum + ratio, 0) / recentDamageRatios.length;
+    const prevAdaptiveScale = run.enemyAdaptiveScale || 1;
+    let adaptiveDelta = 0;
+    if (avgRecentDamage >= 0.45) adaptiveDelta = -0.08;
+    else if (avgRecentDamage >= 0.3) adaptiveDelta = -0.04;
+    else if (avgRecentDamage <= 0.08 && turnsUsed <= 3) adaptiveDelta = 0.05;
+    else if (avgRecentDamage <= 0.15 && turnsUsed <= 4) adaptiveDelta = 0.03;
+    const nextAdaptiveScale = clamp(prevAdaptiveScale + adaptiveDelta, 0.9, 1.12);
+
+    if (Math.abs(nextAdaptiveScale - prevAdaptiveScale) >= 0.01) {
+      get().addLog(nextAdaptiveScale < prevAdaptiveScale
+        ? '📉 Le Rift ralentit un instant...'
+        : '📈 Le Rift se durcit...');
+    }
+
+    const regenCount = activeUpgrades.filter(u => u.id === 'regen').length;
+    if (regenCount > 0) {
       const cm = hasCurseSynergy(activeUpgrades) ? 2 : 1;
-      get().healPlayer(cm);
+      get().healPlayer(regenCount * cm);
     }
 
     // Talent Résilience : soigne 2 PV après chaque salle
@@ -272,7 +521,7 @@ export const createProgressionSlice = (set, get) => ({
         const metaForPick    = { ...state.meta, totalRuns: state.meta.totalRuns + 1, bestScore: Math.max(state.meta.bestScore, finalScore) };
         const newPermanents  = pickPermanentUpgrades(state.meta.permanentUpgrades, metaForPick, 2);
 
-        const newMeta = {
+        let newMeta = {
           ...state.meta,
           bestScore:  Math.max(state.meta.bestScore, finalScore),
           totalRuns:  state.meta.totalRuns + 1,
@@ -294,6 +543,12 @@ export const createProgressionSlice = (set, get) => ({
           runHistory:       newRunHistory,
           localLeaderboard: newLeaderboard,
         };
+
+        newMeta = withUpdatedWeeklyQuest(newMeta, {
+          kills: state.run.killsThisRun || 0,
+          runs: 1,
+          wins: 1,
+        });
 
         // Achievements à la victoire
         const newAch = checkNewAchievements(
@@ -325,6 +580,8 @@ export const createProgressionSlice = (set, get) => ({
             roomsCleared:      state.run.roomsCleared + 1,
             currentLayerIndex: newLayerIndex,
             score:             finalScore,
+            recentDamageRatios,
+            enemyAdaptiveScale: nextAdaptiveScale,
           },
           meta: newMeta,
         };
@@ -332,6 +589,19 @@ export const createProgressionSlice = (set, get) => ({
 
       // Soumettre le score en ligne (fire-and-forget)
       const { meta: finalMeta, run: finalRun, player } = get();
+      const unlockablePermanentCount = getUnlockablePermanentCount(finalMeta);
+      trackAnalyticsEvent('run_end', {
+        runId: finalRun.runId,
+        result: 'victory',
+        score: finalRun.score,
+        layers: finalRun.currentLayerIndex,
+        kills: finalRun.killsThisRun || 0,
+        roomsCleared: finalRun.roomsCleared || 0,
+        shape: player.shape,
+        bossType: finalRun.lastBossType || finalRun.finalBossType || null,
+        permanentCount: (finalMeta.permanentUpgrades || []).length,
+        unlockablePermanentCount,
+      });
       if (finalMeta.playerName) {
         submitScore({
           playerName: finalMeta.playerName,
@@ -353,6 +623,8 @@ export const createProgressionSlice = (set, get) => ({
         roomsCleared:      state.run.roomsCleared + 1,
         score:             state.run.score + 50,
         currentLayerIndex: newLayerIndex,
+        recentDamageRatios,
+        enemyAdaptiveScale: nextAdaptiveScale,
       };
       // Achievement survivor (3 salles)
       const newAch = checkNewAchievements(state.meta, newRun);
@@ -390,8 +662,11 @@ export const createProgressionSlice = (set, get) => ({
     hapticMedium();
     playSfx('upgrade_pick');
 
+    const beforeActiveColors = getSynergyActiveColors(activeUpgrades);
     const newUpgrades  = [...activeUpgrades, chosen];
     const synergized   = applySynergies(newUpgrades);
+    const afterActiveColors = getSynergyActiveColors(synergized);
+    const newlyActivatedColors = afterActiveColors.filter(c => !beforeActiveColors.includes(c));
     const upgradeCount = newUpgrades.length;
     const hasSynergy   = ['red','blue','green'].some(
       c => synergized.filter(u => u.color === c).length >= 3
@@ -432,6 +707,36 @@ export const createProgressionSlice = (set, get) => ({
     });
 
     get().addLog(`✨ ${chosen.name}`);
+
+    trackAnalyticsEvent('upgrade_pick', {
+      runId: get().run?.runId,
+      roomId: get().run?.currentNodeId,
+      roomIndex: get().run?.roomsCleared + 1,
+      upgradeId: chosen.id,
+      color: chosen.color,
+      rarity: chosen.rarity,
+      upgradesCount: newUpgrades.length,
+    });
+
+    if (newlyActivatedColors.length > 0) {
+      newlyActivatedColors.forEach(color => {
+        if (color === 'red') get().addLog('✦ Synergie Rouge active: +2 ATQ');
+        else if (color === 'blue') get().addLog('✦ Synergie Bleue active: +2 DEF');
+        else if (color === 'green') get().addLog('✦ Synergie Verte active: +6 PV max');
+        else if (color === 'curse') get().addLog('☠ Synergie Maudite active: effets ×2');
+      });
+
+      newlyActivatedColors.forEach(color => {
+        trackAnalyticsEvent('synergy_activate', {
+          runId: get().run?.runId,
+          roomId: get().run?.currentNodeId,
+          roomIndex: get().run?.roomsCleared + 1,
+          color,
+          upgradesCount: newUpgrades.length,
+        });
+      });
+    }
+
     newAch.forEach(id => {
       const a = ACHIEVEMENTS_CATALOG.find(x => x.id === id);
       if (a) get().addLog(`🏅 Succès : ${a.icon} ${a.name}`);
@@ -472,6 +777,17 @@ export const createProgressionSlice = (set, get) => ({
   },
 
   leaveRoom: () => {
+    get().onRoomCleared();
+  },
+
+  skipRestForFragments: () => {
+    set(s => ({
+      player: {
+        ...s.player,
+        fragments: (s.player.fragments || 0) + REST_SKIP_FRAGMENT_REWARD,
+      },
+    }));
+    get().addLog(`⏭ Repos ignoré : +${REST_SKIP_FRAGMENT_REWARD} fragments`);
     get().onRoomCleared();
   },
 

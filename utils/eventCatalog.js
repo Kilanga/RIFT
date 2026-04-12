@@ -302,6 +302,193 @@ export const EVENT_CATALOG = [
       },
     ],
   },
+  {
+    id: 'blood_contract',
+    title: 'Contrat de Sang',
+    description: 'Une encre vivante trace ton nom sur un parchemin ancien. Le pacte promet de la puissance immédiate.',
+    choices: [
+      {
+        id: 'sign',
+        label: '🩸 Signer → +4 ATQ, -8 PV max',
+        effect: { type: 'stat_delta', changes: [{ stat: 'attack', delta: 4 }, { stat: 'maxHp', delta: -8 }] },
+      },
+      {
+        id: 'tear',
+        label: '🔥 Brûler le pacte → +70 score, -4 PV',
+        effect: { type: 'composite', effects: [
+          { type: 'score', value: 70 },
+          { type: 'damage', value: 4 },
+        ]},
+      },
+      { id: 'ignore', label: '↩ Refuser', effect: { type: 'none' } },
+    ],
+  },
+  {
+    id: 'unstable_relic',
+    title: 'Relique Instable',
+    description: 'Une relique crépite d\'énergie. Elle peut exploser ou t\'accorder un avantage durable.',
+    choices: [
+      {
+        id: 'bind',
+        label: '⚡ Lier la relique (60% : +2 DEF / 40% : -9 PV)',
+        effect: { type: 'gamble', chance: 0.6,
+          success: { type: 'stat_delta', changes: [{ stat: 'defense', delta: 2 }] },
+          fail: { type: 'damage', value: 9 },
+        },
+      },
+      {
+        id: 'dismantle',
+        label: '🛠 Démanteler → +9 fragments',
+        effect: { type: 'fragments', value: 9 },
+      },
+    ],
+  },
+  {
+    id: 'rift_tax_collector',
+    title: 'Percepteur du Rift',
+    description: 'Une silhouette masquée exige son dû. Négocier est possible, mais risqué.',
+    choices: [
+      {
+        id: 'pay',
+        label: '◈ Payer 7 fragments → +1 upgrade',
+        requireFragments: 7,
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: -7 },
+          { type: 'upgrade_choice' },
+        ]},
+      },
+      {
+        id: 'bluff',
+        label: '🎭 Bluffer (50% : +10 fragments / 50% : -10 PV)',
+        effect: { type: 'gamble', chance: 0.5,
+          success: { type: 'fragments', value: 10 },
+          fail: { type: 'damage', value: 10 },
+        },
+      },
+      { id: 'flee', label: '↩ Fuir', effect: { type: 'none' } },
+    ],
+  },
+  {
+    id: 'mercenary_camp',
+    title: 'Camp de Mercenaires',
+    description: 'Des survivants du Rift vendent leur aide contre fragments ou loyauté.',
+    choices: [
+      {
+        id: 'hire',
+        label: '💰 Engager (8 fragments) → +2 ATQ, +1 DEF',
+        requireFragments: 8,
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: -8 },
+          { type: 'stat_delta', changes: [{ stat: 'attack', delta: 2 }, { stat: 'defense', delta: 1 }] },
+        ]},
+      },
+      {
+        id: 'duel',
+        label: '⚔ Duel rituel → +1 upgrade, -6 PV',
+        effect: { type: 'composite', effects: [
+          { type: 'damage', value: 6 },
+          { type: 'upgrade_choice' },
+        ]},
+      },
+      { id: 'leave', label: '↩ Continuer seul', effect: { type: 'none' } },
+    ],
+  },
+  {
+    id: 'void_lottery',
+    title: 'Loterie du Néant',
+    description: 'Trois runes tournent dans le vide. Une seule distribue une vraie fortune.',
+    choices: [
+      {
+        id: 'one_spin',
+        label: '🎰 Lancer unique (33% jackpot +18 fragments / sinon -4 PV)',
+        effect: { type: 'gamble', chance: 0.33,
+          success: { type: 'fragments', value: 18 },
+          fail: { type: 'damage', value: 4 },
+        },
+      },
+      {
+        id: 'double_spin',
+        label: '🎰🎰 Double spin (50% +1 upgrade / 50% -12 PV)',
+        effect: { type: 'gamble', chance: 0.5,
+          success: { type: 'upgrade_choice' },
+          fail: { type: 'damage', value: 12 },
+        },
+      },
+    ],
+  },
+  {
+    id: 'echo_tunnel',
+    title: 'Tunnel des Échos',
+    description: 'Le passage compresse le temps. Traverser vite coûte des ressources, traverser lentement coûte des forces.',
+    choices: [
+      {
+        id: 'rush',
+        label: '🏃 Traverser vite → -6 fragments, +90 score',
+        requireFragments: 6,
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: -6 },
+          { type: 'score', value: 90 },
+        ]},
+      },
+      {
+        id: 'endure',
+        label: '🧱 Endurer → -7 PV, +2 DEF',
+        effect: { type: 'composite', effects: [
+          { type: 'damage', value: 7 },
+          { type: 'stat_delta', changes: [{ stat: 'defense', delta: 2 }] },
+        ]},
+      },
+      { id: 'turn_back', label: '↩ Contourner', effect: { type: 'none' } },
+    ],
+  },
+  {
+    id: 'faded_shrine',
+    title: 'Sanctuaire Fané',
+    description: 'Un sanctuaire usé propose une bénédiction incomplète. Tu choisis ce que tu abandonnes.',
+    choices: [
+      {
+        id: 'vigor',
+        label: '💚 Vitalité → +12 PV, -1 ATQ',
+        effect: { type: 'composite', effects: [
+          { type: 'heal', value: 12 },
+          { type: 'stat_delta', changes: [{ stat: 'attack', delta: -1 }] },
+        ]},
+      },
+      {
+        id: 'fury',
+        label: '🔥 Fureur → +3 ATQ, -6 PV',
+        effect: { type: 'composite', effects: [
+          { type: 'stat_delta', changes: [{ stat: 'attack', delta: 3 }] },
+          { type: 'damage', value: 6 },
+        ]},
+      },
+      { id: 'silent', label: '↩ Se taire et partir', effect: { type: 'none' } },
+    ],
+  },
+  {
+    id: 'fractured_portal',
+    title: 'Portail Fracturé',
+    description: 'Le portail peut t\'offrir une faveur instantanée, mais laisse une trace sur ton corps.',
+    choices: [
+      {
+        id: 'step_in',
+        label: '🌀 Entrer → +1 upgrade, -5 PV max',
+        effect: { type: 'composite', effects: [
+          { type: 'upgrade_choice' },
+          { type: 'stat_delta', changes: [{ stat: 'maxHp', delta: -5 }] },
+        ]},
+      },
+      {
+        id: 'stabilize',
+        label: '🔧 Stabiliser → +8 fragments, +40 score',
+        effect: { type: 'composite', effects: [
+          { type: 'fragments', value: 8 },
+          { type: 'score', value: 40 },
+        ]},
+      },
+      { id: 'avoid', label: '↩ Éviter', effect: { type: 'none' } },
+    ],
+  },
 ];
 
 /**

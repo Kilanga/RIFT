@@ -29,6 +29,7 @@ export default function GameOverScreen() {
   const pct          = Math.min(layerReached / Math.max(totalLayers, 1), 1);
   const hasMoreUnlocks = meta.permanentUpgrades.length < TOTAL_UNLOCKS;
   const killsThisRun = run.killsThisRun || 0;
+  const deathReasons = meta.lastRunSummary?.deathReasons || [];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -75,6 +76,9 @@ export default function GameOverScreen() {
         {meta.lastRunSummary?.newAchievements?.length > 0 && (
           <NewAchievements achievements={meta.lastRunSummary.newAchievements} />
         )}
+
+        {/* ── Pourquoi je suis mort ──────────────────────────────────────── */}
+        {deathReasons.length > 0 && <DeathReasons reasons={deathReasons} />}
 
         {/* ── Hook : prochain unlock dispo ───────────────────────────────── */}
         {!newUnlock && hasMoreUnlocks && <NextUnlockHint count={meta.permanentUpgrades.length} />}
@@ -226,6 +230,33 @@ function NewAchievements({ achievements }) {
             <Text style={styles.newAchName}>{t(`achievement.${a.id}_name`, { defaultValue: a.name })}</Text>
             <Text style={styles.newAchDesc}>{t(`achievement.${a.id}_desc`, { defaultValue: a.desc })}</Text>
           </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function DeathReasons({ reasons }) {
+  const { t } = useTranslation();
+  const sourceLabel = (source) => {
+    if (source === 'self') return t('game_over.death_source_self');
+    if (source.startsWith('enemy:')) {
+      const type = source.split(':')[1] || 'unknown';
+      const key = `game_over.death_source_enemy_${type}`;
+      const fallback = t('game_over.death_source_enemy_generic', { type });
+      const maybe = t(key);
+      return maybe === key ? fallback : maybe;
+    }
+    return source;
+  };
+
+  return (
+    <View style={styles.deathBox}>
+      <Text style={styles.deathLabel}>{t('game_over.death_title')}</Text>
+      {reasons.map((r, idx) => (
+        <View key={`${r.source}_${idx}`} style={styles.deathRow}>
+          <Text style={styles.deathSource}>{sourceLabel(r.source)}</Text>
+          <Text style={styles.deathDamage}>{t('game_over.death_damage', { value: r.damage })}</Text>
         </View>
       ))}
     </View>
@@ -414,6 +445,21 @@ const styles = StyleSheet.create({
   newAchTexts: { flex: 1, gap: 2 },
   newAchName:  { color: '#88CCFF', fontSize: 15, fontWeight: 'bold' },
   newAchDesc:  { color: PALETTE.textMuted, fontSize: 11 },
+
+  // Why death
+  deathBox: {
+    width:           '100%',
+    backgroundColor: '#150808',
+    borderWidth:     1,
+    borderColor:     '#6A2222',
+    borderRadius:    10,
+    padding:         12,
+    gap:             6,
+  },
+  deathLabel:  { color: '#FF8888', fontSize: 10, letterSpacing: 2, fontWeight: 'bold', textAlign: 'center' },
+  deathRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  deathSource: { color: PALETTE.textMuted, fontSize: 12 },
+  deathDamage: { color: '#FF8888', fontSize: 12, fontWeight: 'bold' },
 
   sectionTitle: { color: PALETTE.textMuted, fontSize: 10, letterSpacing: 3, fontWeight: 'bold' },
 

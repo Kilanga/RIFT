@@ -3,12 +3,13 @@
  * Guide interactif pour les nouveaux joueurs (pages glissantes)
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView,
 } from 'react-native';
 import Svg, { Polygon, Circle, Rect, G, Line } from 'react-native-svg';
 import { PALETTE } from '../constants';
+import { Assassin, Arcaniste, Colosse } from './ClassSilhouettes';
 
 // ─── Contenu des pages ────────────────────────────────────────────────────────
 
@@ -105,15 +106,35 @@ const PAGES = [
   },
 ];
 
+const QUICK_PAGE_KEYS = ['goal', 'combat', 'rooms'];
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 
-export default function TutorialOverlay({ visible, onClose }) {
+export default function TutorialOverlay({ visible, onClose, mode = 'full' }) {
   const [page, setPage] = useState(0);
-  const isLast = page === PAGES.length - 1;
-  const current = PAGES[page];
+  const [viewMode, setViewMode] = useState(mode);
+
+  useEffect(() => {
+    if (!visible) return;
+    setViewMode(mode);
+    setPage(0);
+  }, [visible, mode]);
+
+  const pages = viewMode === 'quick'
+    ? PAGES.filter(p => QUICK_PAGE_KEYS.includes(p.key))
+    : PAGES;
+  const isQuick = viewMode === 'quick';
+  const isLast = page === pages.length - 1;
+  const current = pages[page];
+
+  const closeTutorial = () => {
+    onClose();
+    setPage(0);
+    setViewMode(mode);
+  };
 
   const goNext = () => {
-    if (isLast) { onClose(); setPage(0); }
+    if (isLast) { closeTutorial(); }
     else setPage(p => p + 1);
   };
   const goPrev = () => setPage(p => Math.max(0, p - 1));
@@ -125,8 +146,8 @@ export default function TutorialOverlay({ visible, onClose }) {
 
           {/* ── En-tête ── */}
           <View style={styles.header}>
-            <Text style={styles.pageIndicator}>{page + 1} / {PAGES.length}</Text>
-            <TouchableOpacity onPress={() => { onClose(); setPage(0); }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+            <Text style={styles.pageIndicator}>{page + 1} / {pages.length}{isQuick ? '  ·  RAPIDE' : ''}</Text>
+            <TouchableOpacity onPress={closeTutorial} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
               <Text style={styles.closeBtn}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -146,9 +167,22 @@ export default function TutorialOverlay({ visible, onClose }) {
             ))}
           </ScrollView>
 
+          {isQuick && (
+            <TouchableOpacity
+              style={styles.detailsBtn}
+              onPress={() => {
+                setViewMode('full');
+                setPage(0);
+              }}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.detailsBtnTxt}>VOIR LES DÉTAILS COMPLETS</Text>
+            </TouchableOpacity>
+          )}
+
           {/* ── Points de pagination ── */}
           <View style={styles.dots}>
-            {PAGES.map((_, i) => (
+            {pages.map((_, i) => (
               <TouchableOpacity key={i} onPress={() => setPage(i)}>
                 <View style={[styles.dot, i === page && styles.dotActive]} />
               </TouchableOpacity>
@@ -215,18 +249,9 @@ function GoalVisual() {
 function ShapesVisual() {
   return (
     <Svg width={200} height={80} viewBox="0 0 200 80">
-      {/* Triangle */}
-      <Polygon points="40,18 20,62 60,62" fill="none" stroke={PALETTE.triangle} strokeWidth={2.5} />
-      <Circle cx={40} cy={70} r={3} fill={PALETTE.triangle} />
-      {/* Cercle */}
-      <Circle cx={100} cy={40} r={22} fill="none" stroke={PALETTE.circle} strokeWidth={2.5} />
-      <Circle cx={100} cy={70} r={3} fill={PALETTE.circle} />
-      {/* Hexagone */}
-      <Polygon
-        points={hexPts(160, 40, 22)}
-        fill="none" stroke={PALETTE.hexagon} strokeWidth={2.5}
-      />
-      <Circle cx={160} cy={70} r={3} fill={PALETTE.hexagon} />
+      <Assassin  cx={40}  cy={38} r={18} color={PALETTE.triangle} />
+      <Arcaniste cx={100} cy={38} r={18} color={PALETTE.circle} />
+      <Colosse   cx={160} cy={38} r={18} color={PALETTE.hexagon} />
     </Svg>
   );
 }
@@ -246,10 +271,12 @@ function CombatVisual() {
           />
         ))
       )}
-      {/* Joueur (triangle) au centre */}
-      <Polygon
-        points={triPts(10 + 2*(S+2) + S/2, 5 + 1*(S+2) + S/2, 9)}
-        fill={PALETTE.triangle}
+      {/* Joueur au centre */}
+      <Assassin
+        cx={10 + 2 * (S + 2) + S / 2}
+        cy={5 + 1 * (S + 2) + S / 2}
+        r={9}
+        color={PALETTE.triangle}
       />
       {/* Ennemi à droite */}
       <Circle cx={10 + 3*(S+2) + S/2} cy={5 + 1*(S+2) + S/2} r={8} fill={PALETTE.upgradeRed + 'CC'} />
@@ -468,6 +495,18 @@ const styles = StyleSheet.create({
     lineHeight:   20,
     marginBottom: 10,
     textAlign:    'center',
+  },
+
+  detailsBtn: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  detailsBtnTxt: {
+    color: PALETTE.upgradeBlue,
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
 
   dots: {

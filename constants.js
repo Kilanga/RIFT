@@ -6,7 +6,10 @@
 // ─── Grille ───────────────────────────────────────────────────────────────────
 export const GRID_SIZE = 9;
 
-// ─── Formes du joueur (classes) ───────────────────────────────────────────────
+// ─── Feature flags bêta ──────────────────────────────────────────────────────
+export const PREMIUM_SHOP_ENABLED = false;
+
+// ─── Classes du joueur (IDs legacy conservés) ───────────────────────────────
 // IDs internes inchangés (compatibilité saves) — noms affichés via CLASS_INFO
 export const PLAYER_SHAPES = {
   TRIANGLE: 'triangle', // Assassin  — Pierce, attaque en ligne
@@ -31,6 +34,11 @@ export const ENEMY_INFO = {
   shooter:       { name: 'Tirailleur',        short: 'TIR' },
   blocker:       { name: 'Titan',             short: 'TIT' },
   boss_void:     { name: "L'Écho",           short: 'ÉCH', isBoss: true },
+  boss_cinder:   { name: 'Le Veilleur de Cendre', short: 'CEN', isBoss: true },
+  boss_mirror:   { name: 'La Mère-Écho',      short: 'MER', isBoss: true },
+  boss_weaver:   { name: 'Le Tisseur de Ruines', short: 'TIS', isBoss: true },
+  boss_rust:     { name: "L'Ange Rouillé",    short: 'ROU', isBoss: true },
+  boss_cutter:   { name: "Le Fendeur d'Ombres", short: 'FEN', isBoss: true },
   boss_pulse:    { name: 'Tonnerre Incarné', short: 'TON', isBoss: true },
   boss_rift:     { name: 'Le Dévoreur',      short: 'DÉV', isBoss: true, isFinal: true },
   boss_guardian: { name: 'Le Gardien',       short: 'GAR', isBoss: true, isFinal: true },
@@ -38,6 +46,7 @@ export const ENEMY_INFO = {
   healer:        { name: 'Guérisseur',        short: 'GUÉ' },
   explosive:     { name: 'Explosif',          short: 'EXP' },
   summoner:      { name: 'Invocateur',        short: 'INV' },
+  sentinel:      { name: 'Sentinelle',        short: 'SEN' },
 };
 
 // ─── Couleurs d'upgrades (synergies) ─────────────────────────────────────────
@@ -91,6 +100,11 @@ export const ENEMY_TYPES = {
   SHOOTER:        'shooter',        // Tire à distance
   BLOCKER:        'blocker',        // Se déplace peu, très résistant
   BOSS_VOID:      'boss_void',      // Mini-boss / Boss acte 1 — spirale
+  BOSS_CINDER:    'boss_cinder',    // Boss acte 1 — cendres / feu
+  BOSS_MIRROR:    'boss_mirror',    // Boss acte 1 — imitation / tempo
+  BOSS_WEAVER:    'boss_weaver',    // Boss acte 1 — invocations / fils
+  BOSS_RUST:      'boss_rust',      // Boss acte 1 — bouclier / rouille
+  BOSS_CUTTER:    'boss_cutter',    // Boss acte 1 — lignes / dashes
   BOSS_PULSE:     'boss_pulse',     // Boss acte 2 — onde de choc
   BOSS_RIFT:      'boss_rift',      // Boss final acte 3A — Le Dévoreur
   BOSS_GUARDIAN:  'boss_guardian',  // Boss final acte 3B — Le Gardien
@@ -99,6 +113,17 @@ export const ENEMY_TYPES = {
   EXPLOSIVE:      'explosive',      // Explose à la mort (AoE rayon 2)
   SUMMONER:       'summoner',       // Invoque des Chasseurs tous les 3 tours
 };
+
+export const ACT1_BOSS_TYPES = [
+  ENEMY_TYPES.BOSS_VOID,
+  ENEMY_TYPES.BOSS_CINDER,
+  ENEMY_TYPES.BOSS_MIRROR,
+  ENEMY_TYPES.BOSS_WEAVER,
+  ENEMY_TYPES.BOSS_RUST,
+  ENEMY_TYPES.BOSS_CUTTER,
+];
+
+export const RUST_BOSS_UNLOCK_THRESHOLD = 8;
 
 // ─── Types de cellules ────────────────────────────────────────────────────────
 export const CELL_TYPES = {
@@ -122,7 +147,7 @@ export const PALETTE = {
   textMuted:    '#666680',
   textDim:      '#44446A',
 
-  // Formes joueur
+  // Classes joueur
   triangle:     '#00FFCC',
   circle:       '#FF66FF',
   hexagon:      '#66AAFF',
@@ -150,6 +175,7 @@ export const PALETTE = {
   healer:    '#44FF88',
   explosive: '#FF8800',
   summoner:  '#CC44FF',
+  sentinel:  '#44DDE6',
 
   // Statuts ennemis
   statusBurn:       '#FF6600',
@@ -170,8 +196,8 @@ export const PALETTE = {
 //   { type:'kills',     value:N }       → totalKills >= N
 //   { type:'wins',      value:N }       → total victoires >= N
 //   { type:'score',     value:N }       → bestScore >= N
-//   { type:'shape_win', shape:'xxx' }   → gagner 1 fois avec cette forme
-//   { type:'all_shapes' }               → gagner avec les 3 formes
+//   { type:'shape_win', shape:'xxx' }   → gagner 1 fois avec cette classe
+//   { type:'all_shapes' }               → gagner avec les 3 classes de base
 // hidden:true → condition affichée en "???" tant que non débloquée
 export const PERMANENT_UPGRADES_CATALOG = [
 
@@ -277,26 +303,26 @@ export const PERMANENT_UPGRADES_CATALOG = [
     hidden: false,
   },
 
-  // ── Débloquables par victoire de forme ───────────────────────────────────
+  // ── Débloquables par victoire de classe ──────────────────────────────────
   {
     id: 'perm_pierce', name: '+2 ATK', icon: '🔱',
-    desc: '+2 ATK. Maîtrise du Triangle.',
+    desc: '+2 ATK. Maîtrise de l\'Assassin.',
     statBonus: { stat: 'attack', value: 2 },
-    unlockCondition: { type: 'shape_win', shape: 'triangle', desc: 'Gagner avec le Triangle' },
+    unlockCondition: { type: 'shape_win', shape: 'triangle', desc: 'Gagner avec l\'Assassin' },
     hidden: false,
   },
   {
     id: 'perm_aura', name: '+6 PV', icon: '🔮',
-    desc: '+6 PV max. Maîtrise du Cercle.',
+    desc: '+6 PV max. Maîtrise de l\'Arcaniste.',
     statBonus: { stat: 'maxHp', value: 6 },
-    unlockCondition: { type: 'shape_win', shape: 'circle', desc: 'Gagner avec le Cercle' },
+    unlockCondition: { type: 'shape_win', shape: 'circle', desc: 'Gagner avec l\'Arcaniste' },
     hidden: false,
   },
   {
     id: 'perm_fortress', name: '+2 DEF', icon: '🏰',
-    desc: '+2 DEF. Maîtrise du Hexagone.',
+    desc: '+2 DEF. Maîtrise du Colosse.',
     statBonus: { stat: 'defense', value: 2 },
-    unlockCondition: { type: 'shape_win', shape: 'hexagon', desc: 'Gagner avec le Hexagone' },
+    unlockCondition: { type: 'shape_win', shape: 'hexagon', desc: 'Gagner avec le Colosse' },
     hidden: false,
   },
 
@@ -358,9 +384,9 @@ export const PERMANENT_UPGRADES_CATALOG = [
   // ── Légendaires ───────────────────────────────────────────────────────────
   {
     id: 'perm_master', name: '+4 ATK', icon: '👑',
-    desc: '+4 ATK. Maître du Rift — victoire avec les 3 formes.',
+    desc: '+4 ATK. Maître du Rift — victoire avec les 3 classes de base.',
     statBonus: { stat: 'attack', value: 4 },
-    unlockCondition: { type: 'all_shapes', desc: 'Gagner avec les 3 formes' },
+    unlockCondition: { type: 'all_shapes', desc: 'Gagner avec les 3 classes de base' },
     hidden: true,
   },
   {

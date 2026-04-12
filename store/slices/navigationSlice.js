@@ -4,14 +4,16 @@
  */
 
 import { buildProceduralMap } from '../../utils/procGen';
-import { pickPermanentUpgrades } from '../../utils/metaHelpers';
+import { pickPermanentUpgrades, isUnlockConditionMet } from '../../utils/metaHelpers';
 import { getModifierById, getDailyModifier } from '../../utils/modifierCatalog';
 import { getTalentById } from '../../utils/talentCatalog';
 import { getUpgradeById, getUpgradeChoices } from '../../systems/upgradeSystem';
-import { PLAYER_SHAPES, GAME_PHASES, ENEMY_TYPES } from '../../constants';
+import { PLAYER_SHAPES, GAME_PHASES, ENEMY_TYPES, PERMANENT_UPGRADES_CATALOG, PREMIUM_SHOP_ENABLED } from '../../constants';
 import { hapticError } from '../../utils/haptics';
-import { checkNewAchievements, ACHIEVEMENTS_CATALOG } from '../achievements';
+import { checkNewAchievements, ACHIEVEMENTS_CATALOG, withUpdatedWeeklyQuest } from '../achievements';
+import { checkNewEasterEggTitles } from '../../utils/easterEggs';
 import { submitScore } from '../../services/leaderboardService';
+import { trackAnalyticsEvent } from '../../services/analyticsService';
 import { fetchServerPurchases } from '../../services/stripeService';
 import {
   setMusicEnabled as setAudioMusic,
@@ -30,6 +32,10 @@ function applyPermanentBonuses(permanentUpgrades) {
   return bonuses;
 }
 
+function getUnlockablePermanentCount(meta) {
+  return PERMANENT_UPGRADES_CATALOG.filter(u => isUnlockConditionMet(u, meta)).length;
+}
+
 // ─── État initial ─────────────────────────────────────────────────────────────
 
 const INITIAL_PLAYER = {
@@ -43,6 +49,7 @@ const INITIAL_PLAYER = {
 };
 
 const INITIAL_RUN = {
+  runId:             null,
   floor:             1,
   roomsCleared:      0,
   score:             0,
@@ -56,6 +63,14 @@ const INITIAL_RUN = {
   // Compteurs de performance par salle (reset à chaque enterRoom)
   turnsInRoom:       0,
   damageTakenInRoom: 0,
+  damageBySource:    {},
+  tipsShown:         {},
+  lastBossType:      null,
+  enemyAdaptiveScale: 1,
+  recentDamageRatios: [],
+  // Easter egg tracking
+  lastKillingAttackType: null, // Arrow in Knee: ranged or melee
+  killsThisTurn:     0,    // Pentakill: resets each turn
 };
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
@@ -91,7 +106,7 @@ export const createNavigationSlice = (set, get) => ({
     }
   },
   goToTalentTree:        () => set({ phase: GAME_PHASES.TALENT_TREE }),
-  goToPremiumShop:       () => set({ phase: GAME_PHASES.PREMIUM_SHOP }),
+  goToPremiumShop:       () => set({ phase: PREMIUM_SHOP_ENABLED ? GAME_PHASES.PREMIUM_SHOP : GAME_PHASES.MENU }),
   goToMultiplayer:       () => set({ phase: GAME_PHASES.MULTIPLAYER }),
   goToAchievements:      () => set({ phase: GAME_PHASES.ACHIEVEMENTS }),
   goToLore:              () => set({ phase: GAME_PHASES.LORE }),
@@ -123,6 +138,15 @@ export const createNavigationSlice = (set, get) => ({
     set(s => ({ meta: { ...s.meta, preferredLanguage: lang } }));
   },
 
+  toggleThreatPreview: () => {
+    set(s => ({
+      meta: {
+        ...s.meta,
+        threatPreviewEnabled: !(s.meta?.threatPreviewEnabled ?? true),
+      },
+    }));
+  },
+
   resetProgress: () => set(s => ({
     meta: {
       permanentUpgrades: [],
@@ -147,6 +171,11 @@ export const createNavigationSlice = (set, get) => ({
       isPremium:         s.meta.isPremium,
       purchasedThemes:   s.meta.purchasedThemes,
       purchasedClasses:  s.meta.purchasedClasses,
+      threatPreviewEnabled: true,
+      weeklyQuest: {
+        weekKey: '',
+        counters: { kills: 0, runs: 0, wins: 0 },
+      },
       hardcoreMode:      false,
       premiumTheme:      'default',
       gridTheme:         'default',
@@ -163,6 +192,9 @@ export const createNavigationSlice = (set, get) => ({
       sfxVolume:         0.7,
       preferredLanguage: '',
       playerName:        '',
+      easterEggTitles:   [],    // Easter egg titles unlocked
+      totalCombats:      0,     // Global combat counter (for Shiny)
+      deathsBeforeBossStreak: 0, // Track consecutive deaths before boss (for Leroy Jenkins)
     },
     phase: GAME_PHASES.MENU,
   })),
@@ -269,7 +301,7 @@ export const createNavigationSlice = (set, get) => ({
       const allScores      = [...(state.meta.localLeaderboard || []), runEntry];
       const newLeaderboard = allScores.sort((a, b) => b.score - a.score).slice(0, 5);
 
-      const newMeta = {
+      let newMeta = {
         ...state.meta,
         totalRuns:  state.meta.totalRuns + 1,
         bestScore:  Math.max(state.meta.bestScore, runScore),
@@ -284,6 +316,12 @@ export const createNavigationSlice = (set, get) => ({
         runHistory:       newRunHistory,
         localLeaderboard: newLeaderboard,
       };
+
+      newMeta = withUpdatedWeeklyQuest(newMeta, {
+        kills: run.killsThisRun || 0,
+        runs: 1,
+        wins: 0,
+      });
 
       newMeta.lastRunSummary = {
         score:         runScore,
@@ -309,6 +347,20 @@ export const createNavigationSlice = (set, get) => ({
         dyingEnemies: [],
         meta:         newMeta,
       };
+    });
+
+    const state = get();
+    trackAnalyticsEvent('run_end', {
+      runId: state.run?.runId,
+      result: 'abandon',
+      score: state.run?.score || 0,
+      layers: state.run?.currentLayerIndex || 0,
+      kills: state.run?.killsThisRun || 0,
+      roomsCleared: state.run?.roomsCleared || 0,
+      shape: state.player?.shape,
+      bossType: state.run?.lastBossType || state.run?.finalBossType || null,
+      permanentCount: (state.meta?.permanentUpgrades || []).length,
+      unlockablePermanentCount: getUnlockablePermanentCount(state.meta || {}),
     });
   },
 
@@ -354,7 +406,24 @@ export const createNavigationSlice = (set, get) => ({
       });
     }
 
-    // Stats de base par classe premium/achat
+    // Stats de base par classe
+    if (shape === PLAYER_SHAPES.TRIANGLE) {
+      basePlayer.maxHp   = 23;
+      basePlayer.attack  = 5;
+      basePlayer.defense = 0;
+    }
+    if (shape === PLAYER_SHAPES.CIRCLE) {
+      basePlayer.maxHp   = 25;
+      basePlayer.attack  = 4;
+      basePlayer.defense = 1;
+    }
+    if (shape === PLAYER_SHAPES.HEXAGON) {
+      basePlayer.maxHp   = 27;
+      basePlayer.attack  = 3;
+      basePlayer.defense = 1;
+    }
+
+    // Classes premium/achat
     if (shape === PLAYER_SHAPES.SPECTRE) {
       basePlayer.maxHp   = 15;
       basePlayer.attack  = 6;
@@ -404,6 +473,11 @@ export const createNavigationSlice = (set, get) => ({
       basePlayer.hp = basePlayer.maxHp;
     }
 
+    const runId = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Leroy Jenkins: check si 20+ morts avant boss → trigger chaos spawn
+    const isLeroyJenkinsRun = (meta.deathsBeforeBossStreak || 0) >= 20;
+
     set({
       player:               basePlayer,
       playerBase:           { ...basePlayer },
@@ -411,6 +485,7 @@ export const createNavigationSlice = (set, get) => ({
       isDailySelect:        false,
       run:                  {
         ...INITIAL_RUN,
+        runId,
         startedAt:      Date.now(),
         isDailyRun,
         mapSeed,
@@ -419,6 +494,7 @@ export const createNavigationSlice = (set, get) => ({
         multiRole:      multiOptions?.multiRole || null,
         modifier:       modifier,
         finalBossType,
+        isLeroyJenkinsRun,  // Flag pour spawn chaos au premier combat
       },
       enemies:              [],
       activeUpgrades:       startingUpgrades,
@@ -429,6 +505,23 @@ export const createNavigationSlice = (set, get) => ({
       damagePops:           [],
       dyingEnemies:         [],
       phase:                GAME_PHASES.MAP,
+    });
+
+    trackAnalyticsEvent('run_start', {
+      runId,
+      shape,
+      isDailyRun,
+      modifierId,
+      mapSeed,
+      finalBossType,
+      permanentCount: (meta.permanentUpgrades || []).length,
+      unlockablePermanentCount: getUnlockablePermanentCount(meta),
+      baseStats: {
+        hp: basePlayer.hp,
+        maxHp: basePlayer.maxHp,
+        attack: basePlayer.attack,
+        defense: basePlayer.defense,
+      },
     });
   },
 
@@ -481,7 +574,7 @@ export const createNavigationSlice = (set, get) => ({
         .sort((a, b) => b.score - a.score)
         .slice(0, 5);
 
-      const newMeta = {
+      let newMeta = {
         ...state.meta,
         totalRuns:         state.meta.totalRuns + 1,
         bestScore:         Math.max(state.meta.bestScore, finalScore),
@@ -501,6 +594,12 @@ export const createNavigationSlice = (set, get) => ({
         localLeaderboard: newLeaderboard,
       };
 
+      newMeta = withUpdatedWeeklyQuest(newMeta, {
+        kills: run.killsThisRun || 0,
+        runs: 1,
+        wins: 0,
+      });
+
       // Hardcore mode : perte totale de la méta à la mort
       if (state.meta.hardcoreMode) {
         newMeta.permanentUpgrades = [];
@@ -514,6 +613,27 @@ export const createNavigationSlice = (set, get) => ({
         newMeta.achievements = [...(newMeta.achievements || []), ...newAch];
       }
 
+      // Easter Egg Titles : vérifier les conditions de déblocage
+      const isDeathBoss = state.currentRoom?.isBossRoom;
+      const newDeathsBefore = !isDeathBoss ? (state.meta.deathsBeforeBossStreak || 0) + 1 : 0;
+      const wasDeathBeforeBoss = !isDeathBoss ? newDeathsBefore : 0;
+      const newEasterEggs = checkNewEasterEggTitles(newMeta, state.run, {
+        lastKillingAttackType: state.run.lastKillingAttackType || null,
+        deathsBeforeBoss: wasDeathBeforeBoss,
+        totalCombats: newMeta.totalCombats || 0,
+        killsThisTurn: state.run.killsThisTurn || 0,
+        turnsInRoom: state.run.turnsInRoom || 0,
+      });
+      if (newEasterEggs.length > 0) {
+        newMeta.easterEggTitles = [
+          ...(newMeta.easterEggTitles || []),
+          ...newEasterEggs.map(egg => egg.id),
+        ];
+      }
+      
+      // Update deathsBeforeBossStreak para Leroy Jenkins
+      newMeta.deathsBeforeBossStreak = newDeathsBefore;
+
       newMeta.lastRunSummary = {
         score:           finalScore,
         layersCleared:   state.run.currentLayerIndex,
@@ -522,6 +642,11 @@ export const createNavigationSlice = (set, get) => ({
         upgradeCount:    state.activeUpgrades.length,
         newUnlock:       newPermanent || null,
         newAchievements: newAch.map(id => ACHIEVEMENTS_CATALOG.find(a => a.id === id)).filter(Boolean),
+        newEasterEggs:   newEasterEggs,
+        deathReasons:    Object.entries(state.run.damageBySource || {})
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([source, damage]) => ({ source, damage })),
         won:             false,
       };
 
@@ -532,15 +657,44 @@ export const createNavigationSlice = (set, get) => ({
       };
     });
 
+    const deathReasons = Object.entries(get().run?.damageBySource || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([source, damage]) => ({ source, damage }));
+    const finalMeta = get().meta;
+
+    trackAnalyticsEvent('run_end', {
+      runId: get().run?.runId,
+      result: 'death',
+      score: finalScore,
+      layers: run.currentLayerIndex,
+      kills: run.killsThisRun || 0,
+      roomsCleared: run.roomsCleared || 0,
+      shape: get().player.shape,
+      bossType: get().run?.lastBossType || get().run?.finalBossType || null,
+      killedBy: deathReasons[0]?.source || null,
+      permanentCount: (finalMeta.permanentUpgrades || []).length,
+      unlockablePermanentCount: getUnlockablePermanentCount(finalMeta),
+      deathReasons,
+    });
+
     if (get().meta.lastRunSummary?.newUnlock) {
       get().addLog(`🏆 Débloqué : ${get().meta.lastRunSummary.newUnlock.name}`);
     }
 
+    // Afficher les nouveaux titres easter egg
+    if (get().meta.lastRunSummary?.newEasterEggs?.length > 0) {
+      const lang = (get().meta?.preferredLanguage || '').toLowerCase();
+      get().meta.lastRunSummary.newEasterEggs.forEach(egg => {
+        get().addLog(`✨ ${lang.startsWith('fr') ? egg.textFR : egg.textEN}`);
+      });
+    }
+
     // Soumettre le score en ligne (fire-and-forget)
-    const finalMeta = get().meta;
-    if (finalMeta.playerName) {
+    const finalMetaAfterDeath = get().meta;
+    if (finalMetaAfterDeath.playerName) {
       submitScore({
-        playerName: finalMeta.playerName,
+        playerName: finalMetaAfterDeath.playerName,
         score:      finalScore,
         shape:      get().player.shape,
         kills:      run.killsThisRun || 0,

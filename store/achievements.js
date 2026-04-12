@@ -6,6 +6,95 @@
 
 import { PERMANENT_UPGRADES_CATALOG } from '../constants';
 
+export const WEEKLY_QUESTS_CATALOG = [
+  {
+    id: 'weekly_kills_30',
+    name: 'Nettoyage du Rift',
+    desc: 'Éliminer 30 ennemis cette semaine',
+    icon: '⚔',
+    target: 30,
+    metric: 'kills',
+  },
+  {
+    id: 'weekly_runs_3',
+    name: 'Rythme de Chasse',
+    desc: 'Terminer 3 runs cette semaine',
+    icon: '🎲',
+    target: 3,
+    metric: 'runs',
+  },
+  {
+    id: 'weekly_wins_1',
+    name: 'Victoire Hebdo',
+    desc: 'Remporter 1 run cette semaine',
+    icon: '🏆',
+    target: 1,
+    metric: 'wins',
+  },
+];
+
+function getWeekStartKey(timestamp = Date.now()) {
+  const d = new Date(timestamp);
+  const day = d.getUTCDay();
+  const offsetToMonday = day === 0 ? -6 : 1 - day;
+  d.setUTCDate(d.getUTCDate() + offsetToMonday);
+  d.setUTCHours(0, 0, 0, 0);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const date = String(d.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+}
+
+export function ensureWeeklyQuestState(meta) {
+  const weekKey = getWeekStartKey();
+  const existing = meta.weeklyQuest;
+  if (existing?.weekKey === weekKey) {
+    return {
+      ...existing,
+      counters: {
+        kills: existing?.counters?.kills || 0,
+        runs: existing?.counters?.runs || 0,
+        wins: existing?.counters?.wins || 0,
+      },
+    };
+  }
+
+  return {
+    weekKey,
+    counters: { kills: 0, runs: 0, wins: 0 },
+  };
+}
+
+export function withUpdatedWeeklyQuest(meta, deltas = {}) {
+  const weeklyQuest = ensureWeeklyQuestState(meta);
+  return {
+    ...meta,
+    weeklyQuest: {
+      ...weeklyQuest,
+      counters: {
+        kills: Math.max(0, (weeklyQuest.counters.kills || 0) + (deltas.kills || 0)),
+        runs: Math.max(0, (weeklyQuest.counters.runs || 0) + (deltas.runs || 0)),
+        wins: Math.max(0, (weeklyQuest.counters.wins || 0) + (deltas.wins || 0)),
+      },
+    },
+  };
+}
+
+export function getWeeklyQuestProgress(meta) {
+  const weeklyQuest = ensureWeeklyQuestState(meta);
+  return WEEKLY_QUESTS_CATALOG.map(quest => {
+    const raw = weeklyQuest?.counters?.[quest.metric] || 0;
+    const progress = Math.min(quest.target, raw);
+    return {
+      ...quest,
+      progress,
+      completed: progress >= quest.target,
+      ratio: quest.target > 0 ? progress / quest.target : 0,
+      weekKey: weeklyQuest.weekKey,
+    };
+  });
+}
+
 // ─── Catalogue ────────────────────────────────────────────────────────────────
 
 export const ACHIEVEMENTS_CATALOG = [

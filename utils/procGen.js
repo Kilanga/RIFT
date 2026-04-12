@@ -6,6 +6,7 @@ import {
   GRID_SIZE,
   ROOM_TYPES,
   ENEMY_TYPES,
+  ACT1_BOSS_TYPES,
   CELL_TYPES,
 } from '../constants';
 
@@ -43,11 +44,42 @@ const ENEMY_TEMPLATES = {
     behavior: 'summon', scoreValue: 25, color: '#CC44FF',
     statuses: [], summonCount: 0, turnCount: 0,
   },
+  [ENEMY_TYPES.SENTINEL]: {
+    type: ENEMY_TYPES.SENTINEL, hp: 32, maxHp: 32,
+    attack: 0, defense: 1, speed: 1, range: 0,
+    behavior: 'sentinel', scoreValue: 40, color: '#44DDE6',
+    statuses: [], turnCount: 0, chargeCounter: 0,
+  },
   // Mini-boss (fin acte 1) — plus accessible
   [ENEMY_TYPES.BOSS_VOID]: {
     type: ENEMY_TYPES.BOSS_VOID, hp: 25, maxHp: 25,
     attack: 4, defense: 0, speed: 2,
     behavior: 'boss_void', scoreValue: 80, color: '#BB44FF', isBoss: true,
+  },
+  [ENEMY_TYPES.BOSS_CINDER]: {
+    type: ENEMY_TYPES.BOSS_CINDER, hp: 22, maxHp: 22,
+    attack: 4, defense: 0, speed: 1,
+    behavior: 'boss_cinder', scoreValue: 85, color: '#FF7A2F', isBoss: true,
+  },
+  [ENEMY_TYPES.BOSS_MIRROR]: {
+    type: ENEMY_TYPES.BOSS_MIRROR, hp: 24, maxHp: 24,
+    attack: 4, defense: 0, speed: 2,
+    behavior: 'boss_mirror', scoreValue: 85, color: '#FF66AA', isBoss: true,
+  },
+  [ENEMY_TYPES.BOSS_WEAVER]: {
+    type: ENEMY_TYPES.BOSS_WEAVER, hp: 23, maxHp: 23,
+    attack: 3, defense: 0, speed: 1,
+    behavior: 'boss_weaver', scoreValue: 90, color: '#C48AFF', isBoss: true,
+  },
+  [ENEMY_TYPES.BOSS_RUST]: {
+    type: ENEMY_TYPES.BOSS_RUST, hp: 30, maxHp: 30,
+    attack: 3, defense: 2, speed: 1,
+    behavior: 'boss_rust', scoreValue: 95, color: '#B7A588', isBoss: true,
+  },
+  [ENEMY_TYPES.BOSS_CUTTER]: {
+    type: ENEMY_TYPES.BOSS_CUTTER, hp: 26, maxHp: 26,
+    attack: 5, defense: 0, speed: 2,
+    behavior: 'boss_cutter', scoreValue: 95, color: '#66D6FF', isBoss: true,
   },
   // Boss (fin acte 2) — intermédiaire
   [ENEMY_TYPES.BOSS_PULSE]: {
@@ -77,52 +109,123 @@ const ENEMY_TEMPLATES = {
 
 // ─── API principale ───────────────────────────────────────────────────────────
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function normalizeEnemyBalanceProfile(input) {
+  if (typeof input === 'number') {
+    return {
+      categoryMultipliers: { mob: input, elite: input, boss: input },
+      attackWeight: 1,
+      defenseWeight: 1,
+      defenseCaps: { mob: 99, elite: 99, boss: 99 },
+    };
+  }
+
+  const profile = input || {};
+  const category = profile.categoryMultipliers || {};
+
+  return {
+    categoryMultipliers: {
+      mob: category.mob ?? 1,
+      elite: category.elite ?? 1,
+      boss: category.boss ?? 1,
+    },
+    attackWeight: profile.attackWeight ?? 1,
+    defenseWeight: profile.defenseWeight ?? 1,
+    defenseCaps: {
+      mob: profile.defenseCaps?.mob ?? 99,
+      elite: profile.defenseCaps?.elite ?? 99,
+      boss: profile.defenseCaps?.boss ?? 99,
+    },
+  };
+}
+
 /**
  * Génère une salle complète selon son type et l'étage courant
  * @param {string}  type
  * @param {number}  floor
  * @param {number}  seed
  * @param {string}  finalBossType — overrides le boss du BOSS_FINAL (boss_rift | boss_guardian | boss_entity)
+ * @param {string[]} act1BossPool — pool optionnel pour la rotation du boss acte 1
+ * @param {number|object} enemyBalanceProfile — profil d'équilibrage ennemi (legacy number supporté)
  */
-export function generateRoom(type, floor = 1, seed = null, finalBossType = null) {
+export function generateRoom(type, floor = 1, seed = null, finalBossType = null, act1BossPool = null, enemyBalanceProfile = 1) {
   const rng = seed === null || seed === undefined
     ? Math.random
     : mulberry32(Number(seed) >>> 0);
+  const normalizedBalance = normalizeEnemyBalanceProfile(enemyBalanceProfile);
 
   switch (type) {
-    case ROOM_TYPES.COMBAT:     return generateCombatRoom(floor, rng);
-    case ROOM_TYPES.ELITE:      return generateEliteRoom(floor, rng);
+    case ROOM_TYPES.COMBAT:     return generateCombatRoom(floor, rng, normalizedBalance);
+    case ROOM_TYPES.ELITE:      return generateEliteRoom(floor, rng, normalizedBalance);
     case ROOM_TYPES.EVENT:      return generateEventRoom();
-    case ROOM_TYPES.BOSS_MINI:  return generateBossRoom(floor, 'mini',   null);
-    case ROOM_TYPES.BOSS:       return generateBossRoom(floor, 'normal', null);
-    case ROOM_TYPES.BOSS_FINAL: return generateBossRoom(floor, 'final',  finalBossType);
+    case ROOM_TYPES.BOSS_MINI:  return generateBossRoom(floor, 'mini',   null, rng, act1BossPool, normalizedBalance);
+    case ROOM_TYPES.BOSS:       return generateBossRoom(floor, 'normal', null, rng, null, normalizedBalance);
+    case ROOM_TYPES.BOSS_FINAL: return generateBossRoom(floor, 'final',  finalBossType, rng, null, normalizedBalance);
     case ROOM_TYPES.REST:       return generateRestRoom();
     case ROOM_TYPES.SHOP:       return generateShopRoom(rng);
-    default:                    return generateCombatRoom(floor, rng);
+    default:                    return generateCombatRoom(floor, rng, normalizedBalance);
   }
 }
 
 // ─── Générateurs ─────────────────────────────────────────────────────────────
 
-function generateCombatRoom(floor, rng) {
+function generateCombatRoom(floor, rng, enemyBalanceProfile) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
 
-  addRandomWalls(grid, width, height, 0.08, rng);
-  addLavaTraps(grid, width, height, floor, rng);
+  const isOpeningFight = floor <= 1;
+  const isEarlyGame = floor <= 4;
+  if (!isOpeningFight) {
+    addRandomWalls(grid, width, height, floor <= 2 ? 0.05 : 0.08, rng);
+    if (floor >= 5) addLavaTraps(grid, width, height, floor, rng);
+  }
 
-  const enemyCount = Math.min(1 + Math.floor(floor / 2), 4);
-  const availableTypes = [ENEMY_TYPES.CHASER, ENEMY_TYPES.SHOOTER, ENEMY_TYPES.BLOCKER];
-  if (floor >= 3) availableTypes.push(ENEMY_TYPES.HEALER);
+  const enemyCount = floor <= 2
+    ? 1
+    : floor === 3
+      ? 1
+      : floor <= 4
+        ? 2
+        : Math.min(1 + Math.floor(floor / 2), 4);
+
+  const availableTypes = [ENEMY_TYPES.CHASER];
+  if (floor >= 2) {
+    availableTypes.push(ENEMY_TYPES.SHOOTER);
+  }
+  if (floor >= 3) {
+    availableTypes.push(ENEMY_TYPES.BLOCKER);
+  }
+  if (floor >= 5) availableTypes.push(ENEMY_TYPES.HEALER);
+  if (floor >= 11) availableTypes.push(ENEMY_TYPES.SENTINEL);
+
+  // Floors 2-4: composition plus lisible, pas encore trop punissant.
+  if (floor === 2 && rng() < 0.45) {
+    availableTypes.splice(availableTypes.indexOf(ENEMY_TYPES.SHOOTER), 1, ENEMY_TYPES.CHASER);
+  }
+  if (floor === 3 && rng() < 0.5) {
+    availableTypes.push(ENEMY_TYPES.CHASER);
+  }
   if (floor >= 4) availableTypes.push(ENEMY_TYPES.EXPLOSIVE);
-  if (floor >= 5) availableTypes.push(ENEMY_TYPES.SUMMONER);
+  if (floor >= 6) availableTypes.push(ENEMY_TYPES.SUMMONER);
 
-  const enemies = spawnEnemies(grid, width, height, enemyCount, floor, availableTypes, rng);
+  const enemies = spawnEnemies(grid, width, height, enemyCount, floor, availableTypes, rng, enemyBalanceProfile, 'mob');
+
+  // Smoothing for onboarding: make the very first combat less punishing.
+  if (isOpeningFight) {
+    enemies.forEach(e => {
+      e.hp = Math.max(6, e.hp - 2);
+      e.maxHp = e.hp;
+      e.attack = Math.max(1, e.attack - 1);
+    });
+  }
 
   const room = { type: ROOM_TYPES.COMBAT, width, height, grid, enemies, playerStart: { x: 1, y: 1 } };
 
-  // Paires de téléporteurs (~30% de chance à partir de l'étage 2)
-  if (floor >= 2 && rng() < 0.3) {
+  // Paires de téléporteurs (~30% de chance à partir de l'étage 3)
+  if (!isEarlyGame && floor >= 4 && rng() < 0.22) {
     const pairs = addTeleportPairs(grid, width, height, rng);
     if (pairs.length > 0) room.teleportPairs = pairs;
   }
@@ -130,13 +233,14 @@ function generateCombatRoom(floor, rng) {
   return room;
 }
 
-function generateBossRoom(floor, tier = 'normal', finalBossOverride = null) {
+function generateBossRoom(floor, tier = 'normal', finalBossOverride = null, rng = Math.random, act1BossPool = null, enemyBalanceProfile) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
 
   addSymmetricPillars(grid, width, height);
 
-  const bossType = tier === 'mini'  ? ENEMY_TYPES.BOSS_VOID
+  const act1Pool = Array.isArray(act1BossPool) && act1BossPool.length > 0 ? act1BossPool : ACT1_BOSS_TYPES;
+  const bossType = tier === 'mini'  ? act1Pool[Math.floor(rng() * act1Pool.length)]
                  : tier === 'final' ? (finalBossOverride || ENEMY_TYPES.BOSS_RIFT)
                  : ENEMY_TYPES.BOSS_PULSE;
 
@@ -145,25 +249,27 @@ function generateBossRoom(floor, tier = 'normal', finalBossOverride = null) {
                  : ROOM_TYPES.BOSS;
 
   const boss = {
-    ...scaledEnemy(ENEMY_TEMPLATES[bossType], floor),
+    ...scaledEnemy(ENEMY_TEMPLATES[bossType], floor, enemyBalanceProfile, 'boss'),
     x: Math.floor(width / 2),
     y: Math.floor(height / 2),
     turnCount: 0,
     spiralStep: 0,
+    summonCount: 0,
+    statuses: [],
   };
 
   // Boss final : ajoute 2 gardes
   const enemies = [boss];
   if (tier === 'final') {
     enemies.push({
-      ...scaledEnemy(ENEMY_TEMPLATES[ENEMY_TYPES.BLOCKER], floor),
+      ...scaledEnemy(ENEMY_TEMPLATES[ENEMY_TYPES.BLOCKER], floor, enemyBalanceProfile, 'elite'),
       x: Math.floor(width / 2) - 2, y: Math.floor(height / 2),
-      id: `guard_l_${Date.now()}`, turnCount: 0, spiralStep: 0,
+      id: `guard_l_${Date.now()}`, turnCount: 0, spiralStep: 0, statuses: [],
     });
     enemies.push({
-      ...scaledEnemy(ENEMY_TEMPLATES[ENEMY_TYPES.BLOCKER], floor),
+      ...scaledEnemy(ENEMY_TEMPLATES[ENEMY_TYPES.BLOCKER], floor, enemyBalanceProfile, 'elite'),
       x: Math.floor(width / 2) + 2, y: Math.floor(height / 2),
-      id: `guard_r_${Date.now()}`, turnCount: 0, spiralStep: 0,
+      id: `guard_r_${Date.now()}`, turnCount: 0, spiralStep: 0, statuses: [],
     });
   }
 
@@ -176,7 +282,7 @@ function generateBossRoom(floor, tier = 'normal', finalBossOverride = null) {
   };
 }
 
-function generateEliteRoom(floor, rng) {
+function generateEliteRoom(floor, rng, enemyBalanceProfile) {
   const width = GRID_SIZE, height = GRID_SIZE;
   const grid = createEmptyGrid(width, height);
   addRandomWalls(grid, width, height, 0.08, rng);
@@ -189,7 +295,7 @@ function generateEliteRoom(floor, rng) {
   if (floor >= 3) availableTypes.push(ENEMY_TYPES.EXPLOSIVE);
   if (floor >= 4) availableTypes.push(ENEMY_TYPES.SUMMONER);
 
-  const enemies = spawnEnemies(grid, width, height, enemyCount, floor + 1, availableTypes, rng);
+  const enemies = spawnEnemies(grid, width, height, enemyCount, floor + 1, availableTypes, rng, enemyBalanceProfile, 'elite');
   return { type: ROOM_TYPES.ELITE, width, height, grid, enemies, playerStart: { x: 1, y: 1 }, isElite: true };
 }
 
@@ -315,7 +421,7 @@ function addSymmetricPillars(grid, width, height) {
   ].forEach(({ x, y }) => { grid[y][x] = CELL_TYPES.WALL; });
 }
 
-function spawnEnemies(grid, width, height, count, floor, allowedTypes, rng) {
+function spawnEnemies(grid, width, height, count, floor, allowedTypes, rng, enemyBalanceProfile, category = 'mob') {
   const enemies  = [];
   const occupied = new Set();
   const safeZone = 3;
@@ -331,18 +437,41 @@ function spawnEnemies(grid, width, height, count, floor, allowedTypes, rng) {
 
     occupied.add(key);
     const type = allowedTypes[Math.floor(rng() * allowedTypes.length)];
-    enemies.push({ ...scaledEnemy(ENEMY_TEMPLATES[type], floor), x, y, turnCount: 0, spiralStep: 0, statuses: [] });
+    enemies.push({ ...scaledEnemy(ENEMY_TEMPLATES[type], floor, enemyBalanceProfile, category), x, y, turnCount: 0, spiralStep: 0, statuses: [] });
   }
   return enemies;
 }
 
-function scaledEnemy(template, floor) {
-  const m = 1 + (floor - 1) * 0.1;
+function scaledEnemy(template, floor, enemyBalanceProfile, category = 'mob') {
+  // Courbe lissée: montée régulière sans saut brutal entre étages.
+  const hpScale = floor <= 1
+    ? 0.5
+    : floor === 2
+      ? 0.62
+      : floor === 3
+        ? 0.74
+        : floor === 4
+          ? 0.86
+          : floor === 5
+            ? 0.98
+            : floor === 6
+              ? 1.08
+              : 1.08 + (floor - 6) * 0.08;
+  const atkScale = floor <= 4
+    ? 1 + (floor - 1) * 0.04
+    : 1 + (floor - 1) * 0.07;
+
+  const categoryMultiplier = enemyBalanceProfile.categoryMultipliers[category] ?? 1;
+  const atkMultiplier = 1 + (categoryMultiplier - 1) * enemyBalanceProfile.attackWeight;
+  const defMultiplier = 1 + (categoryMultiplier - 1) * enemyBalanceProfile.defenseWeight;
+  const defenseCap = enemyBalanceProfile.defenseCaps[category] ?? 99;
+
   return {
     ...template,
-    hp:     Math.round(template.hp * m),
-    maxHp:  Math.round(template.maxHp * m),
-    attack: Math.round(template.attack * (1 + (floor - 1) * 0.07)),
+    hp:      Math.max(1, Math.round(template.hp * hpScale * categoryMultiplier)),
+    maxHp:   Math.max(1, Math.round(template.maxHp * hpScale * categoryMultiplier)),
+    attack:  Math.max(1, Math.round(template.attack * atkScale * atkMultiplier)),
+    defense: clamp(Math.round((template.defense || 0) * defMultiplier), 0, defenseCap),
   };
 }
 

@@ -28,6 +28,86 @@ export const BOSS_DIALOGUES = {
     deathLine: "...encore une fois. Je serai là... quand le prochain arrivera.",
   },
 
+  [ENEMY_TYPES.BOSS_CINDER]: {
+    color: '#FF7A2F',
+    exchanges: [
+      {
+        boss: "Tu sens la chaleur ? C'est la mémoire de ceux qui ont essayé de franchir la porte avant toi.",
+        choices: [
+          { label: "Tu gardais quoi ici ?", response: "Des cendres. Des serments. Et ce qui reste quand un poste est oublié trop longtemps." },
+          { label: "Tu es vivant ?", response: "Assez pour brûler. Assez pour me rappeler que j'ai encore un rôle." },
+          { label: "Tu vas céder.", response: "Pas sans appeler des renforts depuis les bords de la salle. Le Rift aime les retards, pas les murs fermés." },
+        ],
+      },
+    ],
+    final: "Approche. Je ne te ferme pas la route. Je la chauffe jusqu'à ce que tu la sentes.",
+    deathLine: "...les braises... ne s'éteignent jamais vraiment...",
+  },
+
+  [ENEMY_TYPES.BOSS_MIRROR]: {
+    color: '#FF66AA',
+    exchanges: [
+      {
+        boss: "Je te vois changer à chaque pas. C'est ainsi que le Rift te copie.",
+        choices: [
+          { label: "Tu me recopies ?", response: "Je te renvoie seulement ce que tu montres. Le reste vient de toi." },
+          { label: "Tu es la première ?", response: "Je suis la voix qui reste quand les autres ont fini de répondre." },
+          { label: "Tu n'es qu'un reflet.", response: "Les reflets coupent aussi. Surtout quand ils apprennent à choisir." },
+        ],
+      },
+    ],
+    final: "Je bouge quand tu bouges. C'est la seule honnêteté qui nous reste.",
+    deathLine: "...le miroir... se fend...",
+  },
+
+  [ENEMY_TYPES.BOSS_WEAVER]: {
+    color: '#C48AFF',
+    exchanges: [
+      {
+        boss: "Tu crois voir une salle. Moi, j'y vois déjà les fils qui la tiennent debout.",
+        choices: [
+          { label: "Tu ne vas pas bloquer ma route.", response: "Je n'ai pas besoin de la bloquer. Je n'ai qu'à la rendre inconfortable." },
+          { label: "Pourquoi tisser ici ?", response: "Parce que le Rift laisse des trous. Et qu'un trou non refermé devient une blessure." },
+          { label: "Tu parles comme un architecte.", response: "J'en étais un. Avant que la ruine devienne ma matière première." },
+        ],
+      },
+    ],
+    final: "Ce n'est pas une prison. C'est une couture. Et tu tires déjà dessus.",
+    deathLine: "...les fils... tombent...",
+  },
+
+  [ENEMY_TYPES.BOSS_RUST]: {
+    color: '#B7A588',
+    exchanges: [
+      {
+        boss: "Le métal rouille. Les serments aussi. Je suis ce qu'il reste quand la garde dure trop longtemps — et quand l'arsenal d'avant-run n'est pas complet.",
+        choices: [
+          { label: "Tu protégeais quoi ?", response: "Une porte, une fois. Puis une autre. Puis la même, encore." },
+          { label: "Tu vas céder au temps.", response: "Le temps a déjà gagné. Je tiens juste encore debout en me couvrant de plaques." },
+          { label: "Alors tombe.", response: "Pas avant que tu comprennes pourquoi quelqu'un est resté ici — et pourquoi il vaut mieux arriver équipé." },
+        ],
+      },
+    ],
+    final: "Je ne suis plus une statue. Je suis une mission qui se protège encore avec ce qu'elle trouve. Si tu n'as pas tout ce qu'il faut, je te le ferai sentir.",
+    deathLine: "...la plaque... se fend... enfin...",
+  },
+
+  [ENEMY_TYPES.BOSS_CUTTER]: {
+    color: '#66D6FF',
+    exchanges: [
+      {
+        boss: "Tu avances droit. C'est rare. C'est aussi la façon la plus simple de te briser.",
+        choices: [
+          { label: "Tu coupes quoi ?", response: "Les lignes. Les habitudes. Les certitudes qui te font croire que la salle t'appartient." },
+          { label: "Tu es rapide ?", response: "Je suis précis. La vitesse n'est qu'un détail quand l'angle est juste." },
+          { label: "Tu ne me feras pas plier.", response: "Je ne compte pas te plier. Juste te forcer à regarder autrement." },
+        ],
+      },
+    ],
+    final: "Un pas de côté, et tu vis. Un pas de trop, et tu saignes.",
+    deathLine: "...les coupes... se referment...",
+  },
+
   [ENEMY_TYPES.BOSS_PULSE]: {
     color: '#FF6644',
     exchanges: [
@@ -264,6 +344,14 @@ export const ENEMY_LORE = [
     lore:     "Plus intelligent que ses congénères, l'Invocateur a appris à exploiter les failles du Rift pour y faire émerger d'autres créatures. Ce n'est pas lui qui te tuera — ce sont les vagues qu'il génère si tu l'ignores trop longtemps.",
     stats:    { hp: 15, attack: 4, defense: 0, speed: 1 },
   },
+  {
+    id:       ENEMY_TYPES.SENTINEL,
+    name:     "Sentinelle",
+    category: "Ennemi d'élite",
+    color:    '#44DDE6',
+    lore:     "La Sentinelle n'explore pas le Rift : elle le garde. Cette machine organique reste en retrait, verrouille les couloirs et punira toute erreur de positionnement. Dans les hautes couches, elle devient le vrai test de discipline.",
+    stats:    { hp: 18, attack: 4, defense: 1, speed: 1 },
+  },
 
   // ── Boss ────────────────────────────────────────────────────────────────────
   {
@@ -273,6 +361,46 @@ export const ENEMY_LORE = [
     color:    '#BB44FF',
     lore:     "Avant toi, quelqu'un d'autre est entré dans le Rift. Il a atteint ce niveau, pensait maîtriser ce qu'il traversait. Il avait tort. Le Rift ne détruit pas les intrus — il les absorbe, les recycle. L'Écho est ce qui reste de cet aventurier : sa forme, ses réflexes, ses doutes. Il te reconnaît, en un sens.",
     stats:    { hp: 25, attack: 4, defense: 0, speed: 2 },
+  },
+  {
+    id:       ENEMY_TYPES.BOSS_CINDER,
+    name:     'Le Veilleur de Cendre',
+    category: 'Boss · Acte I',
+    color:    '#FF7A2F',
+    lore:     "Ce gardien restait autrefois à la lisière d'une porte de service, chargé de surveiller les braises des anciens forges-puits. Le Rift a transformé son devoir en combustion lente. Il n'arrête pas le passage par haine : il le retarde, comme si le temps pouvait encore sauver quelque chose.",
+    stats:    { hp: 22, attack: 4, defense: 0, speed: 1 },
+  },
+  {
+    id:       ENEMY_TYPES.BOSS_MIRROR,
+    name:     'La Mère-Écho',
+    category: 'Boss · Acte I',
+    color:    '#FF66AA',
+    lore:     "Le Rift garde la mémoire des gestes. La Mère-Écho s'est formée là où trop de survivants ont hésité, ont reculé, ont répété les mêmes erreurs. Elle renvoie les trajectoires, les intentions, les rythmes. La combattre, c'est accepter que le Rift te renvoie toujours une part de toi.",
+    stats:    { hp: 24, attack: 4, defense: 0, speed: 2 },
+  },
+  {
+    id:       ENEMY_TYPES.BOSS_WEAVER,
+    name:     'Le Tisseur de Ruines',
+    category: 'Boss · Acte I',
+    color:    '#C48AFF',
+    lore:     "Ancien architecte ou simple survivant obsédé par l'ordre, personne n'est plus certain de ce qu'il fut. Le Rift a fait de lui un réparateur malade : il ne ferme pas les passages, il les ajuste, les contraint, les recompose. Sa violence est celle d'un plan de construction qui refuse de mourir.",
+    stats:    { hp: 23, attack: 3, defense: 0, speed: 1 },
+  },
+  {
+    id:       ENEMY_TYPES.BOSS_RUST,
+    name:     "L'Ange Rouillé",
+    category: 'Boss · Acte I',
+    color:    '#B7A588',
+    lore:     "Une sentinelle sacrée, forgée pour durer plus que les royaumes qu'elle protégeait. Le temps l'a mangée couche après couche jusqu'à n'en laisser qu'une ossature de foi, de métal et de rouille. Elle se couvre parce qu'elle sait que tout finit par s'effriter — sauf le devoir qu'elle s'impose encore.",
+    stats:    { hp: 30, attack: 3, defense: 2, speed: 1 },
+  },
+  {
+    id:       ENEMY_TYPES.BOSS_CUTTER,
+    name:     "Le Fendeur d'Ombres",
+    category: 'Boss · Acte I',
+    color:    '#66D6FF',
+    lore:     "Un éclaireur de guerre passé trop longtemps dans les couloirs du Rift. Il a appris à ne plus courir vers sa cible, mais à couper ce qui la relie au terrain : lignes, diagonales, habitudes. Il ne chasse pas la chair. Il chasse la certitude.",
+    stats:    { hp: 26, attack: 5, defense: 0, speed: 2 },
   },
   {
     id:       ENEMY_TYPES.BOSS_PULSE,

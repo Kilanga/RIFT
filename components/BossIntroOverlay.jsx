@@ -20,26 +20,101 @@ const BOSS_META = {
     name:     "L'Écho",
     subtitle: 'Acte I · Premier niveau',
     color:    '#BB44FF',
+    abilities: [
+      'PULSE toutes les 3 actions',
+      'Dégâts à portée 2',
+      'Poursuite si la spirale est bloquée',
+    ],
+  },
+  [ENEMY_TYPES.BOSS_CINDER]: {
+    name:     'Le Veilleur de Cendre',
+    subtitle: 'Acte I · Brasier dormant',
+    color:    '#FF7A2F',
+    abilities: [
+      'PULSE de braise toutes les 3 actions',
+      'Zone de menace à courte portée',
+      'Appelle des renforts depuis les bords en phase basse',
+    ],
+  },
+  [ENEMY_TYPES.BOSS_MIRROR]: {
+    name:     'La Mère-Écho',
+    subtitle: 'Acte I · Résonance',
+    color:    '#FF66AA',
+    abilities: [
+      'Rythme alterné tous les 2 tours',
+      'Réagit aux axes du joueur',
+      'Se replace sur la position miroir',
+    ],
+  },
+  [ENEMY_TYPES.BOSS_WEAVER]: {
+    name:     'Le Tisseur de Ruines',
+    subtitle: 'Acte I · Trame brisée',
+    color:    '#C48AFF',
+    abilities: [
+      'Appel de renforts toutes les 3 actions',
+      'Pression sans verrouiller la salle',
+      'Utilise la distance pour tisser l’étau',
+    ],
+  },
+  [ENEMY_TYPES.BOSS_RUST]: {
+    name:     "L'Ange Rouillé",
+    subtitle: 'Acte I · Armure oubliée',
+    color:    '#B7A588',
+    abilities: [
+      'Se renforce si ta méta-progression est incomplète',
+      'Gagne un bouclier périodique',
+      'Devient plus agressif quand il s’use',
+    ],
+  },
+  [ENEMY_TYPES.BOSS_CUTTER]: {
+    name:     "Le Fendeur d'Ombres",
+    subtitle: 'Acte I · Lignes de rupture',
+    color:    '#66D6FF',
+    abilities: [
+      'Frappe les lignes et colonnes alignées',
+      'Désaxe ses approches en deux temps',
+      'Punit les couloirs trop prévisibles',
+    ],
   },
   [ENEMY_TYPES.BOSS_PULSE]: {
     name:     'Tonnerre Incarné',
     subtitle: 'Acte II · Cœur du Rift',
     color:    '#FF6644',
+    abilities: [
+      'ONDE tous les 2 tours',
+      'Frappe en croix si aligné',
+      'Se rapproche quand l’onde est en récupération',
+    ],
   },
   [ENEMY_TYPES.BOSS_RIFT]: {
     name:     'Le Dévoreur',
     subtitle: 'Acte III · Les Profondeurs',
     color:    '#FF2266',
+    abilities: [
+      'RIFT PULSE tous les 3 tours',
+      'Dégâts augmentés sous 60% puis 30% PV',
+      'Avance plus vite enragé',
+    ],
   },
   [ENEMY_TYPES.BOSS_GUARDIAN]: {
     name:     'Le Gardien',
     subtitle: 'Acte III · La Porte',
     color:    '#44CCFF',
+    abilities: [
+      'ONDE SACRÉE tous les 4 tours',
+      'Frappe lourde au contact',
+      'Avance lentement mais régulièrement',
+    ],
   },
   [ENEMY_TYPES.BOSS_ENTITY]: {
     name:     "L'Entité",
     subtitle: 'Acte III · Au-delà',
     color:    '#FF0044',
+    abilities: [
+      'DÉFLAGRATION toutes les 3 actions',
+      'Dégâts à distance 2–3',
+      'Accélère en phase basse PV',
+    ],
   },
 };
 
@@ -130,6 +205,12 @@ export default function BossIntroOverlay({ bossType }) {
         <Text style={[styles.bossLabel, { color: color + 'CC' }]}>⚠  BOSS</Text>
         <Text style={[styles.bossName, { color }]}>{meta.name}</Text>
         <Text style={styles.bossSub}>{meta.subtitle}</Text>
+        <View style={[styles.abilityBox, { borderColor: color + '55' }]}>
+          <Text style={[styles.abilityTitle, { color }]}>{'PATTERN'}</Text>
+          {meta.abilities.map((ability, index) => (
+            <Text key={`${bossType}_${index}`} style={styles.abilityLine}>• {ability}</Text>
+          ))}
+        </View>
       </View>
 
       <ScrollView style={styles.dialogScroll} contentContainerStyle={styles.dialogContent} showsVerticalScrollIndicator={false}>
@@ -226,6 +307,16 @@ const styles = StyleSheet.create({
   bossLabel: { fontSize: 10, fontWeight: 'bold', letterSpacing: 5 },
   bossName:  { fontSize: 30, fontWeight: 'bold', letterSpacing: 4, textAlign: 'center' },
   bossSub:   { color: PALETTE.textMuted, fontSize: 12, letterSpacing: 1 },
+  abilityBox: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    gap: 4,
+    backgroundColor: '#0A0A14',
+  },
+  abilityTitle: { fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
+  abilityLine: { color: PALETTE.textPrimary, fontSize: 11, lineHeight: 16 },
 
   dialogScroll:  { width: '100%', flex: 1 },
   dialogContent: { gap: 12, paddingBottom: 8 },

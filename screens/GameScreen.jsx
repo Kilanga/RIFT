@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useGameStore from '../store/gameStore';
 import { GAME_PHASES, PALETTE, ROOM_TYPES, CLASS_INFO } from '../constants';
+import { getBossIntentState } from '../utils/bossIntent';
 
 import GameGrid             from '../components/GameGrid';
 import CombatLog            from '../components/CombatLog';
@@ -32,6 +33,8 @@ export default function GameScreen() {
   const bossIntroType  = useGameStore(s => s.bossIntroType);
   const blinkUsed      = useGameStore(s => s.blinkUsed);
   const useBlink       = useGameStore(s => s.useBlink);
+  const threatPreviewEnabled = useGameStore(s => s.meta?.threatPreviewEnabled ?? true);
+  const toggleThreatPreview = useGameStore(s => s.toggleThreatPreview);
 
   const lastCritAt = useGameStore(s => s.lastCritAt);
   const shakeAnim  = useRef(new Animated.Value(0)).current;
@@ -62,8 +65,13 @@ export default function GameScreen() {
   const [showUpgrades, setShowUpgrades] = useState(false);
 
   const aliveEnemies = enemies.filter(e => e.hp > 0);
+  const aliveBoss = aliveEnemies.find(e => e.isBoss);
+  const bossSkill = getBossIntentState(aliveBoss);
   const isCombat     = phase === GAME_PHASES.COMBAT;
   const isBossIntro  = phase === GAME_PHASES.BOSS_INTRO;
+  const shieldStatus = (player.statuses || []).find(s => s.id === 'shield');
+  const hasShield = !!shieldStatus;
+  const shieldBlockable = Math.max(0, Number(shieldStatus?.value || 0));
 
   // Boss intro : plein écran
   if (isBossIntro) {
@@ -89,11 +97,16 @@ export default function GameScreen() {
               <View style={styles.barBg}>
                 <View style={[styles.barFill, {
                   width: `${(player.hp / player.maxHp) * 100}%`,
-                  backgroundColor: player.hp / player.maxHp < 0.3 ? PALETTE.upgradeRed : PALETTE.hp,
+                  backgroundColor: hasShield
+                    ? PALETTE.upgradeBlue
+                    : (player.hp / player.maxHp < 0.3 ? PALETTE.upgradeRed : PALETTE.hp),
                 }]} />
               </View>
               <Text style={styles.statTxt}>{player.hp}/{player.maxHp}</Text>
             </View>
+            {isCombat && hasShield && (
+              <Text style={styles.shieldHintTxt}>{t('game.shield_block_hint', { value: shieldBlockable })}</Text>
+            )}
 
             {activeUpgrades.some(u => u.id === 'momentum') && (
               <View style={styles.statRow}>
@@ -146,10 +159,46 @@ export default function GameScreen() {
             <Text style={styles.enemyCount}>☠ {aliveEnemies.length}</Text>
           )}
 
+          {bossSkill && (
+            <View
+              style={[
+                styles.bossPulseBadge,
+                {
+                  borderColor: bossSkill.countdown === 0 ? bossSkill.nowColor : bossSkill.warnColor,
+                  backgroundColor: bossSkill.countdown === 0 ? bossSkill.nowBg : bossSkill.warnBg,
+                },
+              ]}
+            >
+              <Text style={[styles.bossPulseLabel, { color: bossSkill.textColor }]}>
+                {t('game.boss_intent_label')}
+              </Text>
+              <Text style={[styles.bossPulseTxt, { color: bossSkill.textColor }]}>
+                {bossSkill.label}
+              </Text>
+              <Text style={[styles.bossPulseDetail, { color: bossSkill.textColor }]}> 
+                {bossSkill.countdown === 0
+                  ? t('game.boss_skill_ready_detail', { effect: bossSkill.effect })
+                  : t('game.boss_skill_countdown_detail', { effect: bossSkill.effect })}
+              </Text>
+            </View>
+          )}
+
           {/* Bouton Upgrades */}
           {activeUpgrades.length > 0 && (
             <TouchableOpacity style={styles.upgradesBtn} onPress={() => setShowUpgrades(true)} activeOpacity={0.7}>
               <Text style={styles.upgradesBtnTxt}>{t('game.upgrades_btn', { count: activeUpgrades.length })}</Text>
+            </TouchableOpacity>
+          )}
+          {isCombat && (
+            <TouchableOpacity
+              style={[
+                styles.threatBtn,
+                threatPreviewEnabled ? styles.threatBtnOn : styles.threatBtnOff,
+              ]}
+              onPress={toggleThreatPreview}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.threatBtnTxt}>{threatPreviewEnabled ? '⚠ MENACE ON' : '⚠ MENACE OFF'}</Text>
             </TouchableOpacity>
           )}
 
@@ -309,6 +358,26 @@ const styles = StyleSheet.create({
     borderBottomColor: PALETTE.border,
     gap:               10,
   },
+    threatBtn: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    threatBtnOn: {
+      borderColor: '#FF6655',
+      backgroundColor: '#2A0D0A',
+    },
+    threatBtnOff: {
+      borderColor: PALETTE.border,
+      backgroundColor: PALETTE.bgCard,
+    },
+    threatBtnTxt: {
+      color: '#FFAA99',
+      fontSize: 10,
+      fontWeight: 'bold',
+      letterSpacing: 0.4,
+    },
   roomBadge: {
     borderWidth:       1,
     borderRadius:      6,
@@ -329,6 +398,13 @@ const styles = StyleSheet.create({
   },
   barFill:  { height: 6, borderRadius: 3 },
   statTxt:  { color: PALETTE.textMuted, fontSize: 10, width: 40, textAlign: 'right' },
+  shieldHintTxt: {
+    color: PALETTE.upgradeBlue,
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'right',
+    letterSpacing: 0.4,
+  },
 
   fragBox:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
   fragIcon:  { color: PALETTE.fragment, fontSize: 13 },
@@ -368,6 +444,19 @@ const styles = StyleSheet.create({
   },
   turnTxt:    { fontSize: 12, fontWeight: 'bold', letterSpacing: 1 },
   enemyCount: { color: PALETTE.upgradeRed, fontSize: 11 },
+  bossPulseBadge: {
+    borderWidth: 1,
+    borderColor: '#AA44CC',
+    backgroundColor: '#1A1026',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 104,
+    gap: 1,
+  },
+  bossPulseLabel: { fontSize: 8, fontWeight: 'bold', letterSpacing: 1.3 },
+  bossPulseTxt: { color: '#D58BFF', fontSize: 9, fontWeight: 'bold', letterSpacing: 1 },
+  bossPulseDetail: { color: '#D58BFF', fontSize: 8, letterSpacing: 0.6 },
 
   // Statuts
   statusRow:   { flexDirection: 'row', gap: 3 },

@@ -28,7 +28,7 @@ const SHAPES = [
     name:  'Arcaniste',
     color: PALETTE.circle,
     icon:  Arcaniste,
-    stats: { atk: 3, def: 2, vit: 4 },
+    stats: { atk: 4, def: 3, vit: 4 },
   },
   {
     id:    PLAYER_SHAPES.HEXAGON,
@@ -36,7 +36,7 @@ const SHAPES = [
     name:  'Colosse',
     color: PALETTE.hexagon,
     icon:  Colosse,
-    stats: { atk: 2, def: 5, vit: 2 },
+    stats: { atk: 2, def: 4, vit: 2 },
   },
   {
     id:      PLAYER_SHAPES.SPECTRE,
@@ -95,7 +95,7 @@ export default function ShapeSelectScreen() {
       return;
     }
     if (s?.purchasable && !(meta.purchasedClasses || []).includes(shapeId)) {
-      Alert.alert(t('shape_select.class_locked_title'), t('shape_select.class_locked_msg'), [{ text: 'OK' }]);
+        Alert.alert(t('shape_select.class_locked_title'), t('shape_select.class_locked_msg'), [{ text: t('shape_select.premium_ok') }]);
       return;
     }
     setSelected(shapeId);
