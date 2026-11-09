@@ -755,13 +755,14 @@ export const createProgressionSlice = (set, get) => ({
     applyEventEffect(choice.effect, get, set);
     get().addLog(`📖 ${currentEvent.title} : ${choice.label}`);
 
-    if (choice.effect.type === 'upgrade_choice') {
-      // onRoomCleared() marque la salle comme terminée, puis generateUpgradeChoices(1) override la phase
-      get().onRoomCleared();
-      get().generateUpgradeChoices(1);
-    } else {
-      get().onRoomCleared();
-    }
+    // Upgrade gratuit possible en top-level OU en sous-effet d'un composite (echo_dead, mercenary_camp…)
+    const needsUpgradeChoice =
+      choice.effect.type === 'upgrade_choice' ||
+      (choice.effect.type === 'composite' &&
+        (choice.effect.effects || []).some(e => e.type === 'upgrade_choice'));
+
+    get().onRoomCleared();
+    if (needsUpgradeChoice) get().generateUpgradeChoices(1);
   },
 
   // ── Salles spéciales ─────────────────────────────────────────────────────────

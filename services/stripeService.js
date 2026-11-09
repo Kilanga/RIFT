@@ -9,6 +9,9 @@ import { supabase } from './supabase';
 
 const DEVICE_ID_KEY = 'rift-device-id';
 
+const VALID_THEME_IDS = new Set(['blood', 'ice', 'void', 'forest', 'lava', 'storm', 'neon']);
+const VALID_CLASS_IDS = new Set(['shadow', 'paladin']);
+
 /** Retourne le deviceId persistant, en génère un si absent. */
 export async function getDeviceId() {
   let id = await AsyncStorage.getItem(DEVICE_ID_KEY);
@@ -40,11 +43,13 @@ export function createPaymentIntent() {
 
 /** Thème cosmétique individuel — 0,99 € */
 export function createThemePaymentIntent(themeId) {
+  if (!VALID_THEME_IDS.has(themeId)) throw new Error(`Thème inconnu : ${themeId}`);
   return _invokePaymentIntent(`rift-theme-${themeId}`);
 }
 
 /** Classe individuelle — 0,99 € */
 export function createClassPaymentIntent(classId) {
+  if (!VALID_CLASS_IDS.has(classId)) throw new Error(`Classe inconnue : ${classId}`);
   return _invokePaymentIntent(`rift-class-${classId}`);
 }
 
@@ -59,9 +64,9 @@ export async function fetchServerPurchases() {
     const { data, error } = await supabase.functions.invoke('get-purchases', {
       body: { deviceId },
     });
-    if (error || !data?.products) return null;
+    if (error || !Array.isArray(data?.products)) return null;
 
-    const products        = data.products;
+    const products        = data.products.filter(p => typeof p === 'string');
     const isPremium       = products.includes('rift-premium');
     const purchasedThemes = products
       .filter(p => p.startsWith('rift-theme-'))

@@ -49,7 +49,7 @@ export const ALL_UPGRADES = [
   },
   {
     id: 'resonance', name: 'Résonance', color: UPGRADE_COLORS.BLUE, rarity: 'epic', maxStack: 1,
-    description: '3 upgrades d\'une même couleur → toutes les stats ×2.',
+    description: '7 upgrades d\'une même couleur → ATQ ×2, DEF ×2, PV max ×1.5.',
     effect: { type: 'synergy', trigger: 'onSynergyActivated', action: 'statMultiplier', multiplier: 2 },
     tags: ['synergie', 'couleur'],
   },

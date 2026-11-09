@@ -659,7 +659,7 @@
     "chain_reaction": { "name": "Réaction en chaîne",  "desc": "Après chaque kill, prochaine attaque +50% par stack." },
     "overload":       { "name": "Surcharge",           "desc": "+3 Attaque." },
     "shield_pulse":   { "name": "Impulsion Bouclier",  "desc": "Après avoir subi des dégâts → bouclier sur le prochain coup." },
-    "resonance":      { "name": "Résonance",           "desc": "3 upgrades d'une même couleur → toutes les stats ×2." },
+    "resonance":      { "name": "Résonance",           "desc": "7 upgrades d'une même couleur → ATQ ×2, DEF ×2, PV max ×1.5." },
     "blink":          { "name": "Clignotement",        "desc": "Une fois par salle : téléportation vers une case vide aléatoire." },
     "absorb":         { "name": "Absorption",          "desc": "+2 Défense." },
     "phase_shift":    { "name": "Déphasage",           "desc": "Les Blockers t'ignorent pendant 2 tours après un déplacement." },

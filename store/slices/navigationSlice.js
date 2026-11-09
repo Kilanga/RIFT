@@ -191,10 +191,9 @@ export const createNavigationSlice = (set, get) => ({
       musicVolume:       0.4,
       sfxVolume:         0.7,
       preferredLanguage: '',
-      playerName:        '',
-      easterEggTitles:   [],    // Easter egg titles unlocked
-      totalCombats:      0,     // Global combat counter (for Shiny)
-      deathsBeforeBossStreak: 0, // Track consecutive deaths before boss (for Leroy Jenkins)
+      easterEggTitles:   [],
+      totalCombats:      0,
+      deathsBeforeBossStreak: 0,
     },
     phase: GAME_PHASES.MENU,
   })),
@@ -607,8 +606,14 @@ export const createNavigationSlice = (set, get) => ({
         newMeta.talentPoints      = 0;
       }
 
-      // Achievements à la mort (total runs, total kills, collector…)
-      const newAch = checkNewAchievements(newMeta, state.run);
+      // Achievements à la mort (total runs, total kills, collector, upgrades…)
+      const newAch = checkNewAchievements(newMeta, state.run, {
+        upgradeCount:      state.activeUpgrades.length,
+        hasSynergy:        ['red', 'blue', 'green'].some(c => state.activeUpgrades.filter(u => u.color === c).length >= 3),
+        curseCount:        state.activeUpgrades.filter(u => u.color === 'curse').length,
+        curseSynergyActive: state.activeUpgrades.filter(u => u.color === 'curse').length >= 3,
+        usedSecondWind:    state.secondWindUsed,
+      });
       if (newAch.length > 0) {
         newMeta.achievements = [...(newMeta.achievements || []), ...newAch];
       }

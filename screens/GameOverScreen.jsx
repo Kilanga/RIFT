@@ -51,7 +51,7 @@ export default function GameOverScreen() {
         <View style={styles.scoreBox}>
           <Text style={styles.scoreLabel}>{t('game_over.score_label')}</Text>
           <Text style={[styles.scoreValue, isNewBest && { color: PALETTE.charge }]}>
-            {run.score.toLocaleString()}
+            {(run.score ?? 0).toLocaleString()}
           </Text>
           {meta.bestScore > 0 && !isNewBest && (
             <Text style={styles.prevBest}>{t('game_over.prev_best', { score: meta.bestScore.toLocaleString() })}</Text>

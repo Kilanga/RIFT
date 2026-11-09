@@ -6,6 +6,7 @@
 import { trackAnalyticsEvent } from './analyticsService';
 
 let initialized = false;
+let handlerActive = false; // re-entrancy guard
 
 export function initCrashReporter() {
   if (initialized) return;
@@ -16,11 +17,20 @@ export function initCrashReporter() {
   if (errorUtils?.getGlobalHandler && errorUtils?.setGlobalHandler) {
     const defaultHandler = errorUtils.getGlobalHandler();
     errorUtils.setGlobalHandler((error, isFatal) => {
-      trackAnalyticsEvent('app_error', {
-        message: String(error?.message || error),
-        stack: String(error?.stack || ''),
-        fatal: Boolean(isFatal),
-      });
+      if (!handlerActive) {
+        handlerActive = true;
+        try {
+          trackAnalyticsEvent('app_error', {
+            message: String(error?.message || error),
+            stack: String(error?.stack || '').slice(0, 2000),
+            fatal: Boolean(isFatal),
+          });
+        } catch {
+          // analytics must never re-throw inside the global error handler
+        } finally {
+          handlerActive = false;
+        }
+      }
 
       if (defaultHandler) {
         defaultHandler(error, isFatal);

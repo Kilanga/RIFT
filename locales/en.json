@@ -659,7 +659,7 @@
     "chain_reaction": { "name": "Chain Reaction",     "desc": "After each kill, next attack +50% per stack." },
     "overload":       { "name": "Overload",           "desc": "+3 Attack." },
     "shield_pulse":   { "name": "Shield Pulse",       "desc": "After taking damage → shield on the next hit." },
-    "resonance":      { "name": "Resonance",          "desc": "3 upgrades of the same color → all stats ×2." },
+    "resonance":      { "name": "Resonance",          "desc": "7 upgrades of the same color → ATK ×2, DEF ×2, max HP ×1.5." },
     "blink":          { "name": "Blink",              "desc": "Once per room: teleport to a random empty cell." },
     "absorb":         { "name": "Absorb",             "desc": "+2 Defense." },
     "phase_shift":    { "name": "Phase Shift",        "desc": "Blockers ignore you for 2 turns after moving." },

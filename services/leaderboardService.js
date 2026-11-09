@@ -19,7 +19,7 @@ async function fetchScoresViaRest({ limit = 10, daily = false }) {
   const safeLimit = Math.max(1, Math.min(50, Number(limit) || 10));
   const base = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/scores`;
   const select = 'player_name,score,shape,kills,layers,won,created_at';
-  const dailyFilter = daily ? `&is_daily=eq.true&daily_date=eq.${todayDateStr()}` : '';
+  const dailyFilter = daily ? `&is_daily=eq.true&daily_date=eq.${encodeURIComponent(todayDateStr())}` : '';
   const url = `${base}?select=${select}${dailyFilter}&order=score.desc&limit=${safeLimit}`;
 
   try {
